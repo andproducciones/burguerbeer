@@ -1,0 +1,286 @@
+@media screen and (max-width: 950px)
+{
+	
+#container{
+	padding: 45px 10px 0px !important;
+}
+	.btn_menu{
+		display: block;
+	}
+	
+	nav {
+		position: absolute;
+		width: 100%;
+		left: -100%;
+		transition: 0.5s all;
+
+	}
+	nav ul{
+	flex-direction: column;	
+	}
+	
+	nav ul li{
+		width: 100%;
+		border-bottom:1px solid #CCC;
+
+
+	}
+	nav ul li:hover ul{
+			display: none;
+	}
+
+
+	nav ul li a {
+		text-align: left;
+		width: 100%;
+	}
+
+	nav li ul{
+		position: relative;
+		border-radius: 0;
+	}
+
+	nav li ul li:last-child{
+		border-radius: 0;
+	}
+
+nav .principal .arrow{
+	float: right;
+
+
+}
+
+
+header h1{
+	font-size: 14px;
+}	
+
+header .fecha{
+	display: none;
+}
+}
+
+@media screen and (max-width: 750px){
+
+	.dashboard{
+		flex-wrap: wrap;
+
+	}
+	.dashboard a{
+		width: 50%;
+		border-bottom: 1px solid #CCC;
+	
+	}
+
+	.containerDataUser, .containerDataEmpresa{
+		width: 100%;
+		margin-bottom: 20px;
+		padding: 10px;
+
+	}
+
+	#container h1{
+		padding: 5px 10px;
+		font-size: 12pt !important;
+
+	}
+	.logoUser{
+		width: 150px;
+		height: 150px;
+
+	}
+	/* LISTA DE USUARIOS */
+.btn_new{
+	margin: 0;
+	margin-right: 10px;
+	padding: 5px 10px;
+	font-size: 8pt;
+}
+
+.fomr_serach {
+	width: 100%;
+	border: 5px solid #CCC;
+	overflow: scroll;
+}
+
+.containerTable{
+
+	width: 100%;
+	border: 5px solid #CCC;
+	overflow: scroll;
+}
+
+
+table{
+	width: 850px;
+
+}
+
+.tablaventacelular{
+	width: 100%;
+
+}
+table td; table th{
+	padding: 5px;
+	font-size: 10pt;
+}
+
+
+
+.form_register{
+	width: 100%;
+}
+form{
+	padding: 10px;
+
+}
+
+.btn_save{
+	width: 100%;
+	margin: 20px auto 15px auto;
+}
+}
+
+
+@media screen and (max-width: 460px){
+table td{
+	padding: 4px;
+	font-size: 9pt;
+
+}
+table th{
+	padding: 4px;
+	font-size: 9pt;
+	text-align: center;
+
+}
+
+.optionsBar span{
+	color: #FFF;
+	font-size: 10px;
+	font-family: 'GothamBook';
+	text-transform: uppercase;
+	margin-left: 0px;
+
+}
+
+.optionsBar{
+	display: flex;
+    justify-content: flex-end;
+}
+
+.optionsBarSalir{
+	width: 20px;
+	margin-left: 5px;
+}
+
+a{
+	width: 20px;
+}
+nav{ 
+	display:block !important;
+}
+
+
+	.photouser {
+    margin-left: 5px;
+    width: 25px;
+    height: 25px;
+}
+	.dashboard a{
+		padding: 5px 2px;
+
+	}
+	.dashboard p{
+		font-size: 9pt;
+	
+	}
+	.dashboard span{
+		font-size: 10pt;
+	
+	}
+
+	.divDataUser label{
+		width: 80px;	
+	}
+
+
+.nav{
+	height: auto;
+}
+
+.productos{
+	height: 200px;
+}
+
+
+.flexCategorias{
+display: flex;
+width: max-content;
+}
+.btnCategoria{
+	height: 120px; 
+	width: minmax(80px,100px);
+}
+
+.tituloResponsive{
+	display: none;
+
+}
+.tituloBlock{
+	display: block !important;
+}
+
+.mesaResponsive{
+	width: 100% !important;
+	
+}
+.nombreResponsive{
+	width: 48% !important;
+	
+}
+.margin{
+	margin: 1%;
+}
+
+.sombras{
+	box-shadow: 0px 3px 5px 1px #CACACA;
+	border-radius: 10px;
+	padding: 5px;
+	margin: 0px 0px 15px 0px;
+}
+#form_add_product{
+	margin: 10px;
+	width: 95%;
+}
+.tablaCodigos{
+		display: none !important;
+	}
+
+	
+.containerVentas{
+	max-height: none;
+}
+table {
+    width: 100% !important;
+}
+
+.btn_view{
+	padding: 7px;
+
+}
+
+.btn_anular{
+padding: 7px;
+}
+	.containerForm{
+	height: 100%;
+}
+}
+
+
+
+
+
+/*lista de usuarios
+

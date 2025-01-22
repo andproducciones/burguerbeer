@@ -1,0 +1,192 @@
+2020-08-07 19:11:30: <br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+2020-08-07 19:11:31: <br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+2020-08-07 19:11:31: <br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+2020-08-07 19:11:31: <br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+2020-08-07 19:12:24: <br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+2020-08-07 19:12:52: <br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+2020-08-07 19:12:53: <br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+2020-08-07 19:12:54: <br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>71</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>53</b><br />
+<br />
+<b>Notice</b>:  Trying to access array offset on value of type int in <b>C:\xampp\htdocs\pruebas\factura\phpqrcode\qrsplit.php</b> on line <b>62</b><br />
