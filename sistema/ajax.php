@@ -2092,6 +2092,11 @@ if (mysqli_num_rows($query_salidas) > 0) {
         $totalFinalEfectivoEntregar = $montoEfectivo + $inicial + $entradasEfectivo - $salidasEfectivo;
 
         $totalFinalTransferenciaEntregar = $montoTransferencia + $entradasTransferencia - $salidasTransferencia;
+
+        $totalEfectivo = number_format($totalFinalEfectivoEntregar, 2, '.', '');
+        $totalTarjeta = number_format($montoTarjeta, 2, '.', '');
+        $totalTransferencia = number_format($totalFinalTransferenciaEntregar, 2, '.', '');
+        $totalDeUna = number_format($montoDeUna, 2, '.', '');
         
 
         // Generar el HTML del formulario
@@ -2099,10 +2104,6 @@ if (mysqli_num_rows($query_salidas) > 0) {
         
             
                 <form action="" method="post" name="form_add_product" class="cierreCaja" id="form_add_product" onsubmit="event.preventDefault(); sendDataForm();">
-                    <div class="wd100">
-                        <h1><i class="fas fa-cash-register fa-3x"></i><br><br>Cerrar Caja</h1>
-                    </div>
-
                     <div class="wd60">
                         <h2>Arqueo de Caja</h2>
                         <hr>
@@ -2152,7 +2153,7 @@ if (mysqli_num_rows($query_salidas) > 0) {
                     </div>
                     <div class="caja_valores">
                     <span>Tarjeta </span>
-                    <span>$'.number_format($montoTarjeta, 2).' </span>
+                    <span>$'.($montoTarjeta != 0 ? number_format($montoTarjeta / 0.94, 2) : '0.00').' </span>
                     </div>
 
                     <div class="caja_valores">
@@ -2209,73 +2210,91 @@ if (mysqli_num_rows($query_salidas) > 0) {
                     <input type="hidden" name="co" value="' . $id . '">
                     <input type="hidden" name="total_ventas" value="' . $ventasFinal . '">
                     <input type="hidden" id="monto_final2" name="monto_final" value="">
-                    <input type="hidden" name="total_cash" value="' . number_format($montoFinal, 2) . '">
-                    <input type="hidden" name="total_salidas" value="' . number_format($totalSalidas, 2) . '">
+                    <input type="hidden" name="total_cash" value="' . number_format($entregar, 2) . '">
+                    <input type="hidden" name="total_movimientos" value="' . number_format($totalSalidas, 2) . '">
 
-                    <div class="acciones wd100">
-                        <button type="submit" class="btn_new"><i class="fas fa-edit"></i> Guardar</button>
-                        <a href="#" class="btn_ok closeModal" onclick="closeModal2();"><i class="fas fa-ban"></i> Cerrar</a>
-                    </div>
-                </form>
-            
-        ';
+                    <input type="hidden" name="total_efectivo" value="'.$totalEfectivo.'">
+                    <input type="hidden" name="total_tarjeta" value="'.$totalTarjeta.'">
+                    <input type="hidden" name="total_transferencia" value="'.$totalTransferencia.'">
+                    <input type="hidden" name="total_deuna" value="'.$totalDeUna.'">
+
+                        <div class="acciones wd100">
+                            <button type="submit" class="btn_new"><i class="fas fa-edit"></i> Guardar</button>
+                            <a href="#" class="btn_ok closeModal" onclick="closeModal2();"><i class="fas fa-ban"></i> Cerrar</a>
+                        </div>
+                </form>';
     }
 }
 
 
 if ($_POST['action'] == 'cerrarCaja') {
 
-    if (empty($_POST['co']) || empty($_POST['monto_final'])) {
-        echo 1;
-        exit;
-    }
+    // Inicio de la transacción
+    mysqli_begin_transaction($conection, MYSQLI_TRANS_START_READ_WRITE);
 
-    $id = $_POST['co'];
-    $user = $_SESSION['idUser'];
-
-    // Consultar datos del arqueo de caja
-    $query = mysqli_query($conection, "SELECT id, id_caja, fecha_inicio, monto_inicial FROM arqueo_caja WHERE id = $id AND estatus = 1");
-
-    if (mysqli_num_rows($query) != 1) {
-        echo 4;
-        exit;
-    }
-
-    $data_caja = mysqli_fetch_assoc($query);
-    $id_cierre = $data_caja['id'];
-    $id_caja = $data_caja['id_caja'];
-    $fecha_inicio = $data_caja['fecha_inicio'];
-    $fecha_fin = date('Y-m-d G:i:s');
-
-    // Recopilar datos del formulario
-    $monto_final = isset($_POST['monto_final']) && $_POST['monto_final'] !== '' ? $_POST['monto_final'] : 0;
-    $total_ventas = isset($_POST['total_ventas']) && $_POST['total_ventas'] !== '' ? $_POST['total_ventas'] : 0;
-    $total_cash = isset($_POST['total_cash']) && $_POST['total_cash'] !== '' ? $_POST['total_cash'] : 0;
-    $total_salidas = isset($_POST['total_salidas']) && $_POST['total_salidas'] !== '' ? $_POST['total_salidas'] : 0;
-    $efectivo = isset($_POST['monto_efectivo']) && $_POST['monto_efectivo'] !== '' ? $_POST['monto_efectivo'] : 0;
-    $transferencia = isset($_POST['monto_transferencia']) && $_POST['monto_transferencia'] !== '' ? $_POST['monto_transferencia'] : 0;
-    $deuna = isset($_POST['monto_deuna']) && $_POST['monto_deuna'] !== '' ? $_POST['monto_deuna'] : 0;
-    $tarjeta = isset($_POST['monto_tarjeta']) && $_POST['monto_tarjeta'] !== '' ? $_POST['monto_tarjeta'] : 0;
-
-    // Actualizar el arqueo de caja
-    $query_update_2 = mysqli_query($conection, "UPDATE arqueo_caja SET fecha_fin = '$fecha_fin', monto_final = '$monto_final', total_ventas = '$total_ventas', total_cash = '$total_cash', efectivo = '$efectivo', transferencia = '$transferencia', deuna = '$deuna', tarjeta = '$tarjeta', salida = '$total_salidas', estatus = 2 WHERE id = $id");
-
-    if ($query_update_2) {
-        // Actualizar el estado de la caja
-        $query_update_3 = mysqli_query($conection, "UPDATE cajas SET estatus = 2 WHERE id = $id_caja");
-        if (!$query_update_3) {
-            echo 3;
+    try {
+        if (empty($_POST['co']) || empty($_POST['monto_final'])) {
+            echo 1;
             exit;
         }
 
-        // Actualizar facturas relacionadas
-        $query_update_4 = mysqli_query($conection, "UPDATE factura SET id_cierre = $id_cierre, estatus = 4 WHERE caja = $id_caja AND estatus = 1 AND fecha BETWEEN '$fecha_inicio' AND '$fecha_fin'");
-        if (!$query_update_4) {
-            echo 3;
+        $id = $_POST['co'];
+        $user = $_SESSION['idUser'];
+
+        // Consultar datos del arqueo de caja
+        $query = mysqli_query($conection, "SELECT id, id_caja, fecha_inicio, monto_inicial FROM arqueo_caja WHERE id = $id AND estatus = 1");
+        if (mysqli_num_rows($query) != 1) {
+            echo 4;
+            mysqli_rollback($conection);
             exit;
         }
 
-        // Consultar detalles del kardex (todas las salidas) con nombre de usuario
+        $data_caja = mysqli_fetch_assoc($query);
+        $id_cierre = $data_caja['id'];
+        $id_caja = $data_caja['id_caja'];
+        $fecha_inicio = $data_caja['fecha_inicio'];
+        $fecha_fin = date('Y-m-d G:i:s');
+
+        // Recopilar datos del formulario
+        $monto_final = isset($_POST['monto_final']) && $_POST['monto_final'] !== '' ? $_POST['monto_final'] : 0;
+        $total_ventas = isset($_POST['total_ventas']) && $_POST['total_ventas'] !== '' ? $_POST['total_ventas'] : 0;
+        $total_cash = isset($_POST['total_cash']) && $_POST['total_cash'] !== '' ? $_POST['total_cash'] : 0;
+        $total_salidas = isset($_POST['total_salidas']) && $_POST['total_salidas'] !== '' ? $_POST['total_salidas'] : 0;
+        $efectivo = isset($_POST['monto_efectivo']) && $_POST['monto_efectivo'] !== '' ? $_POST['monto_efectivo'] : 0;
+        $transferencia = isset($_POST['monto_transferencia']) && $_POST['monto_transferencia'] !== '' ? $_POST['monto_transferencia'] : 0;
+        $deuna = isset($_POST['monto_deuna']) && $_POST['monto_deuna'] !== '' ? $_POST['monto_deuna'] : 0;
+        $tarjeta = isset($_POST['monto_tarjeta']) && $_POST['monto_tarjeta'] !== '' ? $_POST['monto_tarjeta'] : 0;
+
+        // Obtener los valores de los empleados y sumar
+        $salarios = 0;
+        $salarios += isset($_POST['empleado_1']) && $_POST['empleado_1'] !== '' ? (float) $_POST['empleado_1'] : 0;
+        $salarios += isset($_POST['empleado_2']) && $_POST['empleado_2'] !== '' ? (float) $_POST['empleado_2'] : 0;
+        $salarios += isset($_POST['empleado_3']) && $_POST['empleado_3'] !== '' ? (float) $_POST['empleado_3'] : 0;
+
+        // Actualizar el arqueo de caja
+        $query_update_2 = mysqli_query($conection, "UPDATE arqueo_caja SET fecha_fin = '$fecha_fin', monto_final = '$monto_final', total_ventas = '$total_ventas', total_cash = '$total_cash', efectivo = '$efectivo', transferencia = '$transferencia', deuna = '$deuna', tarjeta = '$tarjeta', salida = '$total_salidas', salarios = '$salarios', estatus = 2 WHERE id = $id");
+
+        if ($query_update_2) {
+            // Actualizar el estado de la caja
+            $query_update_3 = mysqli_query($conection, "UPDATE cajas SET estatus = 2 WHERE id = $id_caja");
+            if (!$query_update_3) {
+                echo 3;
+                mysqli_rollback($conection);
+                exit;
+            }
+
+            // Actualizar facturas relacionadas
+            $query_update_4 = mysqli_query($conection, "UPDATE factura SET id_cierre = $id_cierre, estatus = 4 WHERE caja = $id_caja AND estatus = 1 AND fecha BETWEEN '$fecha_inicio' AND '$fecha_fin'");
+            if (!$query_update_4) {
+                echo 3;
+                mysqli_rollback($conection);
+                exit;
+            }
+
+            // Confirmar la transacción
+            mysqli_commit($conection);
+            
+            // Consultar detalles del kardex (todas las salidas) con nombre de usuario
         $salidas = [];
         $query_kardex = mysqli_query($conection, "
             SELECT k.id AS id_salida, k.valor, k.tipo_moneda, k.id_usuario, p.nombres AS nombre_usuario, k.motivo
@@ -2283,8 +2302,10 @@ if ($_POST['action'] == 'cerrarCaja') {
             JOIN personas p ON k.id_usuario = p.id
             WHERE k.fecha BETWEEN '$fecha_inicio' AND '$fecha_fin'
         ");
-        while ($row = mysqli_fetch_assoc($query_kardex)) {
-            $salidas[] = $row;
+        if (mysqli_num_rows($query_kardex) > 0) {
+            while ($row = mysqli_fetch_assoc($query_kardex)) {
+                $salidas[] = $row;
+            }
         }
 
         // Preparar datos para imprimir el cierre de caja
@@ -2303,7 +2324,7 @@ if ($_POST['action'] == 'cerrarCaja') {
             'transferencia' => $transferencia,
             'tarjeta' => $tarjeta,
             'deuna' => $deuna,
-            'total_salidas' => $total_salidas,
+            'total_movimientos' => $total_salidas,
             'salidas' => $salidas // Añadir todas las salidas para la impresión
         ];
 
@@ -2315,11 +2336,19 @@ if ($_POST['action'] == 'cerrarCaja') {
             echo 3;
             exit;
         }
-    } else {
+
+        } else {
+            echo 3;
+            mysqli_rollback($conection);
+            exit;
+        }
+    } catch (Exception $e) {
+        mysqli_rollback($conection);
         echo 3;
         exit;
     }
 }
+
 
 if($_POST['action'] == 'verCierreCaja'){
 

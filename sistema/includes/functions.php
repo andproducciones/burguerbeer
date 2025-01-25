@@ -500,7 +500,7 @@ function imprimirCierreCaja($data) {
         $transferencia      = $data['transferencia'];
         $tarjeta            = $data['tarjeta']; 
         $deuna              = $data['deuna'];
-        $total_salidas      = $data['total_salidas'];
+        $total_salidas      = $data['total_movimientos'];
         $salidas            = $data['salidas']; // Array con las salidas detalladas
 
         // Calcular el total de ventas del sistema (Monto inicial + total en efectivo)
@@ -548,7 +548,7 @@ function imprimirCierreCaja($data) {
             $id_usuario = $salida['id_usuario'];
             $motivo = $salida['motivo'];
             $valor = $salida['valor'];
-            $printer->text("Usuario: $id_usuario - Motivo: $motivo - Monto: $ $valor\n");
+            $printer->text("$id_usuario - $motivo - $ $valor\n");
         }
         $printer->setEmphasis(true);
         $printer->text("Total Salidas: $ $total_salidas\n");
