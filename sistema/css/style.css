@@ -1194,13 +1194,14 @@ display: flex;
 
 
 .cierreCaja {
-  width: 80% !important;
-  height: 80%;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 20px; /* Añadir espacio alrededor del formulario */
+	width: 80% !important;
+    height: 90%;
+    overflow: auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 20px;
 }
 
 .arqueo-container, .montos-container {

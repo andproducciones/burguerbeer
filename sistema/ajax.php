@@ -238,7 +238,7 @@ if ($_POST['action'] == 'addProductoDetalle') {
 				while($data = mysqli_fetch_assoc($query)){
 
 
-					$detalleTabla .= '<div class="producto">
+					$detalleTabla .= '<div class="producto productoG">
 					<button type="button" class="btn1"  onclick="addproduct('.$data['codproducto'].')">
 					<img src="img/productos/'. $data['foto'].'">
 					<p>'. $data['producto'].'</p>
@@ -271,7 +271,7 @@ if ($_POST['action'] == 'addProductoDetalle') {
 			while($data = mysqli_fetch_assoc($query)){
 
 
-				$detalleTabla .= '<div class="producto">
+				$detalleTabla .= '<div class="producto productoG">
 				<button type="button" class="btn1"  onclick="addproduct('.$data['codproducto'].')">
 				<img src="img/productos/'. $data['foto'].'">
 				<p>'. $data['producto'].'</p>
@@ -1884,40 +1884,57 @@ if ($_POST['action'] == 'abrirCaja') {
     $id_usuario = $_SESSION['idUser'];
     $salida = 0; // Asignar un valor inicial para 'salida'
 
-    // Verificar que la caja esté cerrada (estatus = 2)
-    $query = mysqli_query($conection, "SELECT * FROM cajas WHERE id = $id_caja AND estatus = 2");
-    if (mysqli_num_rows($query) != 1) {
-        echo 4; // La caja no está disponible para abrir
-        exit;
-    }
+    // Iniciar transacción
+    mysqli_begin_transaction($conection, MYSQLI_TRANS_START_READ_WRITE);
 
-    // Verificar que el usuario no tenga otra caja abierta (estatus = 1)
-    $query_2 = mysqli_query($conection, "SELECT * FROM arqueo_caja WHERE id_usuario = $id_usuario AND estatus = 1");
-    if (mysqli_num_rows($query_2) > 0) {
-        echo 5; // El usuario ya tiene una caja abierta
-        exit;
-    }
-
-    // Abrir la caja
-    $fecha_inicio = date('Y-m-d G:i:s');
-    $query_insert = mysqli_query($conection, "INSERT INTO arqueo_caja(id_caja, id_usuario, fecha_inicio, monto_inicial, salida) VALUES('$id_caja', '$id_usuario', '$fecha_inicio', '$monto_inicial', '$salida')");
-
-    if ($query_insert) {
-        // Actualizar el estatus de la caja a abierta (estatus = 1)
-        $query_update = mysqli_query($conection, "UPDATE cajas SET estatus = 1 WHERE id = $id_caja");
-
-        if ($query_update) {
-            echo 'Ok'; // Caja abierta correctamente
-            exit;
-        } else {
-            echo 3; // Error al actualizar la caja
+    try {
+        // Verificar que la caja esté cerrada (estatus = 2)
+        $query = mysqli_query($conection, "SELECT * FROM cajas WHERE id = $id_caja AND estatus = 2");
+        if (mysqli_num_rows($query) != 1) {
+            echo 4; // La caja no está disponible para abrir
+            mysqli_rollback($conection); // Revertir la transacción
             exit;
         }
-    } else {
-        echo 3; // Error al insertar el arqueo de caja
+
+        // Verificar que el usuario no tenga otra caja abierta (estatus = 1)
+        $query_2 = mysqli_query($conection, "SELECT * FROM arqueo_caja WHERE id_usuario = $id_usuario AND estatus = 1");
+        if (mysqli_num_rows($query_2) > 0) {
+            echo 5; // El usuario ya tiene una caja abierta
+            mysqli_rollback($conection); // Revertir la transacción
+            exit;
+        }
+
+        // Abrir la caja
+        $fecha_inicio = date('Y-m-d G:i:s');
+        $query_insert = mysqli_query($conection, "INSERT INTO arqueo_caja(id_caja, id_usuario, fecha_inicio, monto_inicial, salida) VALUES('$id_caja', '$id_usuario', '$fecha_inicio', '$monto_inicial', '$salida')");
+        if (!$query_insert) {
+            echo 3; // Error al insertar el arqueo de caja
+            mysqli_rollback($conection); // Revertir la transacción
+            exit;
+        }
+
+        // Actualizar el estatus de la caja a abierta (estatus = 1)
+        $query_update = mysqli_query($conection, "UPDATE cajas SET estatus = 1 WHERE id = $id_caja");
+        if (!$query_update) {
+            echo 3; // Error al actualizar la caja
+            mysqli_rollback($conection); // Revertir la transacción
+            exit;
+        }
+
+        // Confirmar la transacción
+        mysqli_commit($conection);
+        echo 'Ok'; // Caja abierta correctamente
+        exit;
+
+    } catch (Exception $e) {
+        // Revertir la transacción en caso de error
+        mysqli_rollback($conection);
+        echo 3; // Mensaje genérico para error inesperado
         exit;
     }
 }
+
+
 
 
 if ($_POST['action'] == 'formCerrarCaja') {
@@ -1936,86 +1953,154 @@ if ($_POST['action'] == 'formCerrarCaja') {
         // Consultar ventas agrupadas por tipo de pago
         $query_ventas = mysqli_query($conection, "SELECT tipopago, SUM(totalfactura) AS totalMonto, COUNT(totalfactura) AS totalVentas FROM factura WHERE caja = $id_caja AND estatus = 1 AND fecha BETWEEN '$fecha_inicio' AND '$fecha_fin' GROUP BY tipopago");
 
-        $montoFinal = 0;
-        $ventasFinal = 0;
-        $inputs = '';
+// Inicializar variables para totales por tipo de pago
+$montoEfectivo = 0;
+$montoTarjeta = 0;
+$montoTransferencia = 0;
+$montoDeUna = 0;
 
-        while ($data_ventas = mysqli_fetch_assoc($query_ventas)) {
-            switch ($data_ventas['tipopago']) {
-                case 1:
-                    $titulo = 'en Efectivo';
-                    break;
-                case 2:
-                    $titulo = 'con Tarjeta';
-                    break;
-                case 3:
-                    $titulo = 'con Transferencia';
-                    break;
-                case 4:
-                    $titulo = 'con DeUna';
-                    break;
-                default:
-                    $titulo = 'Error';
-                    break;
-            }
+// Variables globales
+$montoFinal = 0;
+$ventasFinal = 0;
 
-            $inputs .= '
-                <div class="caja_valores">
-                    <span>Ventas ' . $titulo . '</span>
-                    <span>' . $data_ventas['totalVentas'] . '</span>
-                </div>
-                <div class="caja_valores">
-                    <span>Monto </span>
-                    <span>$ ' . number_format($data_ventas['totalMonto'], 2) . '</span>
-                </div>';
+// Contenedor para los inputs HTML
+$inputs = '';
+if(mysqli_num_rows($query_ventas) > 0){
 
-            $montoFinal += $data_ventas['totalMonto'];
-            $ventasFinal += $data_ventas['totalVentas'];
-        }
+while ($data_ventas = mysqli_fetch_assoc($query_ventas)) {
+    // Calcular montos individuales según el tipo de pago
+    switch ($data_ventas['tipopago']) {
+        case 1:
+            $titulo = 'en Efectivo';
+            $montoEfectivo += $data_ventas['totalMonto'];
+            break;
+        case 2:
+            $titulo = 'con Tarjeta';
+            $montoTarjeta += $data_ventas['totalMonto'];
+            break;
+        case 3:
+            $titulo = 'con Transferencia';
+            $montoTransferencia += $data_ventas['totalMonto'];
+            break;
+        case 4:
+            $titulo = 'con DeUna';
+            $montoDeUna += $data_ventas['totalMonto'];
+            break;
+        default:
+            $titulo = 'Error';
+            break;
+    }
+
+    // Generar el HTML correspondiente
+    $inputs .= '
+        <div class="caja_valores">
+            <span>Ventas ' . $titulo . '</span>
+            <span>' . $data_ventas['totalVentas'] . '</span>
+        </div>
+        <div class="caja_valores">
+            <span>Monto </span>
+            <span>$ ' . number_format($data_ventas['totalMonto'], 2) . '</span>
+        </div>';
+
+    // Acumular totales globales
+    $montoFinal += $data_ventas['totalMonto'];
+    $ventasFinal += $data_ventas['totalVentas'];
+}
+
+$inputs .= '<div class="caja_valores">
+                            <span>Total Ventas</span>
+                            <span>$ ' . number_format($montoFinal, 2) . '</span>
+                        </div>
+';
+
+}else{
+    $inputs = '<div class="caja_valores"><span>No hay ventas</span>
+        </div>';
+}
 
         $inicial = $data['monto_inicial'];
 
-        // Consultar salidas de dinero con nombre del usuario
-        $query_salidas = mysqli_query($conection, "SELECT k.id, k.id_usuario, k.valor, k.motivo, p.nombres AS nombre_usuario FROM kardex k JOIN personas p ON k.id_usuario = p.id WHERE k.id_user = '$user' AND k.fecha BETWEEN '$fecha_inicio' AND '$fecha_fin'");
-        
-        $totalSalidas = 0;
-        $salidasHTML = '';
+// Inicializar variables para salidas y entradas por tipo de moneda
+$entradasEfectivo = 0;
+$entradasTransferencia = 0;
+$salidasEfectivo = 0;
+$salidasTransferencia = 0;
 
-        if (mysqli_num_rows($query_salidas) > 0) {
-            $salidasHTML .= '
-                <div class="caja_valores">
-                    <span>Nombre</span>
-                    <span>Motivo</span>
-                    <span>Monto</span>
-                </div>';
+$totalSalidas = 0; // Inicializar
+$entregar = 0; // Inicializar
 
-            while ($data_salidas = mysqli_fetch_assoc($query_salidas)) {
-                $salidasHTML .= '
-                    <div class="caja_valores">
-                        <span>' . $data_salidas['nombre_usuario'] . '</span>
-                        <span>' . $data_salidas['motivo'] . '</span>
-                        <span>$ ' . number_format($data_salidas['valor'], 2) . '</span>
-                    </div>';
-                $totalSalidas += $data_salidas['valor'];
+$query_salidas = mysqli_query($conection, "SELECT k.id, k.id_usuario, k.valor, k.tipo_transaccion, k.motivo, k.tipo_moneda, p.nombres AS nombre_usuario FROM kardex k JOIN personas p ON k.id_usuario = p.id WHERE k.id_user = '$user' AND k.fecha BETWEEN '$fecha_inicio' AND '$fecha_fin' ORDER BY k.tipo_transaccion");
+
+$salidasHTML = '';
+
+if (mysqli_num_rows($query_salidas) > 0) {
+    $salidasHTML .= '
+        <div class="caja_valores">
+            <span>Nombre</span>
+            <span>Motivo</span>
+            <span>Monto</span>
+        </div>';
+
+    while ($data_salidas = mysqli_fetch_assoc($query_salidas)) {
+        $signo = '';
+        $estilo = ''; // Clase de estilo para color
+
+        if ($data_salidas['tipo_transaccion'] == 1) { // Salida
+            $signo = '-';
+            $estilo = 'style="color: red;"';
+            if ($data_salidas['tipo_moneda'] == 1) { // Efectivo
+                $salidasEfectivo += $data_salidas['valor'];
+            } elseif ($data_salidas['tipo_moneda'] == 2) { // Transferencia
+                $salidasTransferencia += $data_salidas['valor'];
             }
-
-            $salidasHTML .= '
-                <div class="caja_valores">
-                    <span>Total Salidas</span>
-                    <span>$ ' . number_format($totalSalidas, 2) . '</span>
-                </div>';
+        } elseif ($data_salidas['tipo_transaccion'] == 2) { // Entrada
+            if ($data_salidas['tipo_moneda'] == 1) { // Efectivo
+                $entradasEfectivo += $data_salidas['valor'];
+            } elseif ($data_salidas['tipo_moneda'] == 2) { // Transferencia
+                $entradasTransferencia += $data_salidas['valor'];
+            }
         }
 
+        $salidasHTML .= '
+            <div class="caja_valores">
+                <span>' . $data_salidas['nombre_usuario'] . '</span>
+                <span>' . $data_salidas['motivo'] . '</span>
+                <span ' . $estilo . '>' . $signo . '$ ' . number_format($data_salidas['valor'], 2) . '</span>
+            </div>';
+    }
+
+    $salidasHTML .= '<hr>
+        <div class="caja_valores">
+            <span>Total Movimientos en Efectivo</span>
+            <span>$ ' . number_format($entradasEfectivo - $salidasEfectivo, 2) .'</span>
+        </div>
+        <div class="caja_valores">
+            <span>Total Movimientos en Transferencia</span>
+            <span>$ ' . number_format($entradasTransferencia - $salidasTransferencia, 2) .'</span>
+        </div>';
+} else {
+    $salidasHTML .= '
+        <div class="caja_valores">
+            <span>No hay Movimientos</span>
+        </div>';
+}
+
         // Calcular el monto final a entregar
-        $entregar = ($inicial + $montoFinal) - $totalSalidas;
+        $totalSalidas = $entradasEfectivo - $salidasEfectivo + $entradasTransferencia - $salidasTransferencia;
+        $entregar = ($inicial + $montoFinal) + $totalSalidas;
+
+        $totalFinalEfectivoEntregar = $montoEfectivo + $inicial + $entradasEfectivo - $salidasEfectivo;
+
+        $totalFinalTransferenciaEntregar = $montoTransferencia + $entradasTransferencia - $salidasTransferencia;
+        
 
         // Generar el HTML del formulario
         echo '
-        <div class="scroll">
-            <div class="">
+        
+            
                 <form action="" method="post" name="form_add_product" class="cierreCaja" id="form_add_product" onsubmit="event.preventDefault(); sendDataForm();">
                     <div class="wd100">
-                        <h1><i class="fas fa-cash-register fa-2x"></i><br>Cerrar Caja</h1>
+                        <h1><i class="fas fa-cash-register fa-3x"></i><br><br>Cerrar Caja</h1>
                     </div>
 
                     <div class="wd60">
@@ -2025,13 +2110,10 @@ if ($_POST['action'] == 'formCerrarCaja') {
                         <h3>Ventas Realizadas</h3>
                         <hr>
                         ' . $inputs . '
-                        <div class="caja_valores">
-                            <span>Total Ventas</span>
-                            <span>$ ' . number_format($montoFinal, 2) . '</span>
-                        </div>
+                        
                         <hr>
 
-                        <h3>Salidas de Dinero</h3>
+                        <h3>Movimientos de Caja</h3>
                         <hr>
                         ' . $salidasHTML . '
                         <hr>
@@ -2051,19 +2133,39 @@ if ($_POST['action'] == 'formCerrarCaja') {
                         </div>
                         
                         <div class="caja_valores">
-                            <span>Total Salidas</span>
+                            <span>Total Movimientos</span>
                             <span>$ ' . number_format($totalSalidas, 2) . '</span>
                         </div>
                         <hr>
                         
                         <div class="caja_valores total-entregar">
-                            <h2>MONTO TOTAL A ENTREGAR</h2>
+                            <h2>CIERRE DE CAJA DEL DIA</h2>
                             <h2>$ ' . number_format($entregar, 2) . '</h2>
                         </div>
                     </div>
 
-                    <div class="wd35">
-                        <h2>MONTOS A ENTREGAR</h2>
+                    <div class="wd30">
+                        <h2>MONTOS POR ENTREGAR</h2>
+                    <div class="caja_valores">
+                    <span>Efectivo </span>
+                    <span>$'.number_format($totalFinalEfectivoEntregar, 2).' </span>
+                    </div>
+                    <div class="caja_valores">
+                    <span>Tarjeta </span>
+                    <span>$'.number_format($montoTarjeta, 2).' </span>
+                    </div>
+
+                    <div class="caja_valores">
+                    <span>Transferencia </span>
+                    <span>$'.number_format($totalFinalTransferenciaEntregar, 2).'</span>
+                    </div>
+
+                    <div class="caja_valores">
+                    <span>DeUna </span>
+                    <span>$'.number_format($montoDeUna, 2).' </span>
+                    </div>
+
+                    <h2>MONTOS ENTREGADOS</h2>
                         <label for="monto_efectivo">Efectivo</label>
                         <input type="number" step="0.01" name="monto_efectivo" id="monto_efectivo" onkeyup="calcular();">
 
@@ -2078,7 +2180,30 @@ if ($_POST['action'] == 'formCerrarCaja') {
 
                         <label for="monto_final">Entrega Total</label>
                         <input type="number" step="0.01" name="monto_final" id="monto_final" disabled>
-                    </div>
+                 <br>
+                        <h3>Pagos al Personal</h3>
+                        <div class="caja_valores">
+                            <div class="empleado">
+                                <label for="empleado_1">
+                                    Trabajador 1
+                                    <input type="number" name="empleado_1" id="empleado_1">
+                                </label>
+                            </div>
+                            <div class="empleado">
+                                <label for="empleado_cristina">
+                                    Trabajador 2
+                                    <input type="number" name="empleado_2" id="empleado_cristina">
+                                </label>
+                            </div>
+                            <div class="empleado">
+                                <label for="empleado_patricia">
+                                    Trabajador 3
+                                    <input type="number" name="empleado_3" id="empleado_patricia">
+                                </label>
+                            </div>
+                        </div>
+
+                        </div>
 
                     <input type="hidden" name="action" value="cerrarCaja">
                     <input type="hidden" name="co" value="' . $id . '">
@@ -2092,8 +2217,8 @@ if ($_POST['action'] == 'formCerrarCaja') {
                         <a href="#" class="btn_ok closeModal" onclick="closeModal2();"><i class="fas fa-ban"></i> Cerrar</a>
                     </div>
                 </form>
-            </div>
-        </div>';
+            
+        ';
     }
 }
 
@@ -2683,16 +2808,23 @@ if($_POST['action'] == 'formSalidaDinero'){
 					}
 	
 	echo '<div><form action="" method="post" name="form_add_product" id="form_add_product" onsubmit="event.preventDefault(); sendDataForm();">
-					<h1><i class="fas fa-cash-register fa-3x"></i><br><br>Salida Dinero</h1>
+					<h1><i class="fas fa-cash-register fa-3x"></i><br><br>Entada / Salida Dinero</h1>
 					
-
-		<label for="nombre">Nombre</label>
-		<select name="nombre" id="nombre" class="notItemOne">
+        <label for="tipo">Tipo</label>
+		<select name="tipo" id="tipo" class="notItemOne wd100" style="width: 100% !important;">
+			<option value="">Seleccione</option>
+			<option value="2">Entrada</option>
+			<option value="1">Salida</option>
+		</select>
+		
+        
+        <label for="nombre">Nombre</label>
+		<select name="nombre" id="nombre" class="notItemOne wd100" style="width: 100% !important;">
 			<option value="">Seleccione</option>
 			'.$select.'
 		</select>
 		<label for="moneda">Tipo Moneda</label>
-		<select name="moneda" id="moneda" class="notItemOne">
+		<select name="moneda" id="moneda" class="notItemOne wd100" style="width: 100% !important;">
 			<option value="">Seleccione</option>
 			<option value="1">Efectivo</option>
 			<option value="2">Transferencia</option>
@@ -2716,7 +2848,7 @@ if($_POST['action'] == 'salidaDinero'){
 	//print_r($_FILES);
 	//exit;
 	
-		if(empty($_POST['nombre']) || empty($_POST['monto']) || empty($_POST['motivo']) || empty($_POST['moneda']))
+		if(empty($_POST['nombre']) || empty($_POST['monto']) || empty($_POST['motivo']) || empty($_POST['tipo']))
 		{
 			echo 1;
 			exit;
@@ -2727,7 +2859,7 @@ if($_POST['action'] == 'salidaDinero'){
 			$monto 					= $_POST['monto'];
 			$idCliente 				= $_POST['nombre'];
 			$moneda 				= $_POST['moneda'];
-			$transaccion 			= 1;
+			$transaccion 			= $_POST['tipo'];
 			$user 					= $_SESSION['idUser'];
 			$motivo 				= $_POST['motivo'];
 			$cantidad 				= 1;
@@ -2758,6 +2890,7 @@ if($_POST['action'] == 'salidaDinero'){
 			$data['monto']              = $monto;
 			$data['motivo']             = $motivo;
 			$data['moneda']        		= $moneda;
+            $data['tipo']        		= $transaccion;
 
 					//print_r($data);
 					//exit;

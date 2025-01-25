@@ -1209,6 +1209,7 @@ function selectCategorias(code) {
                     var info =JSON.parse(response);
                     console.log(info);
                     $('.categoriaProd').html(info.detalle);
+                    //setupProductSearch();
                     }else{
                         $('.categoriaProd').html('');
                  //console.log('no data');   
@@ -1303,6 +1304,11 @@ function handleResponse(response) {
         case '6':
             showAlert('error', 'Todas las cajas abiertas');
             break;
+        case 'Ok':
+            showSuccessAlert('Relizado Correctamente', 'Se ha relizado Correctamente', function() {
+                location.reload();
+            });
+            break;
         default:
             try {
                 var info = JSON.parse(response);
@@ -1311,6 +1317,7 @@ function handleResponse(response) {
                 });
                 resetForm(info);
             } catch (e) {
+                console.log(response);
                 console.error("Error al procesar la respuesta JSON:", e);
                 showAlert('error', 'Error inesperado');
             }

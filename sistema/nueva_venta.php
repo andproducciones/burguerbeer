@@ -227,7 +227,7 @@ if($result != 1){
 									<div class="gridBotones" id="accionesVenta">
 										
 										<button class="textcenter boton btn_new_cliente anadirForm" ac="formCliente" style="display: block;"><i class="fas fa-plus fa-2x"></i><br><br> Nuevo Cliente</button>
-										<button class="textcenter boton btn_new_cliente anadirForm" ac="formSalidaDinero" style="display: block;"><i class="fas fa-plus fa-2x"></i><br><br> Salida Dinero</button>
+										<button class="textcenter boton btn_new_cliente anadirForm" ac="formSalidaDinero" style="display: block;"><i class="fas fa-plus fa-2x"></i><br><br> Entrada / Salida Dinero</button>
 										<button class="textcenter boton rojo" id="btn_anular_venta" style="display: none;"><i class="fas fa-ban fa-2x"></i><br><br> Anular</button>
 										<button class="textcenter boton anadirForm verde" id="btn_facturar_venta_1"  ac="facturarVenta" style="display: none;"><i class="fas fa-cash-register fa-2x"></i><br><br> Facturar</button>
 										<button class="textcenter boton anadirForm amarillo imprimir_todo" style="display: none;" ac="formClienteComanda"><i class="fas fa-print fa-2x"></i><br><br> Preparar Orden</button>

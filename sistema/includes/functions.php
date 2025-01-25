@@ -596,6 +596,13 @@ function imprimirSalidaDinero($data){
         $monto              = $data['monto'];
         $motivo             = $data['motivo'];
         $moneda             = $data['moneda'];
+        $tipo               = $data['tipo'];
+
+        if($tipo == 2){
+            $tipoN = "ENTRADA";
+        }else {
+            $tipoN = "SALIDA";
+        }
 
         // Conectar con la impresora
         $connector = new WindowsPrintConnector($nombreImpresora);
@@ -606,7 +613,7 @@ function imprimirSalidaDinero($data){
         // Imprimir encabezado
         $printer->setEmphasis(true);
         $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->text("SALIDA DE DINERO\n");
+        $printer->text("$tipoN DE DINERO\n");
         $printer->setJustification(Printer::JUSTIFY_LEFT);
         $printer->setEmphasis(false);
         $printer->text("Fecha: $fecha\n");
