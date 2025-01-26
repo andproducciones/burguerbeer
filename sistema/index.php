@@ -11,7 +11,48 @@ if(($_SESSION['rol']) != 3)
 <head>
 	<meta charset="UTF-8">
 	<?php include "includes/scripts.php"; ?>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 	<title>Sisteme Ventas</title>
+
+	<style>
+		.dashboard-container {
+    margin-top: 10px;
+    padding: 15px;
+    max-width: 1200px;
+    background: #f9f9f9; /* Fondo claro opcional */
+
+ 
+}
+
+.section-title h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #333;
+    text-align: center;
+}
+
+.charts-row {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.chart-container {
+    flex: 1; /* Distribuir el espacio equitativamente */
+    max-width: 48%; /* Limitar el ancho al 48% para dos columnas */
+}
+
+canvas {
+    width: 100% !important; /* Hacer el canvas responsivo */
+    height: auto !important;
+    border: 1px solid #ddd; /* Borde opcional para separar gráficos */
+    border-radius: 8px; /* Bordes redondeados */
+    padding: 10px; /* Espacio interno para estética */
+    background: #fff; /* Fondo blanco */
+}
+
+	</style>
 </head>
 <body>
 
@@ -21,10 +62,22 @@ if(($_SESSION['rol']) != 3)
 
 	$query_dash =  mysqli_query($conection,"CALL dataDashboard();");
 	$result_das = mysqli_num_rows($query_dash);
+	//print($query_dash);
 	if($result_das > 0){
-		$data_dash = mysqli_fetch_assoc($query_dash);
-		mysqli_close($conection);
-		
+		  // Primer conjunto de resultados: Datos generales
+		  $data_dash = mysqli_fetch_assoc($query_dash);
+
+		  // Avanzar al siguiente conjunto de resultados
+		  mysqli_next_result($conection);
+	  
+		  // Segundo conjunto de resultados: Datos para gráficos
+		  $chartData = [];
+		  if ($result = mysqli_store_result($conection)) {
+			  while ($row = mysqli_fetch_assoc($result)) {
+				  $chartData[] = $row;
+			  }
+		  }
+		  mysqli_close($conection);
 	}
 	print_r ($data_dash);
 	?>
@@ -69,7 +122,29 @@ if(($_SESSION['rol']) != 3)
 				</p>
 			</a>
 		</div>
-		</div>		
+
+		<!-- Sección para los gráficos -->
+			<div class="dashboard-container">
+				<div class="section-title">
+					<h1>Estadistica</h1>
+				</div>
+
+				<div class="charts-row">
+					<div class="chart-container">
+						<canvas id="ventasChart"></canvas>
+					</div>
+					<div class="chart-container">
+						<canvas id="salariosChart"></canvas>
+					</div>
+				</div>
+			</div>
+
+            
+            
+        </div>
+
+
+	
 	
 	<div class="divInfoSistema">
 		<div>
@@ -118,12 +193,65 @@ if(($_SESSION['rol']) != 3)
 						
 		</div>
 	</div>
-	</div>
+
 	</section>
 
 <?php include "includes/footer.php"; ?>
 </body>
 </html>
+<script>
+        // Datos para los gráficos
+        const chartData = <?= json_encode($chartData); ?>;
+
+        // Extraer fechas, ventas y salarios
+        const labels = chartData.map(data => data.fecha);
+        const ventas = chartData.map(data => data.total_ventas);
+        const salarios = chartData.map(data => data.total_salarios);
+
+        // Configuración del gráfico de Ventas
+        new Chart(document.getElementById('ventasChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Ventas Diarias',
+                    data: ventas,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 1,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    title: { display: true, text: 'Ventas por Día' }
+                }
+            }
+        });
+
+        // Configuración del gráfico de Salarios
+        new Chart(document.getElementById('salariosChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Salarios',
+                    data: salarios,
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderWidth: 1,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    title: { display: true, text: 'Salarios' }
+                }
+            }
+        });
+    </script>
 
 <?php
 }else{

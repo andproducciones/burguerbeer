@@ -1762,7 +1762,7 @@ if($_POST['action'] == 'arqueoCajas'){
 			//print_r($_POST);exit;
 
 						$id = $_POST['co'];
-						$query = mysqli_query($conection,"SELECT a.id,u.nombre,u.apellido,a.fecha_inicio,a.fecha_fin,a.monto_inicial,a.monto_final,a.total_ventas,a.total_cash,a.estatus FROM arqueo_caja a INNER JOIN usuario u ON a.id_usuario = u.usuario WHERE a.id_caja = $id  ");
+						$query = mysqli_query($conection,"SELECT a.id,u.nombre,u.apellido,a.fecha_inicio,a.fecha_fin,a.monto_inicial,a.monto_final,a.total_ventas,a.total_cash,a.estatus FROM arqueo_caja a INNER JOIN usuario u ON a.id_usuario = u.usuario WHERE a.id_caja = $id ORDER BY a.id DESC LIMIT 10");
 						$result = mysqli_num_rows($query);
 						$data = '';
 
@@ -1777,7 +1777,7 @@ if($_POST['action'] == 'arqueoCajas'){
 									
 									
 									$estado = '<span class="pagada">Abierto</span>';
-									$boton  = '<button type="button" class="btn_anular" onclick="anadirForm2('.$action.','.$data['id'].');"><i class="fas fa-plus"></i></button>';
+									$boton  = '<button type="button" class="btn_view" onclick="anadirForm2('.$action.','.$data['id'].');"><i class="fas fa-eye"></i></button>';
 
 									}else{
 									
@@ -1796,7 +1796,7 @@ if($_POST['action'] == 'arqueoCajas'){
 									<td class="textcenter">'.$data['total_ventas'].'</td>
 									<td class="textcenter">$ '.$data['total_cash'].'</td>
 									<td class="textcenter">'.$estado.'</td>
-									<td class="textcenter">'.$boton.'<button type="button" class="btn_view" onclick="anadirForm2('.$action2.','.$data['id'].');"><i class="fas fa-eye"></i></button></td>
+									<td class="textcenter">'.$boton.'<button type="button" class="btn_lista" onclick="anadirForm2('.$action2.','.$data['id'].');"><i class="fas fa-list"></i></button></td>
 									</tr>';
 							}
 							}else{
