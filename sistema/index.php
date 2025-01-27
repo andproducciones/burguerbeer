@@ -12,6 +12,7 @@ if(($_SESSION['rol']) != 3)
 	<meta charset="UTF-8">
 	<?php include "includes/scripts.php"; ?>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
 	<title>Sisteme Ventas</title>
 
 	<style>
@@ -235,58 +236,100 @@ canvas {
 </body>
 </html>
 <script>
-        // Datos para los gráficos
-        const chartData = <?= json_encode($chartData); ?>;
+    // Datos para los gráficos
+    const chartData = <?= json_encode($chartData); ?>;
 
-        // Extraer fechas, ventas y salarios
-        const labels = chartData.map(data => data.fecha);
-        const ventas = chartData.map(data => data.total_ventas);
-        const salarios = chartData.map(data => data.total_salarios);
+    // Extraer fechas, ventas y salarios
+    const labels = chartData.map(data => data.fecha);
+    const ventas = chartData.map(data => data.total_ventas);
+    const salarios = chartData.map(data => data.total_salarios);
 
-        // Configuración del gráfico de Ventas
-        new Chart(document.getElementById('ventasChart'), {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Ventas Diarias',
-                    data: ventas,
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderWidth: 1,
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'top' },
-                    title: { display: true, text: 'Ventas por Día' }
+    // Calcular promedios
+    const promedioVentas = ventas.reduce((a, b) => a + b, 0) / ventas.length;
+    const promedioSalarios = salarios.reduce((a, b) => a + b, 0) / salarios.length;
+
+    // Configuración del gráfico de Ventas
+    new Chart(document.getElementById('ventasChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Ventas Diarias',
+                data: ventas,
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderWidth: 1,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top' },
+                title: { display: true, text: 'Ventas por Día' },
+                annotation: {
+                    annotations: {
+                        promedioLine: {
+                            type: 'line',
+                            yMin: promedioVentas,
+                            yMax: promedioVentas,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2,
+                            label: {
+                                content: `Promedio: ${promedioVentas.toFixed(2)}`,
+                                enabled: true,
+                                position: 'end',
+                                backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                                color: '#fff',
+                                padding: 6
+                            }
+                        }
+                    }
                 }
             }
-        });
+        }
+    });
 
-        // Configuración del gráfico de Salarios
-        new Chart(document.getElementById('salariosChart'), {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Salarios',
-                    data: salarios,
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    borderWidth: 1,
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'top' },
-                    title: { display: true, text: 'Salarios' }
+    // Configuración del gráfico de Salarios
+    new Chart(document.getElementById('salariosChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Salarios',
+                data: salarios,
+                borderColor: 'rgba(255, 99, 132, 1)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderWidth: 1,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top' },
+                title: { display: true, text: 'Salarios' },
+                annotation: {
+                    annotations: {
+                        promedioLine: {
+                            type: 'line',
+                            yMin: promedioSalarios,
+                            yMax: promedioSalarios,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 2,
+                            label: {
+                                content: `Promedio: ${promedioSalarios.toFixed(2)}`,
+                                enabled: true,
+                                position: 'end',
+                                backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                                color: '#fff',
+                                padding: 6
+                            }
+                        }
+                    }
                 }
             }
-        });
-    </script>
+        }
+    });
+</script>
 
 <?php
 }else{
