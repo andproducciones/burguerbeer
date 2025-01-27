@@ -18,7 +18,7 @@ if(($_SESSION['rol']) != 3)
 		.dashboard-container {
     margin-top: 10px;
     padding: 15px;
-    max-width: 1200px;
+     
     background: #f9f9f9; /* Fondo claro opcional */
 
  
@@ -77,6 +77,17 @@ canvas {
 				  $chartData[] = $row;
 			  }
 		  }
+
+		  // Avanzar al tercer conjunto de resultados
+		  mysqli_next_result($conection);
+
+		  // Tercer conjunto de resultados: Productos más vendidos
+		  $productos_mas_vendidos = [];
+		  if ($result = mysqli_store_result($conection)) {
+			  while ($row = mysqli_fetch_assoc($result)) {
+				  $productos_mas_vendidos[] = $row;
+			  }
+		  }
 		  mysqli_close($conection);
 	}
 	print_r ($data_dash);
@@ -125,8 +136,8 @@ canvas {
 
 		<!-- Sección para los gráficos -->
 			<div class="dashboard-container">
-				<div class="section-title">
-					<h1>Estadistica</h1>
+				<div class="">
+					<h1 class="titlePanelControl">Estadistica</h1>
 				</div>
 
 				<div class="charts-row">
@@ -136,12 +147,36 @@ canvas {
 					<div class="chart-container">
 						<canvas id="salariosChart"></canvas>
 					</div>
+					<div class="divContainer">
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Productos</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                    $rank = 1;
+                    foreach ($productos_mas_vendidos as $producto) { ?>
+                        <tr>
+                            <td><?= $rank++; ?></td>
+                            <td><?= $producto['nombre_producto']; ?></td>
+                            <td><?= $producto['total_vendidos']; ?></td>
+                        </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
 				</div>
 			</div>
 
             
             
         </div>
+
+		
 
 
 	
