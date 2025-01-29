@@ -88,9 +88,27 @@ if($result != 1){
 
 										if($result > 0){
 											while($data = mysqli_fetch_assoc($query)){
+
+												$mesaId = $data['id'];
+
+												// Consulta para verificar si la mesa tiene productos en detalle_temp
+												$queryProductos = mysqli_query($conection, "
+													SELECT COUNT(*) as total_productos 
+													FROM detalle_temp 
+													WHERE mesa = $mesaId
+												");
+												$productos = mysqli_fetch_assoc($queryProductos);
+										
+												// Determinar si la mesa tiene productos
+												$tieneProductos = ($productos['total_productos'] > 0) ? true : false;
+												
 												?>
 												
-												<option value="<?= $data['id']; ?>"><?= $data['numero']; ?></option>
+												<option value="<?= $data['id']; ?>"><?= $data['numero']; ?>
+												<?php if ($tieneProductos): ?>
+													<span style="color: red; font-size: 14px;">●</span>
+												<?php endif; ?>
+											</option>
 												
 											<?php }} ?>
 								</select>
