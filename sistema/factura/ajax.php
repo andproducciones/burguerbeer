@@ -6,7 +6,8 @@
 if(!empty($_POST)){
 
 	include "../../conexion.php";
-	include "../includes/functions.php";
+	include_once __DIR__ . '/../includes/functions.php';
+
 
 	if($_POST['action'] == 'imprimirPrecuenta2'){
 
