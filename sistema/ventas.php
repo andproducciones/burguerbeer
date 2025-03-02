@@ -47,7 +47,7 @@ include '../conexion.php';
 				ON f.usuario = u.usuario 
 				INNER JOIN clientes cl 
 				ON f.codcliente = cl.usuario 
-				WHERE f.estatus !=10 
+				WHERE f.estatus !=4 
 				ORDER BY f.fecha DESC ");			
 			
 			mysqli_close($conection);
