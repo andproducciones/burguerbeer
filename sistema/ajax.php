@@ -2233,7 +2233,7 @@ if ($_POST['action'] == 'cerrarCaja') {
     mysqli_begin_transaction($conection, MYSQLI_TRANS_START_READ_WRITE);
 
     try {
-        if (empty($_POST['co']) || empty($_POST['monto_final'])) {
+        if (empty($_POST['co']) || empty($_POST['monto_final']) || empty($_POST['empleado_1'])) {
             echo 1;
             exit;
         }
@@ -2417,12 +2417,6 @@ if($_POST['action'] == 'verCierreCaja'){
 			           
 		           		  ';
 }
-
-
-
-
-
-
 
 
 

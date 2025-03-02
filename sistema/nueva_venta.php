@@ -35,7 +35,7 @@ if($result != 1){
 	<meta charset="utf-8">
 	<?php include "includes/scripts.php"; ?>
 	<style>nav{ display:none} #container{padding: 50px 15px 15px;}</style>
-	<title></title>
+	<title>Caja</title>
 </head>
 <body>
 	<?php include "includes/header.php"; ?>

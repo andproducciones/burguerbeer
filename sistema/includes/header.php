@@ -13,7 +13,7 @@ if(empty($_SESSION['active']))
 			<div class="optionsBar">
 				<p class="fecha">Ecuador, <?php echo fechaC(); ?></p>
 				<span class="fecha">|</span>
-				<span class="user"><?php echo $_SESSION['nombre']." ".$_SESSION['apellido']." -".$_SESSION['rol']; ?></span>
+				<span class="user"><?php echo $_SESSION['nombre']." ".$_SESSION['apellido']." - ".$_SESSION['rol_name']; ?></span>
 				<img class="photouser" src="img/user.png" alt="Usuario">
 				<a href="salir.php" class="optionsBarSalir"><img class="close" src="img/salir.png" alt="Salir del Sistema" title="Salir"></a>
 			</div> 

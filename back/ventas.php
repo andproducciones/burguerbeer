@@ -293,23 +293,28 @@ switch ($post['accion']) {
                         $data2 = [];
                 
                         if ($result_detalle > 0) {
-                            while ($row = mysqli_fetch_assoc($query_productos)) {
-                                $producto = [
-                                    'producto' => htmlspecialchars($row['producto'], ENT_QUOTES, 'UTF-8'),
-                                    'cantidad' => intval($row['cantidad']),
-                                    'observaciones' => ''
-                                ];
-                
-                                // Procesamos las observaciones si están presentes
-                                if (!empty($row['observaciones'])) {
-                                    $array = json_decode($row['observaciones'], true);
-                                    if (is_array($array)) {
-                                        $producto['observaciones'] = implode(', ', array_map('htmlspecialchars', $array));
+
+                            while ($row = mysqli_fetch_assoc($query_productos)) { 
+                                    // Añadimos producto y cantidad a $data2
+                                    $data2[] = $row['producto'];
+                                    $data2[] = $row['cantidad'];
+
+                                    // Procesamos las observaciones si están presentes
+                                    if (!empty($row['observaciones'])) {
+                                        $array = json_decode($row['observaciones'], true); // JSON ya se decodifica en un array asociativo
+                                        if (is_array($array)) {
+                                            $seleccionado = implode(', ', $array); // Convierte el array en una cadena con ", " como separador
+                                        } else {
+                                            $seleccionado = ''; // En caso de error en el formato JSON, dejamos vacío
+                                        }
+                                        $data2[] = $seleccionado;
+                                    } else {
+                                        $data2[] = ''; // Si no hay observaciones, añadimos un valor vacío
                                     }
                                 }
-                
-                                $data2[] = $producto;
-                            }
+                            
+
+
                         } else {
                             throw new Exception("Error: No hay productos para generar el ticket");
                         }
@@ -319,10 +324,10 @@ switch ($post['accion']) {
                         $nombreMesero = htmlspecialchars($post['nombre_mesero'] . ' ' . $post['apellido_mesero'], ENT_QUOTES, 'UTF-8');
                 
                         // Enviar a impresión
-                        //$imprimir = imprimirComanda($mesa2, $nombreCliente, $nombreMesero, $data2, $fecha);
-                        //if (!$imprimir) {
-                            //throw new Exception("Error: No se pudo imprimir la comanda");
-                        //}
+                        $imprimir = imprimirComanda($mesa2, $nombreCliente, $nombreMesero, $data2, $fecha);
+                        if (!$imprimir) {
+                            throw new Exception("Error: No se pudo imprimir la comanda");
+                        }
                 
                         // Confirmar la transacción
                         mysqli_commit($conection);
