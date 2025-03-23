@@ -78,7 +78,7 @@ if($result != 1){
 								
 								<input type="text" name="ap_cliente" id="correo" placeholder="Correo" disabled required>
 							</div>
-							<div class="wd10 mesaResponsive margin">
+							<div class="wd10 mesaResponsive margin" id=" mesas2">
 								<select class="notItemOne" name="mesa" id="mesa" onchange="searchForDetalle('<?php echo $_SESSION['idUser'];?>');">
 									<option value="">Mesa</option>
 									<?php
