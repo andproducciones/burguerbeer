@@ -147,6 +147,9 @@ canvas {
 					<div class="chart-container">
 						<canvas id="salariosChart"></canvas>
 					</div>
+					
+					<canvas id="ventasSalariosChart"></canvas>
+					
 					<div class="divContainer">
             <table border="1">
                 <thead>
@@ -286,6 +289,52 @@ canvas {
                 }
             }
         });
+
+
+    // Configuración del gráfico combinado
+    new Chart(document.getElementById('ventasSalariosChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Ventas Diarias',
+                    data: ventas,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2,
+                    tension: 0.3
+                },
+                {
+                    label: 'Salarios',
+                    data: salarios,
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderWidth: 2,
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: 'Comparación de Ventas y Salarios Diarios'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+
     </script>
 
 <?php

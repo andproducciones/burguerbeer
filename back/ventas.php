@@ -518,16 +518,17 @@ switch ($post['accion']) {
 
     break;
     
-    case 'actualizarNombreMesa':
+       case 'actualizarNombreMesa':
         try {
-            // ✅ Validar parámetros
-            if (empty($post['mesa']) || empty($post['nombre'])) {
-                throw new Exception("Error: Parámetros inválidos33");
+            if (empty($post['mesa']) || !isset($post['nombre'])) {
+                throw new Exception("Error: Parámetros inválidos");
             }
+
     
             $mesa = intval($post['mesa']);
             //$usuario = $post['usuario'];
-            $nombre = mysqli_real_escape_string($conection, trim($post['nombre']));
+           $nombre = trim($post['nombre']) === '' ? 'NULL' : "'" . mysqli_real_escape_string($conection, $post['nombre']) . "'";
+
     
             // ✅ Iniciar transacción
             mysqli_begin_transaction($conection);
@@ -539,7 +540,8 @@ switch ($post['accion']) {
             }
     
             // 📝 Actualizar el nombre de la mesa
-            $query_update = mysqli_query($conection, "UPDATE mesas SET nombre = '$nombre' WHERE id = $mesa");
+            $query_update = mysqli_query($conection, "UPDATE mesas SET nombre = $nombre WHERE id = $mesa");
+
             if (!$query_update) {
                 throw new Exception("Error: No se pudo actualizar el nombre de la mesa.");
             }
