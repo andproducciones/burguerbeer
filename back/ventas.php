@@ -274,7 +274,7 @@ switch ($post['accion']) {
                         $mesa2 = $mesas['numero'];
                 
                         // Actualizar el estado de los productos en detalle_temp (preparar = 2)
-                        $query_update = mysqli_query($conection, "UPDATE detalle_temp SET preparar = 2 WHERE token_user = '$co' AND mesa = $mesa");
+                        $query_update = mysqli_query($conection, "UPDATE detalle_temp SET preparar = 2 WHERE token_user = '$co' AND mesa = $mesa AND preparar = 1");
                         if (!$query_update) {
                             throw new Exception("Error: No se pudo actualizar el detalle de la mesa");
                         }
@@ -326,7 +326,12 @@ switch ($post['accion']) {
                         // Enviar a impresión
                         $imprimir = imprimirComanda($mesa2, $nombreCliente, $nombreMesero, $data2, $fecha);
                         if (!$imprimir) {
-                            throw new Exception("Error: No se pudo imprimir la comanda");
+                            throw new Exception("Error: No se pudo imprimir la comanda 1");
+                        }
+
+                        $imprimir = imprimirComanda($mesa2, $nombreCliente, $nombreMesero, $data2, $fecha);
+                        if (!$imprimir) {
+                            throw new Exception("Error: No se pudo imprimir la comanda 2");
                         }
                 
                         // Confirmar la transacción
@@ -577,28 +582,51 @@ switch ($post['accion']) {
                 if (empty($post['mesa'])) {
                     throw new Exception("Error: Falta el ID de la mesa.");
                 }
-    
+        
                 $mesa = intval($post['mesa']);
-                $productos = 0; // **Corrección: Asegurar que siempre tenga un valor**
-    
-                // Consulta para contar productos en `detalle_temp`
-                $query = mysqli_query($conection, "SELECT COUNT(*) as productos FROM detalle_temp WHERE mesa = $mesa");
-                if (!$query) {
-                    throw new Exception("Error en la consulta.");
+                $estadoPreparacion = 0; // 0 = sin productos, 2 = en preparación, 3 = servidos
+        
+                // Primero: ¿hay productos en esta mesa?
+                $query_total = mysqli_query($conection, "
+                    SELECT COUNT(*) as total 
+                    FROM detalle_temp 
+                    WHERE mesa = $mesa
+                ");
+        
+                if (!$query_total) {
+                    throw new Exception("Error al contar productos.");
                 }
-    
-                $result = mysqli_fetch_assoc($query);
-                if ($result) {
-                    $productos = intval($result['productos']);
+        
+                $row_total = mysqli_fetch_assoc($query_total);
+                $totalProductos = intval($row_total['total']);
+        
+                if ($totalProductos === 0) {
+                    $estadoPreparacion = 0;
+                } else {
+                    // ¿Existen productos NO servidos?
+                    $query_no_servidos = mysqli_query($conection, "
+                        SELECT 1 
+                        FROM detalle_temp 
+                        WHERE mesa = $mesa AND preparar != 3 
+                        LIMIT 1
+                    ");
+        
+                    if (!$query_no_servidos) {
+                        throw new Exception("Error al verificar productos pendientes.");
+                    }
+        
+                    $estadoPreparacion = (mysqli_num_rows($query_no_servidos) > 0) ? 2 : 3;
                 }
-    
+        
                 $respuesta = [
                     'response' => 'Consulta exitosa',
                     'estado'   => true
                 ];
-    
-                $data = ['productos' => $productos];
-    
+        
+                $data = [
+                    'estado' => $estadoPreparacion
+                ];
+        
             } catch (Exception $e) {
                 $respuesta = [
                     'response' => $e->getMessage(),
@@ -607,8 +635,7 @@ switch ($post['accion']) {
                 $data = null;
             }
             break;
-
-
+        
 
             case 'formDetalleProducto2':
                 try {
@@ -757,6 +784,51 @@ switch ($post['accion']) {
                         $data = null;
                     }
                     break;
+
+                    case 'servido':
+                        if (empty($post['correlativo'])) {
+                            $respuesta = [
+                                'response' => 'Error: Parámetros inválidos',
+                                'estado' => false
+                            ];
+                            $data = null;
+                            break;
+                        }
+
+                        $correlativo = $post['correlativo'];
+                                            
+                        // 🔄 Actualizar todos los productos con preparar 1 o 2 a preparar = 3
+                        $query_update = mysqli_query(
+                            $conection,
+                            "UPDATE detalle_temp 
+                             SET preparar = 3 
+                             WHERE correlativo = $correlativo AND preparar IN (1,2)"
+                        );
+                    
+                        if ($query_update) {
+                            $filasAfectadas = mysqli_affected_rows($conection);
+                            if ($filasAfectadas == 1) {
+                                $respuesta = [
+                                    'response' => "Productos marcados como servidos",
+                                    'estado' => true
+                                ];
+                                $data = null;
+                            } else {
+                                $respuesta = [
+                                    'response' => "No hay productos pendientes para marcar como servidos",
+                                    'estado' => false
+                                ];
+                                $data = null;
+                            }
+                        } else {
+                            $respuesta = [
+                                'response' => 'Error al actualizar los productos como servidos',
+                                'estado' => false
+                            ];
+                            $data = null;
+                        }
+                        break;
+                    
 
 
     default:

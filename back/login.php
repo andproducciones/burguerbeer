@@ -1,6 +1,7 @@
 <?php
 
 include('../conexion.php');
+date_default_timezone_set('America/Guayaquil');
 
 // Configurar encabezados
 header('Access-Control-Allow-Origin: *');
@@ -25,8 +26,6 @@ $data = [];
 switch ($post['accion']) {
     case 'login':
         $usuario = $post['usuario'];
-        //$hashedclave = clave_hash($post['clave'], clave_BCRYPT);
-        //$hashedclave = md5($post['clave']);
         $hashedclave = md5($post['clave']);
 
         // Verificar si el usuario existe
@@ -38,12 +37,36 @@ switch ($post['accion']) {
 
         if ($query->num_rows > 0) {
             $row = $query->fetch_assoc();
+
             // Verificar la contraseña
             if ($hashedclave == $row['clave']) {
-                $data = $row;
-                $respuesta = ['response' => 'Login successful', 'estado' => true];
+                $idUser = $row['usuario'];
+
+                // 🔐 Verificación de caja abierta
+                $sqlCaja = "SELECT a.id_caja, c.lugar 
+                            FROM arqueo_caja a 
+                            INNER JOIN cajas c ON a.id_caja = c.id 
+                            WHERE a.id_usuario = $idUser AND a.estatus = 1";
+
+                $queryCaja = mysqli_query($conection, $sqlCaja);
+                $resultCaja = mysqli_num_rows($queryCaja);
+
+                if ($resultCaja === 1) {
+                    $cajaData = mysqli_fetch_assoc($queryCaja);
+                    
+                    // Agregamos caja y lugar a la sesión de datos
+                    $data = $row;
+                    $data['fecha'] = date('Y-m-d H:i:s');
+                    $data['id_caja'] = $cajaData['id_caja'];
+                    $data['lugar'] = $cajaData['lugar'];
+
+                    $respuesta = ['response' => 'Login successful', 'estado' => true];
+                } else {
+                    $respuesta = ['response' => 'Usuario no tiene una caja abierta', 'estado' => false];
+                }
+
             } else {
-                $respuesta = ['response' => 'Crecenciales invalidas', 'estado' => false];
+                $respuesta = ['response' => 'Credenciales inválidas', 'estado' => false];
             }
         } else {
             $respuesta = ['response' => 'Falla en la consulta', 'estado' => false];
@@ -51,8 +74,9 @@ switch ($post['accion']) {
         break;
 
     default:
-        $respuesta = ['response' => 'No hay accion 2', 'estado' => false];
+        $respuesta = ['response' => 'No hay acción válida', 'estado' => false];
         break;
 }
 
-echo json_encode(['respuesta' => $respuesta, 'data' => $data]);
+echo json_encode(['respuesta' => $respuesta, 'data' => $data ?? null]);
+
