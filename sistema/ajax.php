@@ -1940,6 +1940,27 @@ if ($_POST['action'] == 'abrirCaja') {
 if ($_POST['action'] == 'formCerrarCaja') {
     $id = intval($_POST['co']); // Asegurarse de que el ID sea un entero
     $user = $_SESSION['idUser'];
+    $user2 = md5($_SESSION['idUser']);
+
+    // Consultar datos del arqueo de caja
+    $query_pro_temp = mysqli_query($conection, "SELECT * FROM detalle_temp WHERE token_user = '$user2'");
+
+    if (mysqli_num_rows($query_pro_temp) > 0) {
+
+    	echo '<form action="" method="post" name="form_add_product" class="cierreCaja" id="form_add_product" onsubmit="event.preventDefault(); sendDataForm();" style="width: 200px; height:auto;">
+                    <div class="acciones wd100">
+                    <h2 style="text-align:center; ">Existen ordenes abiertas</h2>
+                    </div>
+                    <div class="acciones wd100">
+                            
+                        <a href="#" class="btn_ok closeModal" onclick="closeModal2();"><i class="fas fa-ban"></i> Cerrar</a>
+                    </div>
+             
+                </form>';
+                exit;
+
+
+    }
 
     // Consultar datos del arqueo de caja
     $query = mysqli_query($conection, "SELECT * FROM arqueo_caja WHERE id = $id AND estatus = 1");
