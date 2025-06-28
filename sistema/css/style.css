@@ -1066,10 +1066,6 @@ padding: 10px;
 	text-align: left;
 }
 
-.preciosFinal{
-	display: flex;
-	justify-content: space-between;
-}
 
 .block{
 	display: block;
@@ -1125,8 +1121,7 @@ display: flex;
 }
 
 .clientePagos{
-	margin-bottom: 10px;
-
+	margin-bottom: 0px;
 }
 
 .pagos2 label{
@@ -1143,7 +1138,7 @@ display: flex;
 .acciones{
 	display: flex;
 	justify-content: space-around;
-	margin-top: 20px;
+	margin-top: 10px;
 }
 .acciones button{
 	display: flex;
@@ -1378,6 +1373,7 @@ display: flex;
 .preciosFinal h2 {
     font-weight: bold;
     color: #333;
+	margin-top: 10px;
 }
 
 /* Sección de imprimir comprobantes */

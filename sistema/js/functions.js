@@ -727,10 +727,36 @@ $('.anadirForm').click(function() {
                 });
             });
         }
+
+
+           // === GESTIÓN AUTOMÁTICA DE LA COLA DE CORREOS ===
+    setTimeout(function () {
+        procesarColaCorreos();
+    }, 3000); // espera 3 segundos tras cargar la página
     
 
 
 });  //final del ready
+
+
+function procesarColaCorreos() {
+    $.ajax({
+        url: 'includes/plantillas/procesar_cola.php',
+        method: 'GET',
+        dataType: 'json',
+        success: function (response) {
+            console.log("✅ Cola de correos:", response);
+
+            if (response.detalles && response.detalles.length > 0) {
+                // Si hay correos pendientes, vuelve a llamar la función
+                procesarColaCorreos();
+            }
+        },
+        error: function (xhr, status, error) {
+            console.error("❌ Error procesando cola:", error);
+        }
+    });
+}
 
 function validPass(){
     var passNuevo = $('#txtNewPassUser').val();
@@ -1552,130 +1578,199 @@ function codigoPromocional() {
         }
         
 
+// Objeto global para llevar el control de advertencias por mesa
+var correoWarnings = correoWarnings || {};
+
+
 function facturarVenta() {
-            // Mostrar mensaje de carga con SweetAlert
-            Swal.fire({
-                title: 'Cargando...',
-                html: 'Espere por favor',
-                allowEscapeKey: false,
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-        
-            // Obtener el nombre del cliente
-            var nombreCliente = $('#nombreCliente').val().trim();
-        
-            // Verificar si el nombre del cliente está vacío
-            if (nombreCliente === '') {
-                Swal.close();
-                Swal.fire({
-                    position: 'center',
-                    icon: 'error',
-                    title: 'Ingrese el nombre del cliente',
-                    showConfirmButton: false,
-                    timer: 1500
-                });
-                return false;
-            }
-        
-            // Verificar si hay productos en el detalle de la venta
-            var rows = $('#detalle_venta tr').length;
-        
-            if (rows > 0) {
-                var action = 'procesarVenta';
-                var codcliente = $('#id_cliente').val() || 1;
-                var mesa = $('#mesa').val() || 0;
-                var cupon = $('#id_cupon').val() || 0;
-                var pago = $("input[type=radio][name=pago]:checked").val() || 0;
-                var codigoTarjeta = $('#codigoTarjeta').val().trim() || '';
-                var codigoTransferencia = $('#codigoTransferencia').val().trim() || '';
-                var caja = $('#id_caja').val() || 0;
-                var factura = $('#facturaImpresa').is(':checked') ? 1 : 2;
-                var comandas = $('#comandasImpresa').is(':checked') ? 1 : 2;
-
-              
-                // Realizar la solicitud AJAX para procesar la venta
-                $.ajax({
-                    url: 'ajax.php',
-                    type: 'POST',
-                    async: true,
-                    data: {
-                        action: action,
-                        codcliente: codcliente,
-                        mesa: mesa,
-                        cupon: cupon,
-                        pago: pago,
-                        codigoTarjeta: codigoTarjeta,
-                        codigoTransferencia: codigoTransferencia,
-                        caja: caja,
-                        factura: factura,
-                        comandas: comandas
-                    },
-                    success: function(response) {
-                        try {
-                            var info = JSON.parse(response);
-
-                            console.log(response);
-        
-                            if (info.factura == 1 && info.comandas == 1) {
-                                // Imprimir ambos, factura y comanda
-                                imprimirTodo(info.cod_cliente, info.no_factura, nombreCliente);
-                            } else if (info.factura == 1) {
-                                // Imprimir solo factura
-                                imprimirFactura(info.cod_cliente, info.no_factura, nombreCliente);
-                            } else if (info.comandas == 1) {
-                                // Imprimir solo comanda
-                                imprimirComanda(info.cod_cliente, info.no_factura, nombreCliente);
-                            }
-        
-                            Swal.fire({
-                                position: 'center',
-                                icon: 'success',
-                                title: 'Realizado Correctamente',
-                                showConfirmButton: false,
-                                timer: 1000
-                            });
-
-                            
-        
-                            setTimeout(function() {
-                                location.reload();
-                            }, 1000);
-        
-                        } catch (error) {
-                            console.log(response);
-                            console.error('Error al procesar la respuesta:', error);
-                            Swal.fire({
-                                position: 'center',
-                                icon: 'error',
-                                title: 'Error en el procesamiento de la respuesta',
-                                showConfirmButton: true
-                            });
-                        }
-                    },
-                    error: function(error) {
-                        console.error('Error en la solicitud AJAX:', error);
-                        Swal.fire({
-                            position: 'center',
-                            icon: 'error',
-                            title: 'Error al procesar la venta',
-                            showConfirmButton: true
-                        });
-                    }
-                });
-            } else {
-                Swal.close();
-                Swal.fire({
-                    position: 'center',
-                    icon: 'error',
-                    title: 'No hay productos en la venta',
-                    showConfirmButton: false,
-                    timer: 1500
-                });
-            }
+    // Mostrar mensaje de carga
+    Swal.fire({
+        title: 'Cargando...',
+        html: 'Espere por favor',
+        allowEscapeKey: false,
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
         }
+    });
+
+    var numeroMesa = $('#mesa').val() || 0;
+    var nombreCliente = $('#nombreCliente').val().trim();
+
+    if (nombreCliente === '') {
+        Swal.close();
+        Swal.fire({
+            position: 'center',
+            icon: 'error',
+            title: 'Ingrese el nombre del cliente',
+            showConfirmButton: false,
+            timer: 1500
+        });
+        return false;
+    }
+
+    // Validar correo marketing de forma segura
+    var correoMarketing = '';
+
+    // Verificar si el input existe antes de acceder a .val()
+    if ($('#correoMarketing').length) {
+    correoMarketing = $('#correoMarketing').val() || '';
+    correoMarketing = correoMarketing.trim();
+    }
+
+    if (correoMarketing !== '') {
+    var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(correoMarketing)) {
+        Swal.close();
+        Swal.fire({
+            position: 'center',
+            icon: 'error',
+            title: 'El correo ingresado no es válido',
+            showConfirmButton: false,
+            timer: 2000
+        });
+        return false;
+    }
+    } else {
+    // Si está vacío, gestionar alerta por mesa
+    if (!correoWarnings[numeroMesa]) {
+        correoWarnings[numeroMesa] = true;
+        Swal.close();
+        Swal.fire({
+            position: 'center',
+            icon: 'warning',
+            title: 'No ingresó el correo de marketing. Debe ingresarlo o continuar sin él.',
+            showConfirmButton: false,
+            timer: 2000
+        });
+        return false;
+    }
+    // Segunda vez en esta mesa: continúa sin mostrar alerta
+    }
+
+    var pago = parseInt($("input[type=radio][name=pago]:checked").val()) || 0;
+    var codigoTarjeta = $('#codigoTarjeta').val().trim() || '';
+    var codigoTransferencia = $('#codigoTransferencia').val().trim() || '';
+
+    if (pago != 1) {
+        if (pago == 2 && codigoTarjeta === '') {
+            Swal.close();
+            Swal.fire({
+                position: 'center',
+                icon: 'error',
+                title: 'Ingrese la referencia de la tarjeta',
+                showConfirmButton: false,
+                timer: 1500
+            });
+            return false;
+        }
+
+        if ((pago == 3 || pago == 4) && codigoTransferencia === '') {
+            Swal.close();
+            Swal.fire({
+                position: 'center',
+                icon: 'error',
+                title: 'Ingrese el número de documento de la transferencia',
+                showConfirmButton: false,
+                timer: 1500
+            });
+            return false;
+        }
+    }
+
+    var rows = $('#detalle_venta tr').length;
+    if (rows <= 1) {
+        Swal.close();
+        Swal.fire({
+            position: 'center',
+            icon: 'error',
+            title: 'No hay productos en la venta',
+            showConfirmButton: false,
+            timer: 1500
+        });
+        return false;
+    }
+
+    var action = 'procesarVenta';
+    var codcliente = $('#id_cliente').val() || 1;
+    var cupon = $('#id_cupon').val() || 0;
+    var caja = $('#id_caja').val() || 0;
+    var factura = $('#facturaImpresa').is(':checked') ? 1 : 2;
+    var comandas = $('#comandasImpresa').is(':checked') ? 1 : 2;
+
+    $.ajax({
+        url: 'ajax.php',
+        type: 'POST',
+        async: true,
+        data: {
+            action: action,
+            codcliente: codcliente,
+            mesa: numeroMesa,
+            cupon: cupon,
+            pago: pago,
+            codigoTarjeta: codigoTarjeta,
+            codigoTransferencia: codigoTransferencia,
+            caja: caja,
+            factura: factura,
+            comandas: comandas,
+            correoMarketing: correoMarketing,
+            nombreCliente: nombreCliente
+        },
+        success: function(response) {
+
+            console.log(response);
+            try {
+                var info = JSON.parse(response);
+                console.log(response);
+
+                if (info.factura == 1 && info.comandas == 1) {
+                    imprimirTodo(info.cod_cliente, info.no_factura, nombreCliente);
+                } else if (info.factura == 1) {
+                    imprimirFactura(info.cod_cliente, info.no_factura, nombreCliente);
+                } else if (info.comandas == 1) {
+                    imprimirComanda(info.cod_cliente, info.no_factura, nombreCliente);
+                }
+
+                Swal.fire({
+                    position: 'center',
+                    icon: 'success',
+                    title: 'Realizado Correctamente',
+                    showConfirmButton: false,
+                    timer: 1000
+                });
+
+                setTimeout(function() {
+                    location.reload();
+                }, 1000);
+
+            } catch (error) {
+                console.log(response);
+                console.error('Error al procesar la respuesta:', error);
+                Swal.fire({
+                    position: 'center',
+                    icon: 'error',
+                    title: 'Error en el procesamiento de la respuesta',
+                    showConfirmButton: true
+                });
+            }
+        },
+        error: function(error) {
+            console.error('Error en la solicitud AJAX:', error);
+            Swal.fire({
+                position: 'center',
+                icon: 'error',
+                title: 'Error al procesar la venta',
+                showConfirmButton: true
+            });
+        }
+    });
+}
+
+// Función para limpiar el estado de la mesa
+function salirDeMesa(numeroMesa) {
+    delete correoWarnings[numeroMesa];
+}
+
 
 
 function seleccionarPago(valor) {
@@ -1691,7 +1786,7 @@ function seleccionarPago(valor) {
                 $("#Transferencia, .divDescuento").show();
             } else if (valor == 4) {
                 // Mostrar solo el descuento para "DeUna"
-                $(".divDescuento").show();
+                $("#Transferencia, .divDescuento").show();
             } else {
                 // Si el valor no es 2, 3 o 4, solo mostrar el descuento
                 $(".divDescuento").show();
@@ -1847,27 +1942,41 @@ function seleccionarPago(valor) {
     }
 
     function calcular() {
-        // Verificar si los elementos existen
-        const input1 = document.getElementById('monto_efectivo');
-        const input2 = document.getElementById('monto_tarjeta');
-        const input3 = document.getElementById('monto_transferencia');
-        const input4 = document.getElementById('monto_deuna');
-        const resultado = document.getElementById('monto_final');
-        const resultado2 = document.getElementById('monto_final2');
-    
-        if (input1 && input2 && input3 && input4 && resultado && resultado2) {
-            const valor1 = parseFloat(input1.value) || 0;
-            const valor2 = parseFloat(input2.value) || 0;
-            const valor3 = parseFloat(input3.value) || 0;
-            const valor4 = parseFloat(input4.value) || 0;
-            
-            const sumaTotal = valor1 + valor2 + valor3 + valor4;
-            resultado.value = sumaTotal.toFixed(2);
-            resultado2.value = sumaTotal.toFixed(2);
-        } else {
-            console.error("Uno o más elementos no se encontraron en el DOM.");
-        }
+    const input1 = document.getElementById('monto_efectivo');
+    const input2 = document.getElementById('monto_tarjeta');
+    const input3 = document.getElementById('monto_transferencia');
+    const input4 = document.getElementById('monto_deuna');
+    const resultado = document.getElementById('monto_final');
+    const resultado2 = document.getElementById('monto_final2');
+
+    if (input1 && input2 && input3 && input4 && resultado) {
+        const valor1 = parseFloat(input1.value) || 0;
+        const valor2 = parseFloat(input2.value) || 0;
+        const valor3 = parseFloat(input3.value) || 0;
+        const valor4 = parseFloat(input4.value) || 0;
+
+        const sumaTotal = valor1 + valor2 + valor3 + valor4;
+        resultado.value = sumaTotal.toFixed(2);
+        if (resultado2) resultado2.value = sumaTotal.toFixed(2);
     }
+
+    calcular3(); // Ejecuta también cálculo de efectivo neto al cambiar montos entregados
+}
+
+function calcular3() {
+    const totalEntregado = parseFloat(document.getElementById('monto_efectivo')?.value) || 0;
+
+    const empleado2 = parseFloat(document.getElementById('empleado_cristina')?.value) || 0;
+    const empleado3 = parseFloat(document.getElementById('empleado_patricia')?.value) || 0;
+
+    const totalPagadoPersonal = empleado2 + empleado3;
+    const efectivoNeto = totalEntregado - totalPagadoPersonal;
+
+    const output = document.getElementById('efectivo_neto');
+    if (output) output.value = efectivoNeto.toFixed(2);
+}
+
+
 
 function calcular2() {
 
@@ -2115,4 +2224,25 @@ function esJson(cadena) {
   } catch {
     return false;
   }
+}
+
+function prepararDatosParaPDF() {
+    const data = {
+        action: 'actualizarPreviewPDF',
+        efectivo: document.getElementById('monto_efectivo')?.value || 0,
+        tarjeta: document.getElementById('monto_tarjeta')?.value || 0,
+        transferencia: document.getElementById('monto_transferencia')?.value || 0,
+        deuna: document.getElementById('monto_deuna')?.value || 0,
+        monto_final: document.getElementById('monto_final')?.value || 0,
+        observaciones: document.getElementById('observaciones')?.value || "",
+        compras: document.getElementById('compras')?.value || ""
+    };
+
+    return fetch('ajax.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams(data)
+    });
 }
