@@ -1739,9 +1739,9 @@ function facturarVenta() {
                     timer: 1000
                 });
 
-                /*setTimeout(function() {
+                setTimeout(function() {
                     location.reload();
-                }, 1000);*/
+                }, 1000);
 
             } catch (error) {
                 console.log(response);

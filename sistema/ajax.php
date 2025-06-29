@@ -682,14 +682,16 @@ if ($_POST['action'] == 'procesarVenta') {
             }
 
             $response = [
-                'venta_ok'      => true,
-                'mensaje'       => $mensaje,
-                'no_factura'    => $data['no_factura'],
-                'factura'       => $data['factura'],
-                'comandas'      => $data['comandas'],
-                'correo_estado' => $correoEstado,
-                'correo_error'  => $correoError
-            ];
+			    'venta_ok'      => true,
+			    'mensaje'       => $mensaje,
+			    'no_factura'    => $data['no_factura'],
+			    'factura'       => $data['factura'],
+			    'comandas'      => $data['comandas'],
+			    'cod_cliente'   => $codcliente,
+			    'nombreCliente' => $nombreCliente,
+			    'correo_estado' => $correoEstado,
+			    'correo_error'  => $correoError
+			];
 
             echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
