@@ -574,7 +574,7 @@ if ($_POST['action'] == 'procesarVenta') {
                 $pago,
                 '$codigopago',
                 '$cupon',
-                $caja
+                 $caja
             )"
         );
 
@@ -585,8 +585,8 @@ if ($_POST['action'] == 'procesarVenta') {
                 mysqli_next_result($conection);
             }
 
-            $data["factura"] = $_POST['factura'] == 1 ? 1 : 2;
-            $data["comandas"] = $_POST['comandas'] == 1 ? 1 : 2;
+            $factura = $_POST['factura'] == 1 ? 1 : 0;
+            $comandas = $_POST['comandas'] == 1 ? 1 : 0;
 
             $correoEstado = 'no solicitado';
             $correoError = null;
@@ -649,7 +649,7 @@ if ($_POST['action'] == 'procesarVenta') {
                         $imagenesEscaped = mysqli_real_escape_string($conection, $imagenesEmbed);
                         $correoEscaped = mysqli_real_escape_string($conection, $correoMarketing);
                         $nombreEscaped = mysqli_real_escape_string($conection, $nombreCliente);
-                        $asuntoEscaped = mysqli_real_escape_string($conection, '¡Gracias por compartir tu correo con Cañalimeña Group!');
+                        $asuntoEscaped = mysqli_real_escape_string($conection, '¡Gracias por compartir tu correo con Canalimena Group!');
                         $contenidoEscaped = mysqli_real_escape_string($conection, $plantilla);
 
                         $insert = mysqli_query(
@@ -682,13 +682,16 @@ if ($_POST['action'] == 'procesarVenta') {
             }
 
             $response = [
-                'venta_ok'      => true,
-                'mensaje'       => $mensaje,
+                'venta'      => true,
+                //'mensaje'       => $mensaje,
                 'no_factura'    => $data['no_factura'],
-                'factura'       => $data['factura'],
-                'comandas'      => $data['comandas'],
-                'correo_estado' => $correoEstado,
-                'correo_error'  => $correoError
+                'factura'       => $factura,
+                'comandas'      => $comandas,
+                'cod_cliente'   => $codcliente,
+                'nombreCliente' => $nombreCliente
+                //'correo_estado' => $correoEstado,
+                //'correo_error'  => $correoError
+
             ];
 
             echo json_encode($response, JSON_UNESCAPED_UNICODE);
@@ -701,15 +704,6 @@ if ($_POST['action'] == 'procesarVenta') {
         echo json_encode(['error' => 'No hay productos en la venta']);
     }
 }
-
-
-
-
-
-
-
-			//print_r($_POST);exit;
-
 
 //cambiar contraseña
 			if($_POST['action'] == 'changePassword'){
@@ -2503,12 +2497,12 @@ if (!empty($codigosAgrupados)) {
 
                         <div>
                         <label>Observaciones</label>
-                        <textarea class="wd100" id="observaciones" name="observaciones"></textarea>
+                        <textarea class="wd100"  style="height: 100px" id="observaciones" name="observaciones"></textarea>
                         </div>
 
                         <div>
                         <label>Compras</label>
-                        <textarea class="wd100" id="compras" name="compras"></textarea>
+                        <textarea class="wd100" style="height: 100px" id="compras" name="compras"></textarea>
                         </div>
 
                         </div>
@@ -2656,10 +2650,6 @@ if ($_POST['action'] == 'cerrarCaja') {
             }
         }
 
-
-
-        
-
         // Preparar datos para imprimir el cierre de caja
         $data = [
             'fecha_inicio' => $fecha_inicio,
@@ -2684,6 +2674,7 @@ if ($_POST['action'] == 'cerrarCaja') {
             'total_deuna' => $totalDeUnaCalculado,
             'observaciones' => $_POST['observaciones'],
             'compras' => $_POST['compras'],
+            'salarios' => $salarios
 
         ];
 

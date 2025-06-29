@@ -1728,6 +1728,9 @@ function facturarVenta() {
                 var info = JSON.parse(response);
                 console.log(response);
 
+                if(info.venta){
+
+               
                 if (info.factura == 1 && info.comandas == 1) {
                     imprimirTodo(info.cod_cliente, info.no_factura, nombreCliente);
                 } else if (info.factura == 1) {
@@ -1744,9 +1747,11 @@ function facturarVenta() {
                     timer: 1000
                 });
 
-                setTimeout(function() {
+                /*setTimeout(function() {
                     location.reload();
-                }, 1000);
+                }, 1000);*/
+
+                 }
 
             } catch (error) {
                 console.log(response);

@@ -495,6 +495,7 @@ function imprimirCierreCaja($data) {
     $deuna              = $data['deuna'];
     $total_salidas      = $data['total_movimientos'];
     $salidas            = $data['salidas'];
+    $salarios           = $data['salarios'];
 
     // Valores calculados del sistema
     $totalEfectivo      = $data['total_efectivo'];
@@ -505,6 +506,8 @@ function imprimirCierreCaja($data) {
     $total_venta = $monto_inicial + $total_cash;
     $observaciones = $data['observaciones'] ?? '';
     $compras = $data['compras'] ?? '';
+
+    $monto_final_final = $totalEfectivo - $salarios;
 
     try {
         $connector = new WindowsPrintConnector($nombreImpresora);
@@ -524,7 +527,6 @@ function imprimirCierreCaja($data) {
         $printer->setJustification(Printer::JUSTIFY_LEFT);
         $printer->text("Fecha Inicio: $fecha_inicio\n");
         $printer->text("Fecha Final:  $fecha_fin\n");
-        $printer->text("Código:       $id_cierre\n");
         $printer->text("Cajero:       $nombre $apellido\n");
         $printer->text("------------------------------------------------\n");
         $printer->text("Monto Inicial:          $ " . number_format($monto_inicial, 2) . "\n");
@@ -532,12 +534,12 @@ function imprimirCierreCaja($data) {
         
         
         $printer->setEmphasis(true);
-        $printer->setJustification(Printer::JUSTIFY_CENTER);
+        $printer->setJustification(Printer::JUSTIFY_LEFT);
         $printer->text("VENTAS DEL DIA\n");
         $printer->setEmphasis(false);
         $printer->setJustification(Printer::JUSTIFY_LEFT);
         $printer->text("Cantidad de Ventas:     $total_ventas\n");
-        $printer->text("TOTAL VENTAS:       $ " . number_format($total_cash, 2) . "\n");
+        $printer->text("TOTAL EN VENTAS:       $ " . number_format($total_cash, 2) . "\n");
         $printer->text("------------------------------------------------\n");
 
         $printer->setEmphasis(true);
@@ -556,9 +558,9 @@ function imprimirCierreCaja($data) {
 
             $printer->text("$nombre_usuario ($tipo_moneda): $motivo - $ " . number_format($valor, 2) . "\n");
         }
-        $printer->setEmphasis(true);
-        $printer->text("Total Salidas:          $ " . number_format($total_salidas, 2) . "\n");
-        $printer->setEmphasis(false);
+        //$printer->setEmphasis(true);
+        //$printer->text("Total Salidas:          $ " . number_format($total_salidas, 2) . "\n");
+        //$printer->setEmphasis(false);
         $printer->text("------------------------------------------------\n");
                 
         $printer->setEmphasis(true);
@@ -573,7 +575,7 @@ function imprimirCierreCaja($data) {
                
 
         $printer->setEmphasis(true);
-        $printer->setJustification(Printer::JUSTIFY_CENTER);
+        $printer->setJustification(Printer::JUSTIFY_LEFT);
         $printer->text("MONTOS ENTREGADOS\n");
         $printer->setEmphasis(false);
         $printer->setJustification(Printer::JUSTIFY_LEFT);
@@ -624,11 +626,9 @@ function imprimirCierreCaja($data) {
             $printer->setEmphasis(false);
 
             foreach ($data['pagos_codigos'] as $tipo => $codigos) {
-                $printer->text(strtoupper($tipo) . ":\n");
+                $printer->text(strtoupper($tipo) . "\n");
                 foreach ($codigos as $c) {
-                    $printer->text("  Cod: " . $c['codigo'] .
-                                " | Facs: " . $c['cantidad'] .
-                                " | $ " . $c['total'] . "\n");
+                    $printer->text("  Cod: " . $c['codigo'] ."   $ " . $c['total'] . "\n");
                 }
             }
             $printer->text("------------------------------------------------\n");
@@ -643,6 +643,8 @@ function imprimirCierreCaja($data) {
             $printer->text("$observaciones\n");
             $printer->text("------------------------------------------------\n");
         }
+
+        $printer->cut();
         if (!empty($compras)) {
             $printer->setEmphasis(true);
             $printer->text("COMPRAS\n");
@@ -652,7 +654,7 @@ function imprimirCierreCaja($data) {
         }
 
         $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->text("CIERRE COMPLETO\n");
+        $printer->text("CIERRE FINAL EN EFECTIVO $ $monto_final_final\n");
         $printer->cut();
 
         try {
