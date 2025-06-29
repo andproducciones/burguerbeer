@@ -2244,6 +2244,81 @@ if ($_POST['action'] == 'formCerrarCaja') {
         </div>';
     }
 
+
+    // === NUEVO BLOQUE: traer códigos de pago ===
+        $query_codigos = mysqli_query($conection, "
+            SELECT 
+                tipopago,
+                codigopago,
+                SUM(totalfactura) AS total
+            FROM factura
+            WHERE caja = $id_caja
+              AND estatus = 1
+              AND tipopago != 1
+              AND fecha BETWEEN '$fecha_inicio' AND '$fecha_fin'
+            GROUP BY tipopago, codigopago
+            ORDER BY tipopago, codigopago
+        ");
+
+        $codigosAgrupados = [];
+
+        if (mysqli_num_rows($query_codigos) > 0) {
+            while ($row = mysqli_fetch_assoc($query_codigos)) {
+                $tipoPago = tipoPagoNombre($row['tipopago']);
+                $codigo = $row['codigopago'];
+                $total = $row['total'];
+
+                if ($row['tipopago'] == 2) {
+                    $total = $total / 0.94;
+                }
+
+                $total = number_format($total, 2);
+
+                if (!isset($codigosAgrupados[$tipoPago])) {
+                    $codigosAgrupados[$tipoPago] = [];
+                }
+
+                $codigosAgrupados[$tipoPago][] = [
+                    'codigo' => $codigo,
+                    'total' => $total
+                ];
+            }
+        }
+
+        $codigosHTML = '';
+
+if (!empty($codigosAgrupados)) {
+    $codigosHTML .= '<h3>Códigos de Pago</h3><hr>';
+    foreach ($codigosAgrupados as $tipo => $codigos) {
+        $codigosHTML .= "<strong>$tipo:</strong>";
+        $codigosHTML .= '
+            <table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse; margin-top: 5px; margin-bottom: 10px; width: 100%;">
+                <thead style="background-color: #f2f2f2;">
+                    <tr>
+                        <th style="text-align: left;">Código</th>
+                        <th style="text-align: right;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>';
+        foreach ($codigos as $item) {
+            $codigosHTML .= '
+                    <tr>
+                        <td>' . htmlspecialchars($item['codigo']) . '</td>
+                        <td style="text-align: right;">$ ' . $item['total'] . '</td>
+                    </tr>';
+        }
+        $codigosHTML .= '
+                </tbody>
+            </table>
+            <hr>';
+    }
+}
+
+        // === FIN BLOQUE NUEVO ===
+
+
+
+
         // Calcular el monto final a entregar
         $totalSalidas = $entradasEfectivo - $salidasEfectivo + $entradasTransferencia - $salidasTransferencia;
         $entregar = ($inicial + $montoFinal) + $totalSalidas;
@@ -2325,6 +2400,9 @@ if ($_POST['action'] == 'formCerrarCaja') {
                         ' . $inputs . '
                         
                         <hr>
+
+                        ' . $codigosHTML . '
+                    
 
                         <h3>Movimientos de Caja</h3>
                         <hr>
@@ -2567,7 +2645,7 @@ if ($_POST['action'] == 'cerrarCaja') {
             // Consultar detalles del kardex (todas las salidas) con nombre de usuario
         $salidas = [];
         $query_kardex = mysqli_query($conection, "
-            SELECT k.id AS id_salida, k.valor, k.tipo_moneda, k.id_usuario, p.nombres AS nombre_usuario, k.motivo
+            SELECT k.id AS id_salida, k.valor, k.tipo_moneda, k.id_usuario, p.nombres AS nombre_usuario, k.motivo, k.tipo_transaccion
             FROM kardex k
             JOIN personas p ON k.id_usuario = p.id
             WHERE k.fecha BETWEEN '$fecha_inicio' AND '$fecha_fin'
@@ -2577,6 +2655,10 @@ if ($_POST['action'] == 'cerrarCaja') {
                 $salidas[] = $row;
             }
         }
+
+
+
+        
 
         // Preparar datos para imprimir el cierre de caja
         $data = [
@@ -2637,6 +2719,52 @@ if ($_POST['action'] == 'cerrarCaja') {
                 VALUES ($id_cierre, '$tipo_pago', '$estado', $diferencia)
             ");
         }
+
+        // Traer códigos de pago agrupados por tipo de pago para este cierre
+            $tipos_codigos_pago = [];
+
+            $query_codigos = mysqli_query($conection, "
+                SELECT 
+                    tipopago, 
+                    codigopago, 
+                    COUNT(*) AS cantidad, 
+                    SUM(totalfactura) AS total
+                FROM factura
+                WHERE id_cierre = $id_cierre
+                AND estatus = 4
+                AND tipopago != 1
+                GROUP BY tipopago, codigopago
+                ORDER BY tipopago, codigopago
+            ");
+
+            if (mysqli_num_rows($query_codigos) > 0) {
+                while ($row = mysqli_fetch_assoc($query_codigos)) {
+                    $tipoPago = tipoPagoNombre($row['tipopago']);
+                    $codigo = $row['codigopago'];
+                    $cantidad = $row['cantidad'];
+                    $total = $row['total'];
+
+                    if ($row['tipopago'] == 2) {
+                        $total = $total / 0.94;
+                    }
+
+                    $total = number_format($total, 2);
+
+                    if (!isset($tipos_codigos_pago[$tipoPago])) {
+                        $tipos_codigos_pago[$tipoPago] = [];
+                    }
+
+                    $tipos_codigos_pago[$tipoPago][] = [
+                        'codigo' => $codigo,
+                        'cantidad' => $cantidad,
+                        'total' => $total
+                    ];
+                }
+            }
+
+            // Guardar en data
+            $data['pagos_codigos'] = $tipos_codigos_pago;
+
 
         imprimirCierreCaja($data);
 
@@ -3235,6 +3363,13 @@ if($_POST['action'] == 'salidaDinero'){
 	//print_r($data);exit;
 }
 
-
+function tipoPagoNombre($tipo) {
+    switch ($tipo) {
+        case 2: return 'Tarjeta';
+        case 3: return 'Transferencia';
+        case 4: return 'DeUna';
+        default: return 'Otro';
+    }
+}
 	exit;	
 ?>

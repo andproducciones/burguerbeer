@@ -81,9 +81,9 @@ if ($is_preview && is_string($data)) {
     $html .= "<div class='line'></div>";
 
     if (!empty($data['movimientos'])) {
-        $html .= "<h3>SALIDAS DE CAJA</h3>";
+        $html .= "<h3>MOVIMIENTOS DE CAJA</h3>";
         $html .= "<div>{$data['movimientos']}</div>";
-        $html .= "<div class='item'><strong>TOTAL SALIDAS: $ " . number_format($data['total_salidas'], 2) . "</strong></div>";
+        $html .= "<div class='item'><strong>TOTAL MOVIMIENTOS: $ " . number_format($data['total_salidas'], 2) . "</strong></div>";
         $html .= "<div class='line'></div>";
     }
 

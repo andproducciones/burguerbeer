@@ -519,7 +519,7 @@ function imprimirCierreCaja($data) {
 
         $printer->setEmphasis(true);
         $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->text("CIERRE DE CAJA\n");
+        $printer->text("CIERRE DE CAJA # $id_cierre\n");
         $printer->setEmphasis(false);
         $printer->setJustification(Printer::JUSTIFY_LEFT);
         $printer->text("Fecha Inicio: $fecha_inicio\n");
@@ -527,41 +527,50 @@ function imprimirCierreCaja($data) {
         $printer->text("Código:       $id_cierre\n");
         $printer->text("Cajero:       $nombre $apellido\n");
         $printer->text("------------------------------------------------\n");
-
+        $printer->text("Monto Inicial:          $ " . number_format($monto_inicial, 2) . "\n");
+        $printer->text("------------------------------------------------\n");
+        
+        
         $printer->setEmphasis(true);
         $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->text("VENTAS DEL DÍA\n");
+        $printer->text("VENTAS DEL DIA\n");
         $printer->setEmphasis(false);
         $printer->setJustification(Printer::JUSTIFY_LEFT);
-        $printer->text("Monto Inicial:          $ " . number_format($monto_inicial, 2) . "\n");
         $printer->text("Cantidad de Ventas:     $total_ventas\n");
-        $printer->text("Monto por Ventas:       $ " . number_format($total_cash, 2) . "\n");
-        $printer->text("TOTAL DEL DIA:           $ " . number_format($total_venta, 2) . "\n");
+        $printer->text("TOTAL VENTAS:       $ " . number_format($total_cash, 2) . "\n");
         $printer->text("------------------------------------------------\n");
 
         $printer->setEmphasis(true);
-        $printer->text("DETALLE DEL SISTEMA\n");
-        $printer->setEmphasis(false);
-        $printer->text("Efectivo (calc):        $ " . number_format($totalEfectivo, 2) . "\n");
-        $printer->text("Tarjeta (calc):         $ " . number_format($totalTarjeta, 2) . "\n");
-        $printer->text("Transferencia (calc):   $ " . number_format($totalTransferencia, 2) . "\n");
-        $printer->text("DeUna (calc):           $ " . number_format($totalDeUna, 2) . "\n");
-        $printer->text("------------------------------------------------\n");
-
-        $printer->setEmphasis(true);
-        $printer->text("SALIDAS DE CAJA\n");
+        $printer->text("MOVIMIENTOS DE CAJA\n");
         $printer->setEmphasis(false);
         foreach ($salidas as $salida) {
             $nombre_usuario = $salida['nombre_usuario'];
             $motivo = $salida['motivo'];
             $valor = $salida['valor'];
             $tipo_moneda = $salida['tipo_moneda'] == 1 ? 'EF' : 'TR';
+
+            // Si tipo_transaccion es 2, se resta
+            if (isset($salida['tipo_transaccion']) && $salida['tipo_transaccion'] == 1) {
+                $valor = -abs($valor);
+            }
+
             $printer->text("$nombre_usuario ($tipo_moneda): $motivo - $ " . number_format($valor, 2) . "\n");
         }
         $printer->setEmphasis(true);
         $printer->text("Total Salidas:          $ " . number_format($total_salidas, 2) . "\n");
         $printer->setEmphasis(false);
         $printer->text("------------------------------------------------\n");
+                
+        $printer->setEmphasis(true);
+        $printer->text("MONTOS A ENTREGAR\n");
+        $printer->setEmphasis(false);
+        $printer->text("Efectivo:        $ " . number_format($totalEfectivo, 2) . "\n");
+        $printer->text("Tarjeta:         $ " . number_format($totalTarjeta, 2) . "\n");
+        $printer->text("Transferencia:   $ " . number_format($totalTransferencia, 2) . "\n");
+        $printer->text("DeUna:           $ " . number_format($totalDeUna, 2) . "\n");
+        $printer->text("------------------------------------------------\n");
+
+               
 
         $printer->setEmphasis(true);
         $printer->setJustification(Printer::JUSTIFY_CENTER);
@@ -577,25 +586,55 @@ function imprimirCierreCaja($data) {
         $printer->setEmphasis(false);
         $printer->text("------------------------------------------------\n");
 
-        $printer->setEmphasis(true);
-        $printer->text("DIFERENCIA CALC-ENTREGADO\n");
-        $printer->setEmphasis(false);
-        $printer->text("Efectivo:               $ " . number_format($efectivo - $totalEfectivo, 2) . "\n");
-        $printer->text("Tarjeta:                $ " . number_format($tarjeta - $totalTarjeta, 2) . "\n");
-        $printer->text("Transferencia:          $ " . number_format($transferencia - $totalTransferencia, 2) . "\n");
-        $printer->text("DeUna:                  $ " . number_format($deuna - $totalDeUna, 2) . "\n");
-        $printer->text("------------------------------------------------\n");
+        $q_auditoria = mysqli_query(
+        $conection,
+            "SELECT tipo_pago, estado, diferencia 
+            FROM auditoria_cierre_caja 
+            WHERE id_cierre = $id_cierre"
+        );
 
-        $q_auditoria = mysqli_query($conection, "SELECT tipo_pago, estado, diferencia FROM auditoria_cierre_caja WHERE id_cierre = $id_cierre");
+        $novedad_encontrada = false;
+        $auditoria_detalle = [];
+
         if (mysqli_num_rows($q_auditoria) > 0) {
+            while ($row = mysqli_fetch_assoc($q_auditoria)) {
+                $auditoria_detalle[] = $row;
+                
+                // Detecta si hay alguna novedad (estado distinto de "OK")
+                if (strtoupper($row['estado']) !== 'OK') {
+                    $novedad_encontrada = true;
+                }
+            }
+        }
+
+        if ($novedad_encontrada) {
             $printer->setEmphasis(true);
             $printer->text("RESULTADO DE AUDITORÍA\n");
             $printer->setEmphasis(false);
-            while ($row = mysqli_fetch_assoc($q_auditoria)) {
+
+            foreach ($auditoria_detalle as $row) {
                 $printer->text("{$row['tipo_pago']}: {$row['estado']} - $ " . number_format($row['diferencia'], 2) . "\n");
             }
             $printer->text("------------------------------------------------\n");
         }
+
+        if (!empty($data['pagos_codigos'])) {
+            $printer->setEmphasis(true);
+            $printer->text("DETALLE CÓDIGOS DE PAGO\n");
+            $printer->setEmphasis(false);
+
+            foreach ($data['pagos_codigos'] as $tipo => $codigos) {
+                $printer->text(strtoupper($tipo) . ":\n");
+                foreach ($codigos as $c) {
+                    $printer->text("  Cod: " . $c['codigo'] .
+                                " | Facs: " . $c['cantidad'] .
+                                " | $ " . $c['total'] . "\n");
+                }
+            }
+            $printer->text("------------------------------------------------\n");
+        }
+
+
 
         if (!empty($observaciones)) {
             $printer->setEmphasis(true);
@@ -633,11 +672,6 @@ function imprimirCierreCaja($data) {
         return false;
     }
 }
-
-
-
-
-
 function mostrarTicketCierre($data) {
     // Cálculos previos
     $monto_inicial      = $data['monto_inicial'];
@@ -701,8 +735,6 @@ function mostrarTicketCierre($data) {
     echo "CIERRE COMPLETO\n";
     echo "</pre>";
 }
-
-
 function imprimirSalidaDinero($data){
     try {
         // Nombre de la impresora
@@ -768,7 +800,6 @@ function imprimirSalidaDinero($data){
         echo "Error: " . $e->getMessage();
     }
 }
-
 function compararMontosEntregadosVsCalculados($calculado, $entregado) {
     $diferencias = [];
     $faltanteGeneral = 0;
@@ -797,11 +828,4 @@ function compararMontosEntregadosVsCalculados($calculado, $entregado) {
 
     return $diferencias;
 }
-
-
-
-
-
-
-
  ?>
