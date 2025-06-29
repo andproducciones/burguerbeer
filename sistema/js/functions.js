@@ -1679,7 +1679,7 @@ function facturarVenta() {
     }
 
     var rows = $('#detalle_venta tr').length;
-    if (rows <= 1) {
+    if (rows < 1) {
         Swal.close();
         Swal.fire({
             position: 'center',
@@ -1739,9 +1739,9 @@ function facturarVenta() {
                     timer: 1000
                 });
 
-                setTimeout(function() {
+                /*setTimeout(function() {
                     location.reload();
-                }, 1000);
+                }, 1000);*/
 
             } catch (error) {
                 console.log(response);

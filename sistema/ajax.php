@@ -692,6 +692,8 @@ if ($_POST['action'] == 'procesarVenta') {
             ];
 
             echo json_encode($response, JSON_UNESCAPED_UNICODE);
+
+            
         } else {
             echo json_encode(['error' => 'Error al procesar la venta']);
         }
