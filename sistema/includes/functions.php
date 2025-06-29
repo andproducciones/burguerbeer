@@ -536,7 +536,7 @@ function imprimirCierreCaja($data) {
         $printer->text("Monto Inicial:          $ " . number_format($monto_inicial, 2) . "\n");
         $printer->text("Cantidad de Ventas:     $total_ventas\n");
         $printer->text("Monto por Ventas:       $ " . number_format($total_cash, 2) . "\n");
-        $printer->text("TOTAL VENTAS:           $ " . number_format($total_venta, 2) . "\n");
+        $printer->text("TOTAL DEL DIA:           $ " . number_format($total_venta, 2) . "\n");
         $printer->text("------------------------------------------------\n");
 
         $printer->setEmphasis(true);

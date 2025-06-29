@@ -682,16 +682,14 @@ if ($_POST['action'] == 'procesarVenta') {
             }
 
             $response = [
-			    'venta_ok'      => true,
-			    'mensaje'       => $mensaje,
-			    'no_factura'    => $data['no_factura'],
-			    'factura'       => $data['factura'],
-			    'comandas'      => $data['comandas'],
-			    'cod_cliente'   => $codcliente,
-			    'nombreCliente' => $nombreCliente,
-			    'correo_estado' => $correoEstado,
-			    'correo_error'  => $correoError
-			];
+                'venta_ok'      => true,
+                'mensaje'       => $mensaje,
+                'no_factura'    => $data['no_factura'],
+                'factura'       => $data['factura'],
+                'comandas'      => $data['comandas'],
+                'correo_estado' => $correoEstado,
+                'correo_error'  => $correoError
+            ];
 
             echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
@@ -2427,12 +2425,12 @@ if ($_POST['action'] == 'formCerrarCaja') {
 
                         <div>
                         <label>Observaciones</label>
-                        <textarea class="wd100" id="observaciones"></textarea>
+                        <textarea class="wd100" id="observaciones" name="observaciones"></textarea>
                         </div>
 
                         <div>
                         <label>Compras</label>
-                        <textarea class="wd100" id="compras"></textarea>
+                        <textarea class="wd100" id="compras" name="compras"></textarea>
                         </div>
 
                         </div>
@@ -2491,6 +2489,9 @@ if ($_POST['action'] == 'actualizarPreviewPDF') {
 
 if ($_POST['action'] == 'cerrarCaja') {
 
+
+    //print_r($_POST);
+    //exit;
     // Inicio de la transacción
     mysqli_begin_transaction($conection, MYSQLI_TRANS_START_READ_WRITE);
 
@@ -2531,6 +2532,8 @@ if ($_POST['action'] == 'cerrarCaja') {
 
         $deuna = isset($_POST['monto_deuna']) && $_POST['monto_deuna'] !== '' ? $_POST['monto_deuna'] : 0;
         $tarjeta = isset($_POST['monto_tarjeta']) && $_POST['monto_tarjeta'] !== '' ? $_POST['monto_tarjeta'] : 0;
+
+        
 
         // Obtener los valores de los empleados y sumar
         $salarios = 0;
@@ -2596,7 +2599,9 @@ if ($_POST['action'] == 'cerrarCaja') {
             'total_efectivo' => $totalFinalEfectivoEntregar,
             'total_tarjeta' => $totalTarjetaCalculado,
             'total_transferencia' => $totalFinalTransferenciaEntregar,
-            'total_deuna' => $totalDeUnaCalculado
+            'total_deuna' => $totalDeUnaCalculado,
+            'observaciones' => $_POST['observaciones'],
+            'compras' => $_POST['compras'],
 
         ];
 
@@ -2635,7 +2640,7 @@ if ($_POST['action'] == 'cerrarCaja') {
 
         imprimirCierreCaja($data);
 
-        echo 'Ok';
+        echo 10;
 
         } else {
             echo 2;

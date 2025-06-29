@@ -1334,7 +1334,12 @@ function handleResponse(response) {
             showSuccessAlert('Relizado Correctamente', 'Se ha relizado Correctamente', function() {
                 location.reload();
             });
-            break;
+        break;
+            case '10':
+                 showSuccessAlert('Relizado Correctamente', 'Se ha relizado Correctamente', function() {
+                location.reload();
+            });
+        break;
         default:
             try {
                 var info = JSON.parse(response);
