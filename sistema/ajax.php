@@ -705,6 +705,27 @@ if ($_POST['action'] == 'procesarVenta') {
     }
 }
 
+if ($_POST['action'] == 'abrirModalMesas') {
+    $query = mysqli_query($conection, "
+        SELECT m.id, m.numero,
+            (SELECT COUNT(*) FROM detalle_temp WHERE mesa = m.id) as total_productos
+        FROM mesas m
+        WHERE m.estatus = 1
+    ");
+
+    $mesas = [];
+    while ($row = mysqli_fetch_assoc($query)) {
+        $mesas[] = [
+            'id' => (int)$row['id'],
+            'numero' => 'Mesa ' . $row['numero'],
+            'ocupada' => ($row['total_productos'] > 0) ? true : false
+        ];
+    }
+
+    echo json_encode($mesas);
+    exit;
+}
+
 //cambiar contraseña
 			if($_POST['action'] == 'changePassword'){
 

@@ -288,7 +288,7 @@ $('#add_product_venta').click(function(e) {
     // Verificar si la cantidad es válida
     if (cantidad > 0) {
         var codproducto = $('#txt_cod_producto').val();
-        var mesa = $('#mesa').val();
+        var mesa = $('#id_mesa').val();
         var action = 'addProductoDetalle';
 
         $.ajax({
@@ -342,7 +342,7 @@ e.preventDefault();
     if(rows > 0)
         {
 
-        var mesa        = $('#mesa').val();    
+        var mesa        = $('#id_mesa').val();    
         if(mesa == 0){
         alert("Seleccione una mesa");
         return false;
@@ -377,7 +377,7 @@ e.preventDefault();
 $('.btn_imprimir_general').click(function(e){
 e.preventDefault();
     
-    var mesa         = $('#mesa').val();
+    var mesa         = $('#id_mesa').val();
     var action       = $(this).attr('ac');
     
         if(mesa == 0){
@@ -459,7 +459,7 @@ $('#btn_facturar_venta').click(function(e) {
     if (rows > 0) {
         var action = 'procesarVenta';
         var codcliente = $('#id_cliente').val();
-        var mesa = $('#mesa').val();
+        var mesa = $('#id_mesa').val();
 
         $.ajax({
             url: 'ajax.php',
@@ -736,7 +736,15 @@ $('.anadirForm').click(function() {
     
 
 
+    
+
+
+
 });  //final del ready
+
+
+
+
 
 
 function procesarColaCorreos() {
@@ -814,8 +822,7 @@ function imprimirTodo(cliente,factura,nombre){
     
     }
 
-
-    function imprimirFactura(cliente,factura,nombre){
+function imprimirFactura(cliente,factura,nombre){
 
         var action = 'imprimirFactura';
     
@@ -837,8 +844,7 @@ function imprimirTodo(cliente,factura,nombre){
                             });
         
         }
-
-        function imprimirComanda(cliente,factura,nombre){
+function imprimirComanda(cliente,factura,nombre){
 
             var action = 'imprimirComanda';
         
@@ -942,7 +948,7 @@ function del_product_detalle(correlativo) {
 
     var action = 'del_product_detalle';
     var id_detalle = correlativo;
-    var mesa = $('#mesa').val();
+    var mesa = $('#id_mesa').val();
 
     // Verificar si se ha seleccionado una mesa
     if (!mesa || mesa == 0) {
@@ -999,8 +1005,6 @@ function del_product_detalle(correlativo) {
         }
     });
 }
-
-
 function viewProcesar(){
     if($('#detalle_venta tr').length > 0)
      {
@@ -1027,35 +1031,51 @@ function viewProcesar(){
     }
 
 }
-
-function searchForDetalle(id) {
+function searchForDetalle(id,idmesa) {
     var action = 'searchForDetalle';
     var user = id;
-    var mesa = $('#mesa').val();
+    var mesa = idmesa || $('#id_mesa').val(); 
 
-    // Verificar si se ha seleccionado una mesa
+    console.log(mesa);
+
     if (!mesa || mesa == 0) {
-        alert('Seleccione una mesa');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Atención',
+            text: 'Seleccione una mesa',
+            confirmButtonText: 'Aceptar'
+        });
         return false;
     }
+
+    // Mostrar mensaje de carga
+    Swal.fire({
+        title: 'Cargando...',
+        html: 'Espere por favor',
+        allowEscapeKey: false,
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
 
     $.ajax({
         url: 'ajax.php',
         type: 'POST',
         async: true,
         data: { action: action, user: user, mesa: mesa },
-
         success: function(response) {
             console.log(response);
-            if (response != 'error') {
+            Swal.close(); // Cerrar el loader al recibir respuesta
+
+            if (response !== 'error') {
                 try {
                     var info = JSON.parse(response);
 
-                    // Actualizar los detalles de la venta
-                    $('#detalle_venta').html(info.detalle);
-                    $('#detalle_totales').html(info.totales);
-                    $('#id_precioFinal').val(info.preciofinal);
-                    $('#id_mesa').val(info.mesa);
+                    $('#detalle_venta').html(info.detalle || '');
+                    $('#detalle_totales').html(info.totales || '');
+                    $('#id_precioFinal').val(info.preciofinal || 0);
+                    $('#id_mesa').val(info.mesa || '');
 
                 } catch (e) {
                     console.error("Error al procesar la respuesta JSON:", e);
@@ -1068,9 +1088,15 @@ function searchForDetalle(id) {
             }
             viewProcesar();
         },
-
         error: function(error) {
-            console.error("Error en la solicitud AJAX:", error);
+            console.error("Error en la solicitud AJAX:", error.responseText || error);
+            Swal.close(); // Cerrar el loader también en error
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo consultar el detalle de la venta',
+                confirmButtonText: 'Aceptar'
+            });
         }
     });
 }
@@ -1116,7 +1142,7 @@ function sendDataProduct(){
             });
         }
 
-        function clearFormFields() {
+function clearFormFields() {
             $('.alertAddProduct').html('');
             $('#txtCantidad').val('');
             $('#txtPrecio').val('');
@@ -1150,7 +1176,7 @@ function sendDataProduct(){
 
         function addproduct(code) {
             var codproducto = code;
-            var mesa = $('#mesa').val();
+            var mesa = $('#id_mesa').val();
             var cantidad = 1;
             var action = 'addProductoDetalle';
         
@@ -1586,7 +1612,6 @@ function codigoPromocional() {
 // Objeto global para llevar el control de advertencias por mesa
 var correoWarnings = correoWarnings || {};
 
-
 function facturarVenta() {
     // Mostrar mensaje de carga
     Swal.fire({
@@ -1599,8 +1624,8 @@ function facturarVenta() {
         }
     });
 
-    var numeroMesa = $('#mesa').val() || 0;
-    var nombreCliente = $('#nombreCliente').val().trim();
+    var numeroMesa = $('#id_mesa').length ? $('#id_mesa').val() : 0;
+    var nombreCliente = $('#nombreCliente').length ? $('#nombreCliente').val().trim() : '';
 
     if (nombreCliente === '') {
         Swal.close();
@@ -1617,48 +1642,47 @@ function facturarVenta() {
     // Validar correo marketing de forma segura
     var correoMarketing = '';
 
-    // Verificar si el input existe antes de acceder a .val()
     if ($('#correoMarketing').length) {
-    correoMarketing = $('#correoMarketing').val() || '';
-    correoMarketing = correoMarketing.trim();
+        correoMarketing = $('#correoMarketing').val() || '';
+        correoMarketing = correoMarketing.trim();
     }
 
     if (correoMarketing !== '') {
-    var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(correoMarketing)) {
-        Swal.close();
-        Swal.fire({
-            position: 'center',
-            icon: 'error',
-            title: 'El correo ingresado no es válido',
-            showConfirmButton: false,
-            timer: 2000
-        });
-        return false;
-    }
+        // Regex robusto para correos válidos
+        var emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+        if (!emailRegex.test(correoMarketing)) {
+            Swal.close();
+            Swal.fire({
+                position: 'center',
+                icon: 'error',
+                title: 'El correo ingresado no es válido',
+                showConfirmButton: false,
+                timer: 2000
+            });
+            return false;
+        }
     } else {
-    // Si está vacío, gestionar alerta por mesa
-    if (!correoWarnings[numeroMesa]) {
-        correoWarnings[numeroMesa] = true;
-        Swal.close();
-        Swal.fire({
-            position: 'center',
-            icon: 'warning',
-            title: 'No ingresó el correo de marketing. Debe ingresarlo o continuar sin él.',
-            showConfirmButton: false,
-            timer: 2000
-        });
-        return false;
-    }
-    // Segunda vez en esta mesa: continúa sin mostrar alerta
+        if (!correoWarnings[numeroMesa]) {
+            correoWarnings[numeroMesa] = true;
+            Swal.close();
+            Swal.fire({
+                position: 'center',
+                icon: 'warning',
+                title: 'No ingresó el correo de marketing. Debe ingresarlo o continuar sin él.',
+                showConfirmButton: false,
+                timer: 2000
+            });
+            return false;
+        }
+        // Segunda vez en esta mesa: continúa sin mostrar alerta
     }
 
     var pago = parseInt($("input[type=radio][name=pago]:checked").val()) || 0;
-    var codigoTarjeta = $('#codigoTarjeta').val().trim() || '';
-    var codigoTransferencia = $('#codigoTransferencia').val().trim() || '';
+    var codigoTarjeta = $('#codigoTarjeta').length ? $('#codigoTarjeta').val().trim() : '';
+    var codigoTransferencia = $('#codigoTransferencia').length ? $('#codigoTransferencia').val().trim() : '';
 
-    if (pago != 1) {
-        if (pago == 2 && codigoTarjeta === '') {
+    if (pago !== 1) {
+        if (pago === 2 && codigoTarjeta === '') {
             Swal.close();
             Swal.fire({
                 position: 'center',
@@ -1670,7 +1694,7 @@ function facturarVenta() {
             return false;
         }
 
-        if ((pago == 3 || pago == 4) && codigoTransferencia === '') {
+        if ((pago === 3 || pago === 4) && codigoTransferencia === '') {
             Swal.close();
             Swal.fire({
                 position: 'center',
@@ -1683,7 +1707,7 @@ function facturarVenta() {
         }
     }
 
-    var rows = $('#detalle_venta tr').length;
+    var rows = $('#detalle_venta').length ? $('#detalle_venta tr').length : 0;
     if (rows < 1) {
         Swal.close();
         Swal.fire({
@@ -1697,11 +1721,11 @@ function facturarVenta() {
     }
 
     var action = 'procesarVenta';
-    var codcliente = $('#id_cliente').val() || 1;
-    var cupon = $('#id_cupon').val() || 0;
-    var caja = $('#id_caja').val() || 0;
-    var factura = $('#facturaImpresa').is(':checked') ? 1 : 2;
-    var comandas = $('#comandasImpresa').is(':checked') ? 1 : 2;
+    var codcliente = $('#id_cliente').length ? $('#id_cliente').val() : 1;
+    var cupon = $('#id_cupon').length ? $('#id_cupon').val() : 0;
+    var caja = $('#id_caja').length ? $('#id_caja').val() : 0;
+    var factura = $('#facturaImpresa').length && $('#facturaImpresa').is(':checked') ? 1 : 2;
+    var comandas = $('#comandasImpresa').length && $('#comandasImpresa').is(':checked') ? 1 : 2;
 
     $.ajax({
         url: 'ajax.php',
@@ -1722,40 +1746,35 @@ function facturarVenta() {
             nombreCliente: nombreCliente
         },
         success: function(response) {
-
             console.log(response);
             try {
                 var info = JSON.parse(response);
-                console.log(response);
+                console.log(info);
 
-                if(info.venta){
+                if (info.venta) {
+                    if (info.factura == 1 && info.comandas == 1) {
+                        imprimirTodo(info.cod_cliente, info.no_factura, nombreCliente);
+                    } else if (info.factura == 1) {
+                        imprimirFactura(info.cod_cliente, info.no_factura, nombreCliente);
+                    } else if (info.comandas == 1) {
+                        imprimirComanda(info.cod_cliente, info.no_factura, nombreCliente);
+                    }
 
-               
-                if (info.factura == 1 && info.comandas == 1) {
-                    imprimirTodo(info.cod_cliente, info.no_factura, nombreCliente);
-                } else if (info.factura == 1) {
-                    imprimirFactura(info.cod_cliente, info.no_factura, nombreCliente);
-                } else if (info.comandas == 1) {
-                    imprimirComanda(info.cod_cliente, info.no_factura, nombreCliente);
+                    Swal.fire({
+                        position: 'center',
+                        icon: 'success',
+                        title: 'Realizado Correctamente',
+                        showConfirmButton: false,
+                        timer: 1000
+                    });
+
+                    /*setTimeout(function() {
+                        location.reload();
+                    }, 1000);*/
                 }
-
-                Swal.fire({
-                    position: 'center',
-                    icon: 'success',
-                    title: 'Realizado Correctamente',
-                    showConfirmButton: false,
-                    timer: 1000
-                });
-
-                /*setTimeout(function() {
-                    location.reload();
-                }, 1000);*/
-
-                 }
-
             } catch (error) {
-                console.log(response);
                 console.error('Error al procesar la respuesta:', error);
+                console.log('Respuesta recibida:', response);
                 Swal.fire({
                     position: 'center',
                     icon: 'error',
@@ -1765,7 +1784,7 @@ function facturarVenta() {
             }
         },
         error: function(error) {
-            console.error('Error en la solicitud AJAX:', error);
+            console.error('Error en la solicitud AJAX:', error.responseText || error);
             Swal.fire({
                 position: 'center',
                 icon: 'error',
@@ -1775,6 +1794,7 @@ function facturarVenta() {
         }
     });
 }
+
 
 // Función para limpiar el estado de la mesa
 function salirDeMesa(numeroMesa) {
@@ -2036,7 +2056,7 @@ function procesarDivisionCuenta () {
 
     // Obtener los datos necesarios para dividir la cuenta
     var action = 'procesarDivisionCuenta';
-    var mesa = $('#mesa').val() || 'error';
+    var mesa = $('#id_mesa').val() || 'error';
     var codcliente = $('#id_cliente').val() || 1;
     var codcliente2 = $('#cedula_cliente').val() || 1;
     var cupon = $('#id_cupon').val() || 0;

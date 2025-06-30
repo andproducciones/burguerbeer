@@ -9,7 +9,7 @@ if(empty($_SESSION['active']) OR empty($_SESSION['idUser'])){
 
 $id = $_SESSION['idUser'];
 
-$query = mysqli_query($conection,"SELECT a.id_caja,c.lugar FROM arqueo_caja a INNER JOIN cajas c ON a.id_caja=c.id WHERE a.id_usuario = $id AND a.estatus = 1 ");
+$query = mysqli_query($conection,"SELECT a.id_caja,c.lugar FROM arqueo_caja a INNER JOIN cajas c ON a.id_caja = c.id WHERE a.id_usuario = $id AND a.estatus = 1 ");
 $result = mysqli_num_rows($query);
 
 //print_r($query);
@@ -24,16 +24,21 @@ if($result != 1){
 	header('location: ../');
 	}
 
-
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
 	<meta charset="utf-8">
 	<?php include "includes/scripts.php"; ?>
+	<div class="modal4" id="modalMesas" style="display: none;">
+    <div class="bodyModal4">
+        <h2>Seleccione una Mesa</h2>
+        <div class="gridMesas"></div>
+		</div>
+	</div>
+
+
 	<style>nav{ display:none} #container{padding: 50px 15px 15px;}</style>
 	<title>Caja</title>
 </head>
@@ -66,6 +71,10 @@ if($result != 1){
 									<?php echo buscarCliente(); ?>
 								</select>
 							</div>
+
+							
+
+
 							<div class="wd25 nombreResponsive margin">
 								
 								<input type="text" name="ap_cliente" id="direccion" placeholder="Dirección" disabled required>
@@ -78,41 +87,13 @@ if($result != 1){
 								
 								<input type="text" name="ap_cliente" id="correo" placeholder="Correo" disabled required>
 							</div>
-							<div class="wd10 mesaResponsive margin" id=" mesas2">
-								<select class="notItemOne" name="mesa" id="mesa" onchange="searchForDetalle('<?php echo $_SESSION['idUser'];?>');">
-									<option value="">Mesa</option>
-									<?php
-										$query = mysqli_query($conection,"SELECT * FROM mesas WHERE estatus = 1");
-										$result = mysqli_num_rows($query);
-										$data = '';
 
-										if($result > 0){
-											while($data = mysqli_fetch_assoc($query)){
-
-												$mesaId = $data['id'];
-
-												// Consulta para verificar si la mesa tiene productos en detalle_temp
-												$queryProductos = mysqli_query($conection, "
-													SELECT COUNT(*) as total_productos 
-													FROM detalle_temp 
-													WHERE mesa = $mesaId
-												");
-												$productos = mysqli_fetch_assoc($queryProductos);
-										
-												// Determinar si la mesa tiene productos
-												$tieneProductos = ($productos['total_productos'] > 0) ? true : false;
-												
-												?>
-												
-												<option value="<?= $data['id']; ?>"><?= $data['numero']; ?>
-												<?php if ($tieneProductos): ?>
-													<span style="color: red; font-size: 14px;">●</span>
-												<?php endif; ?>
-											</option>
-												
-											<?php }} ?>
-								</select>
+							<div class="wd10 mesaResponsive margin">
+								<button type="button" class="btn1" id="botonSeleccionarMesa">
+									Seleccionar Mesa
+								</button>
 							</div>
+							
 						</form>
 					</div>
 				</div>
@@ -275,4 +256,72 @@ if($result != 1){
 
 			</body>
 			</html>
+
+<script>
+    function abrirModalMesas() {
+        $.ajax({
+            url: 'ajax.php',
+            type: 'POST',
+            dataType: 'json',
+            data: { action: 'abrirModalMesas' },
+            success: function(mesas) {
+                if (!mesas || mesas.length === 0) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudo obtener la información de las mesas.'
+                    });
+                    return;
+                }
+
+                var contenedor = $('#modalMesas .gridMesas');
+                contenedor.empty();
+
+                mesas.forEach(mesa => {
+                    var claseEstado = mesa.ocupada ? 'ocupada' : 'libre';
+
+                    var boton = $('<button>')
+                        .text(mesa.numero)
+                        .addClass(claseEstado)
+                        .attr('data-id', mesa.id)
+                        .on('click', function() {
+                            var idMesa = $(this).data('id');
+
+                            $('#id_mesa').val(idMesa);
+                            searchForDetalle('<?php echo $_SESSION['idUser']; ?>', idMesa);
+                            $('#modalMesas').hide();
+                        });
+
+                    contenedor.append(boton);
+                });
+
+                $('#modalMesas').show();
+            },
+            error: function(xhr, status, error) {
+                console.error(error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Hubo un problema al cargar las mesas.'
+                });
+            }
+        });
+    }
+
+    $('#botonSeleccionarMesa').on('click', function() {
+        abrirModalMesas();
+        console.log('Modal abierto manualmente.');
+    });
+
+    $(document).ready(function() {
+        var mesaSeleccionada = $('#id_mesa').val();
+
+        if (!mesaSeleccionada || mesaSeleccionada == 0) {
+            console.log("No hay mesa seleccionada. Abriendo modal...");
+            abrirModalMesas();
+        } else {
+            console.log("Mesa preseleccionada: " + mesaSeleccionada);
+        }
+    });
+</script>
 

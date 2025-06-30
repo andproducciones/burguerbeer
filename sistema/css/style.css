@@ -498,6 +498,61 @@ font-size: 12pt;
 	margin-top: 15px;
 }
 
+.modal4 {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.bodyModal4 {
+    background: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    max-width: 600px;
+    width: 90%;
+    text-align: center;
+}
+
+.gridMesas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.gridMesas button {
+    width: 80px;
+    height: 80px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    color: #fff;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.gridMesas button.libre {
+    background-color: #2ecc71; /* verde */
+}
+
+.gridMesas button.ocupada {
+    background-color: #e74c3c; /* rojo */
+}
+
+.gridMesas button:hover {
+    opacity: 0.8;
+}
+
+
 
 /***********Modulo Ventas***********/
 .datos_cliente, .datos_venta, .title_page{
