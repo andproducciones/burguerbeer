@@ -227,3 +227,68 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+
+BEGIN
+
+    DECLARE usuarios INT;
+    DECLARE clientes INT;
+    DECLARE productos INT;
+    DECLARE ventas INT;
+
+    -- Conteo de registros activos
+    SELECT COUNT(*) INTO usuarios FROM usuario WHERE estatus != 10;
+    SELECT COUNT(*) INTO clientes FROM clientes WHERE estatus != 10;
+    SELECT COUNT(*) INTO productos FROM producto WHERE estatus != 10;
+    SELECT COUNT(*) INTO ventas FROM factura WHERE fecha > CURDATE() AND estatus != 10;
+
+    -- Primer resultado: Totales
+    SELECT usuarios AS total_usuarios, 
+           clientes AS total_clientes, 
+           productos AS total_productos, 
+           ventas AS ventas_hoy;
+
+    -- Segundo resultado: Ventas y salarios últimos 10 arqueos
+    SELECT 
+        DATE(fecha_fin) AS fecha,
+        SUM(monto_final) AS total_ventas,
+        SUM(salarios) AS total_salarios
+    FROM arqueo_caja
+    GROUP BY DATE(fecha_fin)
+    ORDER BY fecha DESC
+    LIMIT 10;
+
+    -- Tercer resultado: 10 productos más vendidos
+    SELECT 
+        p.producto AS nombre_producto,
+        SUM(df.cantidad) AS total_vendidos
+    FROM 
+        detalle_factura df
+    INNER JOIN 
+        producto p ON df.codproducto = p.codproducto
+    WHERE 
+        df.estatus_dt = 1 
+        AND p.categoria NOT IN (20, 21, 22, 24, 25, 26, 27)
+    GROUP BY 
+        df.codproducto, p.producto
+    ORDER BY 
+        total_vendidos DESC
+    LIMIT 10;
+
+    -- Cuarto resultado: 20 productos menos vendidos (incluyendo sin ventas)
+    SELECT 
+        p.producto AS nombre_producto,
+        COALESCE(SUM(df.cantidad), 0) AS total_vendidos
+    FROM 
+        producto p
+    LEFT JOIN 
+        detalle_factura df ON df.codproducto = p.codproducto AND df.estatus_dt = 1
+    WHERE 
+        p.categoria NOT IN (20, 21, 22, 24, 25, 26, 27)
+    GROUP BY 
+        p.codproducto, p.producto
+    ORDER BY 
+        total_vendidos ASC
+    LIMIT 20;
+
+END
