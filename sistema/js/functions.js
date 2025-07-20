@@ -589,90 +589,20 @@ $('#btn_facturar_venta').click(function(e) {
 
 ///// final venta credito
 
+
+
+
+/// hotel
+
+
+
     $(document).on('change', 'input[name="productos_seleccionados[]"]', calcularTotalDividir);
 
 
 
 
-$('.anadirForm').click(function() {
 
-    // Obtener los atributos y valores del elemento clicado
-    var correlativo = $(this).attr('co');
-    var tipo = $(this).attr('ti');
-    var placa = $(this).attr('pl');
-    var action = $(this).attr('ac');
-    var lugar = $(this).attr('lu');
-    var cedula = $('#id_cliente').val();
-    var nombre = $('#nom_cliente').val();
-    var apellido = $('#ap_cliente').val();
-    var mesa = $('#id_mesa').val();
-    var final = $('#id_precioFinal').val();
-    var rows = $('#detalle_venta tr').length;
 
-      if (rows > 1) {
-                    var dividirBtn = 1;
-                }else{
-                    var dividirBtn = 2;
-                }
-        
-
-    $.ajax({
-        url: 'ajax.php',
-        type: 'POST',
-        async: true,
-        data: {
-            action: action,
-            co: correlativo,
-            tipo: tipo,
-            pl: placa,
-            lu: lugar,
-            ce: cedula,
-            nom: nombre,
-            ape: apellido,
-            mesa: mesa,
-            final: final,
-            dividirBtn:dividirBtn
-        },
-        success: function(response) {
-            console.log(response);
-
-            // Manejo de la respuesta cuando no es un error
-            if (response != '6') {
-                $('.bodyModal').html(response);
-                $('.modal').fadeIn();
-                $('#codigoBarras').focus();
-
-                // Inicializar DataTables para las tablas de arqueo y ventas
-                $('#myTableArqueo, #myTableVentas').DataTable({
-                    language: {
-                        url: "//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json"
-                    },
-                    dom: 'Bfrtip',
-                    buttons: ['excelHtml5', 'pdfHtml5']
-                });
-            } else {
-                // Manejo cuando todas las cajas están abiertas
-                $('.modal').fadeOut();
-                Swal.fire({
-                    position: 'top-end',
-                    icon: 'error',
-                    title: 'Todas las cajas están abiertas',
-                    showConfirmButton: false,
-                    timer: 1500
-                });
-            }
-        },
-        error: function(error) {
-            console.error('Error en la solicitud AJAX:', error);
-            Swal.fire({
-                position: 'center',
-                icon: 'error',
-                title: 'Error',
-                text: 'Hubo un problema al cargar los datos. Por favor, intenta nuevamente.',
-            });
-        }
-    });
-});
 
 
 
@@ -1883,7 +1813,7 @@ function seleccionarPago(valor) {
                     // Inicializar DataTables para la tabla de ventas con configuraciones adicionales
                     $('#myTableVentas').DataTable({
                         language: {
-                            url: "//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json"
+                            url: "https://cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json"
                         },
                         dom: 'Bfrtip',
                         buttons: [
@@ -2276,3 +2206,489 @@ function prepararDatosParaPDF() {
         body: new URLSearchParams(data)
     });
 }
+
+
+function addHabitacion() {
+    const entrada = document.getElementById('fecha_entrada').value;
+    const salida = document.getElementById('fecha_salida').value;
+
+    if (!entrada || !salida) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Fechas requeridas',
+            text: 'Selecciona primero la fecha de entrada y salida antes de añadir habitaciones.'
+        });
+        return;
+    }
+
+    if (new Date(salida) <= new Date(entrada)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Fechas inválidas',
+            text: 'La fecha de salida debe ser posterior a la de entrada.'
+        });
+        return;
+    }
+
+    const container = document.getElementById('habitacionesContainer');
+    const original = container.querySelector('.habitacion-row');
+    const clone = original.cloneNode(true);
+
+    // Limpiar habitación seleccionada
+    const habitacionSelect = clone.querySelector('.id_habitacion');
+    habitacionSelect.value = '';
+    habitacionSelect.onchange = recalcularTotalReserva;
+
+    // Limpiar tarifas
+    const tarifaAdulto = clone.querySelector('.select_tarifa');
+    const tarifaNino = clone.querySelector('.select_tarifa_nino');
+    if (tarifaAdulto) {
+        tarifaAdulto.value = '';
+        tarifaAdulto.onchange = recalcularTotalReserva;
+    }
+    if (tarifaNino) {
+        tarifaNino.value = '';
+        tarifaNino.onchange = recalcularTotalReserva;
+    }
+
+    // Resetear adultos y niños
+    clone.querySelector('.input_adultos').value = 1;
+    clone.querySelector('.input_adultos').onchange = recalcularTotalReserva;
+    clone.querySelector('.input_ninos').value = 0;
+    clone.querySelector('.input_ninos').onchange = recalcularTotalReserva;
+
+    // Resetear desayuno
+    const desayunoChk = clone.querySelector('.chk_desayuno');
+    const desayunoSel = clone.querySelector('.precio_desayuno');
+    desayunoChk.checked = false;
+    desayunoChk.onchange = () => {
+        togglePrecio(desayunoChk, 'precio_desayuno');
+        recalcularTotalReserva();
+    };
+    desayunoSel.disabled = true;
+    desayunoSel.value = '';
+    desayunoSel.onchange = recalcularTotalReserva;
+
+    // Resetear tour
+    const tourChk = clone.querySelector('.chk_tour');
+    const tourSel = clone.querySelector('.precio_tour');
+    const lugarTour = clone.querySelector('.select_lugar_tour');
+    tourChk.checked = false;
+    tourChk.onchange = () => {
+        togglePrecio(tourChk, 'precio_tour');
+        togglePrecio(tourChk, 'select_lugar_tour');
+        recalcularTotalReserva();
+    };
+    tourSel.disabled = true;
+    tourSel.value = '';
+    tourSel.onchange = recalcularTotalReserva;
+
+    lugarTour.disabled = true;
+    lugarTour.value = '';
+
+    // Cargar habitaciones disponibles desde PHP
+    fetch('ajax.php', {
+        method: 'POST',
+        body: new URLSearchParams({
+            action: 'habitacionesDisponibles',
+            fecha_entrada: entrada,
+            fecha_salida: salida
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        const select = clone.querySelector('.id_habitacion');
+        select.innerHTML = '<option value="">Seleccione</option>';
+        data.forEach(h => {
+            select.innerHTML += `<option value="${h.idhabitacion}">Hab. ${h.numero}</option>`;
+        });
+    });
+
+    container.appendChild(clone);
+    recalcularTotalReserva();
+}
+
+
+function removeHabitacion(btn) {
+    const container = document.getElementById('habitacionesContainer');
+    if (container.children.length > 1) {
+        btn.parentElement.remove();
+        recalcularTotalReserva();
+    }
+}
+
+function calcularNoches() {
+    const f1 = document.getElementById('fecha_entrada').value;
+    const f2 = document.getElementById('fecha_salida').value;
+    const d1 = new Date(f1);
+    const d2 = new Date(f2);
+    const diff = (d2 - d1) / (1000 * 60 * 60 * 24);
+    return (isNaN(diff) || diff <= 0) ? 0 : diff;
+}
+
+function recalcularTotalReserva() {
+    const noches = calcularNoches();
+    if (noches <= 0) return;
+
+    let total = 0;
+    const habitacionesUsadas = [];
+
+    document.querySelectorAll('.habitacion-row').forEach((row, idx) => {
+        const selectHabitacion = row.querySelector('.id_habitacion');
+        const idHab = selectHabitacion?.value;
+        if (idHab) {
+            if (habitacionesUsadas.includes(idHab)) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Habitación duplicada',
+                    text: 'No puedes seleccionar la misma habitación más de una vez.'
+                });
+                selectHabitacion.value = '';
+                return;
+            }
+            habitacionesUsadas.push(idHab);
+        }
+
+        const adultos = parseInt(row.querySelector('.input_adultos')?.value || 0);
+        const ninos = parseInt(row.querySelector('.input_ninos')?.value || 0);
+
+        const precioAdulto = parseFloat(row.querySelector('.select_tarifa')?.selectedOptions[0]?.dataset.precio || 0);
+        const precioNino = parseFloat(row.querySelector('.select_tarifa_nino')?.selectedOptions[0]?.dataset.precio || 0);
+        const precioDesayuno = row.querySelector('.chk_desayuno')?.checked
+            ? parseFloat(row.querySelector('.precio_desayuno')?.selectedOptions[0]?.dataset?.precio || 0)
+            : 0;
+
+        const precioTour = row.querySelector('.chk_tour')?.checked
+            ? parseFloat(row.querySelector('.precio_tour')?.selectedOptions[0]?.dataset?.precio || 0)
+            : 0;
+
+
+        const subtotalAdulto = adultos * (precioAdulto + precioDesayuno + precioTour) * noches;
+        const subtotalNino = ninos * (precioNino + precioDesayuno + precioTour) * noches;
+
+        total += subtotalAdulto + subtotalNino;
+    });
+
+    document.getElementById('total').value = total.toFixed(2);
+}
+
+function togglePrecio(checkbox, clase) {
+    const select = checkbox.closest('.habitacion-row').querySelector(`.${clase}`);
+    if (checkbox.checked) {
+        select.disabled = false;
+    } else {
+        select.disabled = true;
+        select.value = '';
+    }
+    recalcularTotalReserva();
+}
+
+function actualizarHabitacionesDisponibles() {
+    const entrada = document.getElementById('fecha_entrada').value;
+    const salida = document.getElementById('fecha_salida').value;
+
+    if (!entrada || !salida) return;
+
+    fetch('ajax.php', {
+        method: 'POST',
+        body: new URLSearchParams({
+            action: 'habitacionesDisponibles',
+            fecha_entrada: entrada,
+            fecha_salida: salida
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.querySelectorAll('.id_habitacion').forEach(select => {
+            const currentValue = select.value;
+            let disponible = false;
+
+            select.innerHTML = '<option value="">Seleccione</option>';
+            data.forEach(h => {
+                if (h.idhabitacion == currentValue) disponible = true;
+                select.innerHTML += `<option value="${h.idhabitacion}" ${h.idhabitacion == currentValue ? 'selected' : ''}>Hab. ${h.numero}</option>`;
+            });
+
+            if (!disponible && currentValue) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Habitación no disponible',
+                    text: 'Una de las habitaciones ya no está disponible en el rango de fechas seleccionado.'
+                });
+                select.value = '';
+            }
+        });
+    })
+    .catch(err => {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error al cargar habitaciones',
+            text: 'No se pudo verificar disponibilidad. Intenta nuevamente o contacta soporte.'
+        });
+        console.error('Error al actualizar habitaciones:', err);
+    });
+}
+
+
+function iniciarEventosReserva() {
+    const fechaEntrada = document.getElementById('fecha_entrada');
+    const fechaSalida = document.getElementById('fecha_salida');
+
+    if (fechaEntrada && fechaSalida) {
+        fechaEntrada.addEventListener('change', () => {
+            actualizarHabitacionesDisponibles();
+            recalcularTotalReserva();
+        });
+
+        fechaSalida.addEventListener('change', () => {
+            actualizarHabitacionesDisponibles();
+            recalcularTotalReserva();
+        });
+    }
+}
+
+
+
+function sendDataReserva(modo = 'nueva') {
+    const form = document.getElementById('formReserva');
+    if (!form) {
+        Swal.fire('Error', 'Formulario no encontrado', 'error');
+        return;
+    }
+
+    const habitaciones = form.querySelectorAll('.habitacion-row');
+    if (habitaciones.length === 0) {
+        Swal.fire('Error', 'Debes añadir al menos una habitación.', 'error');
+        return;
+    }
+
+    const entrada = document.getElementById('fecha_entrada')?.value;
+    const salida = document.getElementById('fecha_salida')?.value;
+
+    if (!entrada || !salida || new Date(salida) <= new Date(entrada)) {
+        Swal.fire('Error', 'La fecha de salida debe ser posterior a la fecha de entrada.', 'error');
+        return;
+    }
+
+    let habitacionesValidas = true;
+    const habitacionesUsadas = [];
+
+    habitaciones.forEach(row => {
+        const select = row.querySelector('.id_habitacion');
+        const idHab = select?.value;
+
+        if (!idHab) {
+            habitacionesValidas = false;
+        } else {
+            if (habitacionesUsadas.includes(idHab)) {
+                habitacionesValidas = false;
+                Swal.fire('Error', 'Has seleccionado la misma habitación más de una vez.', 'error');
+                return;
+            }
+            habitacionesUsadas.push(idHab);
+        }
+    });
+
+    if (!habitacionesValidas) {
+        Swal.fire('Error', 'Hay habitaciones no seleccionadas o duplicadas.', 'error');
+        return;
+    }
+
+    const total = parseFloat(document.getElementById('total')?.value || 0);
+    const abono = parseFloat(document.getElementById('abono')?.value || 0);
+
+    if (isNaN(total) || total <= 0) {
+        Swal.fire('Error', 'El total debe ser mayor a cero.', 'error');
+        return;
+    }
+
+    if (abono > total) {
+        Swal.fire('Error', 'El abono no puede ser mayor que el total.', 'error');
+        return;
+    }
+
+    const data = new FormData(form);
+    data.set('action', (modo === 'editar') ? 'editarReserva' : 'guardarReserva');
+
+    fetch('ajax.php', {
+        method: 'POST',
+        body: data
+    })
+    .then(res => res.text())
+    .then(response => {
+        console.log(response);
+        if (response.trim() === 'ok') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Éxito',
+                text: (modo === 'editar') ? 'Reserva actualizada correctamente' : 'Reserva guardada correctamente'
+            });
+            closeModal('modalReserva');
+            location.reload();
+        } else {
+            Swal.fire('Error', response, 'error');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+    });
+}
+
+
+
+
+
+$(document).on('click', '.anadirForm', function () {
+    const action = $(this).attr('ac');
+    const co = $(this).attr('co');
+    const tipo = $(this).attr('ti');
+    const placa = $(this).attr('pl');
+    const lugar = $(this).attr('lu');
+    const cedula = $('#id_cliente').val();
+    const nombre = $('#nom_cliente').val();
+    const apellido = $('#ap_cliente').val();
+    const mesa = $('#id_mesa').val();
+    const final = $('#id_precioFinal').val();
+    const rows = $('#detalle_venta tr').length;
+    const dividirBtn = (rows > 1) ? 1 : 2;
+
+    // Reset modal y globales
+    $('.modal .bodyModal').html('');
+    $('.modal').hide();
+    delete window.tarifasDisponibles;
+    delete window.tarifasExtras;
+
+    // Si es cancelar reserva, verificar abono antes
+    if (action === 'formCancelarReserva') {
+        $.post('ajax.php', { action: 'verificarAbono', idreserva: co }, function (resp) {
+            try {
+                const json = JSON.parse(resp);
+                if (json.abono > 0) {
+                    Swal.fire({
+                        title: 'Reserva con Abono',
+                        text: `Esta reserva tiene un abono de $${json.abono}. ¿Deseas continuar con la cancelación?`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, cancelar',
+                        cancelButtonText: 'No, volver',
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            cargarFormularioModal();
+                        }
+                    });
+                } else {
+                    cargarFormularioModal();
+                }
+            } catch (e) {
+                Swal.fire('Error', 'Error al procesar la verificación del abono.', 'error');
+            }
+        });
+    } else {
+        cargarFormularioModal();
+    }
+
+    function cargarFormularioModal() {
+        $.ajax({
+            url: 'ajax.php',
+            type: 'POST',
+            data: {
+                action: action,
+                co: co,
+                tipo: tipo,
+                pl: placa,
+                lu: lugar,
+                ce: cedula,
+                nom: nombre,
+                ape: apellido,
+                mesa: mesa,
+                final: final,
+                dividirBtn: dividirBtn
+            },
+            success: function (response) {
+                if (response != '6') {
+                    $('.modal .bodyModal').html(response);
+                    $('.modal').fadeIn('fast', function () {
+                        // Activar select2 si existe
+                        if ($('.js-example-basic-single').length) {
+                            $('.js-example-basic-single').select2({
+                                width: '100%',
+                                dropdownParent: $('.modal')
+                            });
+                        }
+
+                        // Eventos fecha entrada/salida para validación de habitaciones
+                        if (typeof iniciarEventosReserva === 'function') {
+                            iniciarEventosReserva(); // solo si está definida
+                        }
+                    });
+
+                    // Inicializar datatables si corresponde
+                    if ($('#myTableArqueo').length || $('#myTableVentas').length) {
+                        $('#myTableArqueo, #myTableVentas').DataTable({
+                            language: {
+                                url: "https://cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json"
+                            },
+                            dom: 'Bfrtip',
+                            buttons: ['excelHtml5', 'pdfHtml5']
+                        });
+                    }
+                } else {
+                    $('.modal').fadeOut();
+                    Swal.fire({
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'Todas las cajas están abiertas',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                }
+            },
+            error: function () {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Hubo un problema al cargar el formulario.'
+                });
+            }
+        });
+    }
+});
+
+
+function sendCancelarReserva() {
+    const form = document.getElementById('form_cancelar_reserva');
+    const formData = new FormData(form);
+
+    fetch('ajax.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(resp => resp.text())
+    .then(data => {
+        alert(data);
+        closeModal();
+        location.reload();
+    })
+    .catch(err => {
+        alert('Error al cancelar la reserva');
+    });
+}
+
+
+
+
+function abrirFormularioCliente() {
+    $.ajax({
+        url: 'ajax.php',
+        type: 'POST',
+        data: { action: 'formCliente' },
+        success: function (response) {
+            $('.modal .bodyModal').html(response);
+            $('.modal').fadeIn();
+        }
+    });
+}
+

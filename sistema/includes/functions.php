@@ -1,24 +1,27 @@
-<?php 
-	date_default_timezone_set('America/Guayaquil'); 
-	
-	function fechaC(){
-		$mes = array("","Enero", 
-					  "Febrero", 
-					  "Marzo", 
-					  "Abril", 
-					  "Mayo", 
-					  "Junio", 
-					  "Julio", 
-					  "Agosto", 
-					  "Septiembre", 
-					  "Octubre", 
-					  "Noviembre", 
-					  "Diciembre");
-		return date('d')." de ". $mes[date('n')] . " de " . date('Y');
-	}
+<?php
+
+date_default_timezone_set('America/Guayaquil');
+
+function fechaC()
+{
+    $mes = array("","Enero",
+                  "Febrero",
+                  "Marzo",
+                  "Abril",
+                  "Mayo",
+                  "Junio",
+                  "Julio",
+                  "Agosto",
+                  "Septiembre",
+                  "Octubre",
+                  "Noviembre",
+                  "Diciembre");
+    return date('d')." de ". $mes[date('n')] . " de " . date('Y');
+}
 
 
-function buscarCliente(){
+function buscarCliente()
+{
 
     include "../conexion.php";
     // Simulación de conexión a base de datos
@@ -46,11 +49,11 @@ require 'C:\wamp64\www\burguerbeer\sistema\libreries\mike42\autoload.php';
 use Mike42\Escpos\Printer;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
 
-
 //use Mike42\Escpos\Printer;
 //use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
 
-function imprimirComandaMatricial($numeroMesa, $nombreMesera, $productos) {
+function imprimirComandaMatricial($numeroMesa, $nombreMesera, $productos)
+{
     try {
         // Nombre de la impresora
         $nombreImpresora = "matricial";
@@ -58,7 +61,7 @@ function imprimirComandaMatricial($numeroMesa, $nombreMesera, $productos) {
         // Conectar con la impresora matricial (ajusta según tu configuración)
         $connector = new WindowsPrintConnector($nombreImpresora);
         $printer = new Printer($connector);
-        
+
         // Configurar la impresora matricial (ajusta según tu impresora)
         $printer->initialize();
 
@@ -96,21 +99,22 @@ function imprimirComandaMatricial($numeroMesa, $nombreMesera, $productos) {
         // Cortar el papel y cerrar la conexión
         $printer->cut();
         $printer->close();
-        
+
         //echo "Impresión exitosa.";
     } catch (Exception $e) {
         echo "Error: " . $e->getMessage();
     }
 }
-function imprimirFacturaMatricial($factura, $tl_sniva, $total, $productos) {
+function imprimirFacturaMatricial($factura, $tl_sniva, $total, $productos)
+{
     try {
 
         include "../../conexion.php";
 
-        $query_config   = mysqli_query($conection,"SELECT * FROM configuracion");
+        $query_config   = mysqli_query($conection, "SELECT * FROM configuracion");
         $result_config  = mysqli_num_rows($query_config);
 
-        if($result_config > 0){
+        if ($result_config > 0) {
             $configuracion = mysqli_fetch_assoc($query_config);
 
             $razon_social   = $configuracion['razon_social'];
@@ -120,10 +124,10 @@ function imprimirFacturaMatricial($factura, $tl_sniva, $total, $productos) {
             $telefono       = $configuracion['telefono'];
         }
 
-            $nombre2         = $factura['nombre'];
-            $p_apellido      = $factura['p_apellido'];
-            $direccion2      = $factura['direccion'];
-            $telefono2       = $factura['telefono'];
+        $nombre2         = $factura['nombre'];
+        $p_apellido      = $factura['p_apellido'];
+        $direccion2      = $factura['direccion'];
+        $telefono2       = $factura['telefono'];
 
 
         // Nombre de la impresora
@@ -132,7 +136,7 @@ function imprimirFacturaMatricial($factura, $tl_sniva, $total, $productos) {
         // Conectar con la impresora matricial (ajusta según tu configuración)
         $connector = new WindowsPrintConnector($nombreImpresora);
         $printer = new Printer($connector);
-        
+
         // Configurar la impresora matricial (ajusta según tu impresora)
         $printer->initialize();
 
@@ -183,20 +187,21 @@ function imprimirFacturaMatricial($factura, $tl_sniva, $total, $productos) {
         $printer->cut();
         $printer->close();
         return true;
-        
+
         //echo "Impresión exitosa.";
     } catch (Exception $e) {
         echo "Error: " . $e->getMessage();
     }
 }
-function imprimirFactura($factura, $nombreCliente, $tl_sniva, $total, $productos) {
+function imprimirFactura($factura, $nombreCliente, $tl_sniva, $total, $productos)
+{
     try {
         include "../../conexion.php";
 
-         $query_config   = mysqli_query($conection,"SELECT * FROM configuracion");
+        $query_config   = mysqli_query($conection, "SELECT * FROM configuracion");
         $result_config  = mysqli_num_rows($query_config);
 
-        if($result_config > 0){
+        if ($result_config > 0) {
             $configuracion = mysqli_fetch_assoc($query_config);
             $razon_social   = $configuracion['razon_social'];
             $nombre         = $configuracion['nombre'];
@@ -205,10 +210,10 @@ function imprimirFactura($factura, $nombreCliente, $tl_sniva, $total, $productos
             $telefono       = $configuracion['telefono'];
         }
 
-            $nombre2         = $factura['nombre'];
-            $p_apellido      = $factura['p_apellido'];
-            $direccion2      = $factura['direccion'];
-            $telefono2       = $factura['telefono'];
+        $nombre2         = $factura['nombre'];
+        $p_apellido      = $factura['p_apellido'];
+        $direccion2      = $factura['direccion'];
+        $telefono2       = $factura['telefono'];
 
         // Nombre de la impresora
         $nombreImpresora = "comandas";
@@ -216,8 +221,8 @@ function imprimirFactura($factura, $nombreCliente, $tl_sniva, $total, $productos
         // Conectar con la impresora
         $connector = new WindowsPrintConnector($nombreImpresora);
         $printer = new Printer($connector);
-        
-        
+
+
         $printer->setJustification(Printer::JUSTIFY_CENTER);
 
         // Establecer el ancho de impresión para papel de 76 mm
@@ -232,10 +237,10 @@ function imprimirFactura($factura, $nombreCliente, $tl_sniva, $total, $productos
         $printer->text("$direccion\n");
 
         $printer->text("-----------------------------------------------\n\n");
-         $printer->text("$nombreCliente\n");
+        $printer->text("$nombreCliente\n");
 
         $printer->setJustification(Printer::JUSTIFY_LEFT);
-        
+
 
         $printer->text("-----------------------------------------------\n");
 
@@ -259,10 +264,10 @@ function imprimirFactura($factura, $nombreCliente, $tl_sniva, $total, $productos
             $precio         = $productos[$i + 2];
             $preciototal    = $productos[$i + 3];
 
-                $nombreProducto = str_pad($nombreProducto, 28);
-                $cantidad       = str_pad($cantidad, 5);
-                $precio         = str_pad($precio, 6);
-                $preciototal    = str_pad($preciototal, 6);
+            $nombreProducto = str_pad($nombreProducto, 28);
+            $cantidad       = str_pad($cantidad, 5);
+            $precio         = str_pad($precio, 6);
+            $preciototal    = str_pad($preciototal, 6);
 
             $printer->text("$cantidad $nombreProducto $precio $preciototal\n");
         }
@@ -290,9 +295,9 @@ function imprimirFactura($factura, $nombreCliente, $tl_sniva, $total, $productos
         $printer->setEmphasis(false);
 
         $printer->text("-----------------------------------------------\n");
-        
 
-        $printer->setJustification(Printer::JUSTIFY_CENTER);    
+
+        $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->text("!Gracias por su compra¡\n");
 
         // Cortar el papel y cerrar la conexión
@@ -303,15 +308,16 @@ function imprimirFactura($factura, $nombreCliente, $tl_sniva, $total, $productos
         echo "Error: " . $e->getMessage();
     }
 }
-function imprimirPrecuenta($mesa, $nombreCliente, $tl_sniva, $total, $productos) {
-    
+function imprimirPrecuenta($mesa, $nombreCliente, $tl_sniva, $total, $productos)
+{
+
     try {
         include "../../conexion.php";
 
-        $query_config   = mysqli_query($conection,"SELECT * FROM configuracion");
+        $query_config   = mysqli_query($conection, "SELECT * FROM configuracion");
         $result_config  = mysqli_num_rows($query_config);
 
-        if($result_config > 0){
+        if ($result_config > 0) {
             $configuracion = mysqli_fetch_assoc($query_config);
             $razon_social   = $configuracion['razon_social'];
             $nombre         = $configuracion['nombre'];
@@ -330,8 +336,8 @@ function imprimirPrecuenta($mesa, $nombreCliente, $tl_sniva, $total, $productos)
         // Conectar con la impresora
         $connector = new WindowsPrintConnector($nombreImpresora);
         $printer = new Printer($connector);
-        
-        
+
+
         $printer->setJustification(Printer::JUSTIFY_CENTER);
 
         // Establecer el ancho de impresión para papel de 76 mm
@@ -347,7 +353,7 @@ function imprimirPrecuenta($mesa, $nombreCliente, $tl_sniva, $total, $productos)
         $printer->setEmphasis(false);
         $printer->text("Mesa: $mesa\n");
         $printer->text("Mesero: $nombreMesero\n");
-        $printer->text("Fecha: $fecha\n");        
+        $printer->text("Fecha: $fecha\n");
         $printer->text("-----------------------------------------------\n");
 
         $nombreProducto2 = str_pad('Descripcion', 28);
@@ -366,10 +372,10 @@ function imprimirPrecuenta($mesa, $nombreCliente, $tl_sniva, $total, $productos)
             $precio         = $productos[$i + 2];
             $preciototal    = $productos[$i + 3];
 
-                $nombreProducto = str_pad($nombreProducto, 28);
-                $cantidad       = str_pad($cantidad, 5);
-                $precio         = str_pad($precio, 6);
-                $preciototal    = str_pad($preciototal, 6);
+            $nombreProducto = str_pad($nombreProducto, 28);
+            $cantidad       = str_pad($cantidad, 5);
+            $precio         = str_pad($precio, 6);
+            $preciototal    = str_pad($preciototal, 6);
 
             $printer->text("$cantidad $nombreProducto $precio $preciototal\n");
         }
@@ -430,7 +436,8 @@ function imprimirPrecuenta($mesa, $nombreCliente, $tl_sniva, $total, $productos)
         echo "Error: " . $e->getMessage();
     }
 }
-function imprimirComanda($numeroMesa, $nombreCliente, $nombreMesera, $productos, $fecha) {
+function imprimirComanda($numeroMesa, $nombreCliente, $nombreMesera, $productos, $fecha)
+{
     try {
         // Nombre de la impresora
         $nombreImpresora = "comandas";
@@ -455,12 +462,12 @@ function imprimirComanda($numeroMesa, $nombreCliente, $nombreMesera, $productos,
 
         // Imprimir productos
         for ($i = 0; $i < count($productos); $i += 3) {
-        $nombreProducto     = $productos[$i];
-        $cantidad           = $productos[$i + 1];
-        $observaciones      = $productos[$i + 2];
-        $printer->text("$cantidad $nombreProducto\n");
-        if (!empty($observaciones)) {
-        $printer->text("   $observaciones\n");
+            $nombreProducto     = $productos[$i];
+            $cantidad           = $productos[$i + 1];
+            $observaciones      = $productos[$i + 2];
+            $printer->text("$cantidad $nombreProducto\n");
+            if (!empty($observaciones)) {
+                $printer->text("   $observaciones\n");
             }
         }
 
@@ -474,24 +481,25 @@ function imprimirComanda($numeroMesa, $nombreCliente, $nombreMesera, $productos,
         echo "Error: " . $e->getMessage();
     }
 }
-function imprimirCierreCaja($data) {
+function imprimirCierreCaja($data)
+{
     include "../conexion.php";
     $nombreImpresora = "comandas";
 
     // Extraer datos
-    $fecha_inicio       = $data['fecha_inicio'];   
-    $fecha_fin          = $data['fecha_fin'];       
-    $id_cierre          = $data['idArqueo'];        
-    $user               = $data['idUser'];          
-    $nombre             = $data['nombre'];          
-    $apellido           = $data['apellido'];      
+    $fecha_inicio       = $data['fecha_inicio'];
+    $fecha_fin          = $data['fecha_fin'];
+    $id_cierre          = $data['idArqueo'];
+    $user               = $data['idUser'];
+    $nombre             = $data['nombre'];
+    $apellido           = $data['apellido'];
     $monto_inicial      = $data['monto_inicial'];
     $monto_final        = $data['monto_final'];
-    $total_ventas       = $data['total_ventas'];   
+    $total_ventas       = $data['total_ventas'];
     $total_cash         = $data['total_cash'];
     $efectivo           = $data['efectivo'];
     $transferencia      = $data['transferencia'];
-    $tarjeta            = $data['tarjeta']; 
+    $tarjeta            = $data['tarjeta'];
     $deuna              = $data['deuna'];
     $total_salidas      = $data['total_movimientos'];
     $salidas            = $data['salidas'];
@@ -531,8 +539,8 @@ function imprimirCierreCaja($data) {
         $printer->text("------------------------------------------------\n");
         $printer->text("Monto Inicial:          $ " . number_format($monto_inicial, 2) . "\n");
         $printer->text("------------------------------------------------\n");
-        
-        
+
+
         $printer->setEmphasis(true);
         $printer->setJustification(Printer::JUSTIFY_LEFT);
         $printer->text("VENTAS DEL DIA\n");
@@ -562,7 +570,7 @@ function imprimirCierreCaja($data) {
         //$printer->text("Total Salidas:          $ " . number_format($total_salidas, 2) . "\n");
         //$printer->setEmphasis(false);
         $printer->text("------------------------------------------------\n");
-                
+
         $printer->setEmphasis(true);
         $printer->text("MONTOS A ENTREGAR\n");
         $printer->setEmphasis(false);
@@ -572,7 +580,7 @@ function imprimirCierreCaja($data) {
         $printer->text("DeUna:           $ " . number_format($totalDeUna, 2) . "\n");
         $printer->text("------------------------------------------------\n");
 
-               
+
 
         $printer->setEmphasis(true);
         $printer->setJustification(Printer::JUSTIFY_LEFT);
@@ -589,7 +597,7 @@ function imprimirCierreCaja($data) {
         $printer->text("------------------------------------------------\n");
 
         $q_auditoria = mysqli_query(
-        $conection,
+            $conection,
             "SELECT tipo_pago, estado, diferencia 
             FROM auditoria_cierre_caja 
             WHERE id_cierre = $id_cierre"
@@ -601,7 +609,7 @@ function imprimirCierreCaja($data) {
         if (mysqli_num_rows($q_auditoria) > 0) {
             while ($row = mysqli_fetch_assoc($q_auditoria)) {
                 $auditoria_detalle[] = $row;
-                
+
                 // Detecta si hay alguna novedad (estado distinto de "OK")
                 if (strtoupper($row['estado']) !== 'OK') {
                     $novedad_encontrada = true;
@@ -674,7 +682,8 @@ function imprimirCierreCaja($data) {
         return false;
     }
 }
-function mostrarTicketCierre($data) {
+function mostrarTicketCierre($data)
+{
     // Cálculos previos
     $monto_inicial      = $data['monto_inicial'];
     $monto_final        = $data['monto_final'];
@@ -694,7 +703,7 @@ function mostrarTicketCierre($data) {
 
     $total_salidas      = $data['total_movimientos'];
     $salidas            = $data['salidas'];
-    
+
     // HTML del ticket
     echo "<pre style='font-family:monospace; font-size:13px'>";
     echo "CIERRE DE CAJA\n";
@@ -737,24 +746,25 @@ function mostrarTicketCierre($data) {
     echo "CIERRE COMPLETO\n";
     echo "</pre>";
 }
-function imprimirSalidaDinero($data){
+function imprimirSalidaDinero($data)
+{
     try {
         // Nombre de la impresora
         $nombreImpresora = "comandas";
-        
-        $fecha              = $data['fecha'];        
-        $id                 = $data['id'];        
+
+        $fecha              = $data['fecha'];
+        $id                 = $data['id'];
         $nombre2            = $_SESSION['nombre'];
-        $apellido2          = $_SESSION['apellido'];          
-        $nombre             = $data['nombre'];             
+        $apellido2          = $_SESSION['apellido'];
+        $nombre             = $data['nombre'];
         $monto              = $data['monto'];
         $motivo             = $data['motivo'];
         $moneda             = $data['moneda'];
         $tipo               = $data['tipo'];
 
-        if($tipo == 2){
+        if ($tipo == 2) {
             $tipoN = "ENTRADA";
-        }else {
+        } else {
             $tipoN = "SALIDA";
         }
 
@@ -802,7 +812,8 @@ function imprimirSalidaDinero($data){
         echo "Error: " . $e->getMessage();
     }
 }
-function compararMontosEntregadosVsCalculados($calculado, $entregado) {
+function compararMontosEntregadosVsCalculados($calculado, $entregado)
+{
     $diferencias = [];
     $faltanteGeneral = 0;
     $sobranteGeneral = 0;
@@ -830,4 +841,84 @@ function compararMontosEntregadosVsCalculados($calculado, $entregado) {
 
     return $diferencias;
 }
- ?>
+
+
+
+function imprimirDesayunosHoy()
+{
+    try {
+        //include "../../conexion.php";
+        include "../conexion.php";
+
+        $nombreImpresora = "comandas";
+
+        // Datos del hotel
+        $query_config = mysqli_query($conection, "SELECT * FROM configuracion LIMIT 1");
+        $config       = mysqli_fetch_assoc($query_config);
+
+        $razon_social = $config['razon_social'] ?? '';
+        $nit          = $config['nit'] ?? '';
+        $direccion    = $config['direccion'] ?? '';
+        $telefono     = $config['telefono'] ?? '';
+
+        // Consulta de desayunos para hoy
+        $query = mysqli_query($conection, "
+            SELECT h.numero AS habitacion, (rd.adultos + rd.ninos) AS total_desayunos
+            FROM reservas_detalle rd
+            INNER JOIN reservas r ON rd.idreserva = r.idreserva
+            INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+            WHERE 
+                rd.incluye_desayuno = 1
+                AND r.estado = 'checkin'
+                AND CURDATE() BETWEEN r.fecha_entrada AND DATE_SUB(r.fecha_salida, INTERVAL 1 DAY)
+            ORDER BY h.numero
+        ");
+
+        if (!$query || mysqli_num_rows($query) == 0) {
+            throw new Exception("No hay desayunos programados hoy.");
+        }
+
+        // Conexión con la impresora
+        try {
+            $connector = new WindowsPrintConnector($nombreImpresora);
+        } catch (Exception $e) {
+            die("No se pudo conectar a la impresora: " . $e->getMessage());
+            exit;
+        }
+
+        $printer = new Printer($connector);
+
+        $printer->setJustification(Printer::JUSTIFY_CENTER);
+        $printer->setEmphasis(true);
+        $printer->text(strtoupper($razon_social) . "\n");
+        $printer->setEmphasis(false);
+        $printer->text("RUC: $nit\n");
+        $printer->text("Tel: $telefono\n");
+        $printer->text("$direccion\n");
+        $printer->text(str_repeat("-", 42) . "\n");
+
+        $printer->setEmphasis(true);
+        $printer->text("DESAYUNOS PROGRAMADOS - " . date('d/m/Y') . "\n");
+        $printer->setEmphasis(false);
+        $printer->text(str_repeat("-", 42) . "\n");
+
+        while ($row = mysqli_fetch_assoc($query)) {
+            $hab = str_pad("Hab. " . $row['habitacion'], 15);
+            $cant = str_pad("🟢 {$row['total_desayunos']} desayuno(s)", 25);
+            $printer->text("$hab $cant\n");
+        }
+
+        $printer->text(str_repeat("-", 42) . "\n");
+        $printer->text("Preparación por cocina\n");
+        $printer->feed(1);
+        $printer->setJustification(Printer::JUSTIFY_CENTER);
+        $printer->text("Impreso: " . date('d/m/Y H:i') . "\n");
+
+        $printer->cut();
+        $printer->close();
+
+        return true;
+    } catch (Exception $e) {
+        return "Error al imprimir: " . $e->getMessage();
+    }
+}

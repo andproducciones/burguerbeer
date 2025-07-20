@@ -9,7 +9,7 @@ if(empty($_SESSION['active']))
 <header>
 		<div class="header">
 			<a href="#" class="btn_menu"><i class="fas fa-bars"></i></a>
-			<h1>BURGERBBER</h1>
+			<h1>Grupo Cañalimeña</h1>
 			<div class="optionsBar">
 				<p class="fecha">Ecuador, <?php echo fechaC(); ?></p>
 				<span class="fecha">|</span>
