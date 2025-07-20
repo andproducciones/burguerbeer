@@ -5099,7 +5099,7 @@ if (!empty($_POST)) {
         }
 
         // Antes de INSERT o UPDATE
-        $check = mysqli_query($conection, "SELECT idhabitacion FROM habitaciones WHERE numero = '$numero' AND idhabitacion != $id");
+        $check = mysqli_query($conection, "SELECT idhabitacion FROM habitaciones WHERE numero = '$numero'");
         if (mysqli_num_rows($check) > 0) {
             echo 'Ya existe una habitación con ese número';
             exit;

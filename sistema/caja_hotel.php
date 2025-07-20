@@ -98,7 +98,8 @@ $query = mysqli_query($conection, "
          LIMIT 1) AS incluye_limpieza
 
     FROM habitaciones h
-    WHERE h.habilitada = 1
+    WHERE h.habilitada = 1 ORDER BY CAST(h.numero AS UNSIGNED) ASC
+
 ");
 
 
@@ -131,22 +132,25 @@ $desayunosQuery = mysqli_query($conection, "
     ORDER BY h.numero
 ");
 
-echo '<div id="bloqueDesayunos" style="margin: 10px 15px 0; padding: 10px 15px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px; font-size: 15px;">
+
+$desayunos =  '';
+
+$desayunos .= '<div id="bloqueDesayunos" style=" padding: 10px 15px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px; font-size: 15px;">
     <div style="display:flex; justify-content: space-between; align-items: center;">
         <strong>🍽️ Desayunos programados para hoy:</strong>
         <button onclick="imprimirDesayunos()" style="padding: 4px 10px; background: #fbc02d; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">🖨️ Imprimir</button>
     </div><br>';
 
 if ($desayunosQuery && mysqli_num_rows($desayunosQuery) > 0) {
-    echo '<ul style="margin: 5px 0 0 20px; padding: 0;">';
+    $desayunos .= '<ul style="margin: 5px 0 0 20px; padding: 0;">';
     while ($row = mysqli_fetch_assoc($desayunosQuery)) {
-        echo "<li><strong>Hab. {$row['habitacion']}:</strong> {$row['total_desayunos']} desayuno(s)</li>";
+        $desayunos .= "<li><strong>Hab. {$row['habitacion']}:</strong> {$row['total_desayunos']} desayuno(s)</li>";
     }
-    echo '</ul>';
+    $desayunos .= '</ul>';
 } else {
-    echo '<p style="margin: 5px 0 0;">Ninguna habitación tiene desayuno hoy.</p>';
+    $desayunos .= '<p style="margin: 5px 0 0;">Ninguna habitación tiene desayuno hoy.</p>';
 }
-echo '</div>';
+$desayunos .= '</div>';
 
 
 
@@ -164,226 +168,206 @@ echo '</div>';
 include "includes/scripts.php";?>
 
   <style>
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      font-family: sans-serif;
-      background: #f0f2f5;
-      overflow: hidden;
-    }
+   html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: sans-serif;
+  background: #f0f2f5;
+  overflow: hidden;
+  font-size: 13px;
+}
 
-    .container {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      padding: 20px;
-      box-sizing: border-box;
-    }
+.container {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  padding: 10px;
+  box-sizing: border-box;
+  gap: 10px;
+}
 
-    .seccion-habitaciones {
-      flex: 1;
-      overflow-y: auto;
-      padding-bottom: 10px;
-    }
+/* Bloque de habitaciones (70%) */
+.panel-habitaciones {
+  flex: 6;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 6px;
+  padding: 10px;
+}
 
-    .seccion-reservas {
-      flex: 0 0 45%;
-      overflow-y: auto;
-      margin-top: 20px;
-      background: #fff;
-      padding: 10px;
-      border-radius: 6px;
-      box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
-    }
+/* Bloque lateral derecho (30%) */
+.panel-secundario {
+  flex: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
 
+/* Habitaciones grid */
+.grid-habitaciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
 
+.habitacion-card {
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  transition: all 0.3s ease;
+  color: white;
+  font-size: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
 
-    .grid-habitaciones {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 20px;
-      margin-top: 20px;
-    }
+.habitacion-card h4 {
+  margin: 4px 0;
+  font-size: 14px;
+}
 
-    .habitacion-card {
-      border-radius: 10px;
-      padding: 15px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      text-align: center;
-      transition: all 0.3s ease;
-      color: white;
-    }
+.habitacion-card .badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 12px;
+}
 
-    .habitacion-card.verde {
-      background: #28a745;
-    }
+.btn-habitacion {
+  padding: 4px 6px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  background: white;
+  color: #333;
+  font-weight: bold;
+}
 
-    .habitacion-card.amarillo {
-      background: #ffc107;
-      color: black;
-    }
+.btn-habitacion:hover {
+  opacity: 0.85;
+}
 
-    .habitacion-card.rojo {
-      background: #dc3545;
-    }
+/* Colores */
+.verde { background: #28a745; color: white; }
+.amarillo { background: #ffc107; color: black; }
+.rojo { background: #dc3545; color: white; }
+.naranja { background: #fd7e14; color: white; }
+.gris { background: #6c757d; color: white; }
 
-    .habitacion-card.naranja {
-      background: #fd7e14;
-    }
+/* Toolbar */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
 
-    .habitacion-card.gris {
-      background: #6c757d;
-    }
+.btn-refresh {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
 
-    .habitacion-card h4 {
-      margin: 5px 0 10px;
-      font-size: 18px;
-    }
+/* Resumen superior */
+.resumen-superior {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: bold;
+  justify-content: space-between;
+  background: #fff;
+  padding: 6px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
 
-    .habitacion-card .badge {
-      background: rgba(255, 255, 255, 0.2);
-      padding: 6px 12px;
-      font-weight: bold;
-      border-radius: 20px;
-      display: inline-block;
-      margin-bottom: 10px;
-    }
+.resumen-box {
+  padding: 6px;
+  border-radius: 6px;
+  text-align: center;
+  min-width: 100px;
+}
 
-    .habitacion-card .btn-habitacion {
-      background: white;
-      color: #333 !important;
-      font-weight: bold;
-      padding: 8px 12px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-      transition: all 0.2s ease;
-    }
+.resumen-box.total { background: #e9ecef; }
+.resumen-box.ocupadas { background: #f8d7da; }
+.resumen-box.disponibles { background: #d4edda; }
+.resumen-box.mantenimiento { background: #dee2e6; }
+.resumen-box.porcentaje { background: #d1ecf1; }
 
+/* Tabla */
+.seccion-reservas table {
+  font-size: 12px;
+}
 
-    .habitacion-card .btn-habitacion:hover {
-      opacity: 0.85;
-    }
+/* Leyenda */
+.leyenda {
+  margin-top: 10px;
+  font-size: 12px;
+}
 
-    .leyenda {
-      margin-top: 30px;
-      font-size: 14px;
-    }
+.leyenda span {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+}
 
-    .leyenda span {
-      display: inline-block;
-      margin-right: 10px;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-weight: bold;
-    }
+/* Bloque de desayunos */
+#bloqueDesayunos {
+  margin: 0;
+  padding: 10px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 6px;
+  font-size: 13px;
+}
 
-    .verde {
-      background: #28a745;
-      color: white;
-    }
+#bloqueDesayunos ul {
+  margin: 5px 0 0 20px;
+  padding: 0;
+  font-size: 12px;
+}
 
-    .amarillo {
-      background: #ffc107;
-      color: black;
-    }
+#bloqueDesayunos button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
 
-    .rojo {
-      background: #dc3545;
-      color: white;
-    }
+/* Modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.81);
+  display: none;
+  z-index: 10;
+  overflow: auto;
+}
 
-    .naranja {
-      background: #fd7e14;
-      color: white;
-    }
+.bodyModal {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
 
-    .gris {
-      background: #6c757d;
-      color: white;
-    }
-
-    .toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .btn-refresh {
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .resumen-superior {
-      display: flex;
-      gap: 15px;
-      margin-bottom: 15px;
-      font-size: 14px;
-      font-weight: bold;
-      justify-content: space-around;
-      background: #fff;
-      padding: 10px;
-      border-radius: 6px;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .resumen-box {
-      padding: 10px;
-      border-radius: 6px;
-      text-align: center;
-      min-width: 120px;
-    }
-
-    .resumen-box.total {
-      background: #e9ecef;
-    }
-
-    .resumen-box.ocupadas {
-      background: #f8d7da;
-    }
-
-    .resumen-box.disponibles {
-      background: #d4edda;
-    }
-
-    .resumen-box.mantenimiento {
-      background: #dee2e6;
-    }
-
-    .resumen-box.porcentaje {
-      background: #d1ecf1;
-    }
-
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.81);
-      display: none;
-      z-index: 10;
-      overflow: auto;
-      /* Permite scroll si el contenido es grande */
-    }
-
-    .bodyModal {
-      width: 100%;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
-      box-sizing: border-box;
-    }
   </style>
 </head>
 
@@ -395,8 +379,9 @@ include "includes/scripts.php";?>
 
 <body>
   <div class="container">
+  <div class="panel-habitaciones">
     <div class="toolbar">
-      <h2>Estado de Habitaciones</h2>
+      <h2>Habitaciones</h2>
       <div style="display:flex; gap:10px;">
         <button class="btn-refresh" onclick="location.reload()">🔄 Actualizar</button>
         <button class="btn-refresh" style="background:#28a745;" onclick="anadirForm('formReserva')">➕ Añadir
@@ -413,6 +398,15 @@ include "includes/scripts.php";?>
         Ocupación Global: <span id="porcentajeOcupacion">0%</span>
       </div>
     </div>
+    <div class="leyenda">
+        <span class="verde">Disponible</span>
+        <span class="amarillo">Reservada hoy</span>
+        <span class="rojo">Ocupada</span>
+        <span class="naranja">Salida hoy</span>
+        <span class="gris">Mantenimiento</span>
+      </div>
+
+
 
     <div class="seccion-habitaciones">
       <div class="grid-habitaciones">
@@ -445,42 +439,46 @@ while ($hab = mysqli_fetch_assoc($query)):
     }
     ?>
         <div class="habitacion-card <?= $colorClass ?>">
-          <span class="badge"><?= ucfirst($estado) ?></span>
-          <h4>Hab. <?= $hab['numero'] ?></h4>
-          <?= $boton ?>
-          <?php if ($alerta_checkout): ?>
-          <span title="Check-out pendiente" style="font-size:20px;">⚠️</span>
-          <?php endif; ?>
-          <?php if (!$hab['abono_registrado'] && $hab['reservada_hoy']): ?>
-          <span title="Sin abono registrado" style="font-size:18px;">🔴</span>
-          <?php endif; ?>
-          <div style="margin-top:10px; font-size:18px;">
-            <?php if ($hab['incluye_desayuno']) {
-                echo '<span title="Incluye desayuno">🥐</span>';
-            } ?>
-            <?php if ($hab['incluye_tour']) {
-                echo '<span title="Incluye tour">🗺️</span>';
-            } ?>
+  <span class="badge"><?= ucfirst($estado) ?></span>
+  <h4>Hab. <?= $hab['numero'] ?></h4>
+  <?= $boton ?>
 
+  <?php if ($alerta_checkout): ?>
+    <span title="Check-out pendiente" style="font-size:20px;">⚠️</span>
+  <?php endif; ?>
 
-          </div>
+  <?php if (!$hab['abono_registrado'] && $hab['reservada_hoy']): ?>
+    <span title="Sin abono registrado" style="font-size:18px;">🔴</span>
+  <?php endif; ?>
 
+  <div style="margin-top:10px; font-size:18px;">
+    <?php if ($hab['reservada_hoy'] || $hab['ocupada'] || $hab['salida_hoy']): ?>
+      <?php if ($hab['incluye_desayuno']) {
+        echo '<span title="Incluye desayuno">🥐</span>';
+      } ?>
+      <?php if ($hab['incluye_tour']) {
+        echo '<span title="Incluye tour">🗺️</span>';
+      } ?>
+      <?php if ($hab['incluye_limpieza']) {
+        echo '<span title="Incluye limpieza especial">🧼</span>';
+      } ?>
+    <?php endif; ?>
+  </div>
+</div>
 
-
-        </div>
         <?php endwhile; ?>
 
 
       </div>
 
-      <div class="leyenda">
-        <span class="verde">Disponible</span>
-        <span class="amarillo">Reservada hoy</span>
-        <span class="rojo">Ocupada</span>
-        <span class="naranja">Salida hoy</span>
-        <span class="gris">Mantenimiento</span>
-      </div>
+      
     </div>
+    </div>
+
+    <div class="panel-secundario">
+
+
+      <?php echo $desayunos; ?>
 
     <div class="seccion-reservas">
       <h3>📅 Reservas próximas</h3>
@@ -489,9 +487,9 @@ while ($hab = mysqli_fetch_assoc($query)):
           <tr>
 
             <th>Cliente</th>
-            <th>Entrada</th>
-            <th>Salida</th>
-            <th>Habitación(es)</th>
+            <th>IN</th>
+            <th>OUT</th>
+            <th>Hab.</th>
             <th>Estado</th>
             <th>Acción</th>
           </tr>
@@ -521,6 +519,9 @@ while ($hab = mysqli_fetch_assoc($query)):
         </tbody>
       </table>
     </div>
+
+   </div>
+    
   </div>
 
 </body>

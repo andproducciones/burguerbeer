@@ -45,7 +45,7 @@
 				<li><a href="checkin_checkout.php"><i class="fas fa-sign-in-alt"></i> Check-In / Check-Out</a></li>
 				<li><a href="facturacion.php"><i class="fas fa-file-invoice-dollar"></i> Facturar</a></li>
 				<li><a href="habitaciones.php"><i class="fas fa-bed"></i> Habitaciones</a></li>
-				<li><a href="tarifas.php"><i class="fas fa-dollar-sign"></i> Tarifas Habitaciones</a></li>
+				<li><a href="habitaciones_tarifas.php"><i class="fas fa-dollar-sign"></i> Tarifas Habitaciones</a></li>
 				<li><a href="tarifas_extra.php"><i class="fas fa-utensils"></i> Tarifas Extras</a></li>
 				<li><a href="lugares_tour.php"><i class="fas fa-map-marked-alt"></i> Lugares Turísticos</a></li>
 				<li><a href="caja_hotel.php"><i class="fas fa-cash-register"></i> Caja Hotel</a></li>
