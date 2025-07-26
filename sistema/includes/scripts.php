@@ -32,4 +32,7 @@
 <!-- ✅ Favicon -->
 <link rel="icon" href="img/ala.ico" type="image/x-icon">
 
-<?php include "functions.php"; ?>
+<?php include "functions.php";
+
+verificarSesionPOS();
+?>

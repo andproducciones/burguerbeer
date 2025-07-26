@@ -84,7 +84,7 @@ ob_start();
 <head>
 	<meta charset="UTF-8">
 	<link rel="icon" href="ruta_del_icono.ico" type="image/x-icon">
-	<title>Factura</title>
+	<title>Recibo de Venta</title>
 	<style type="text/css">
 		@import url('fonts/BrixSansRegular.css');
 		@import url('fonts/BrixSansBlack.css');
@@ -212,7 +212,13 @@ ob_start();
 
 		.nota {
 			font-size: 8pt;
+			line-height: 1.4;
+			color: #333;
+			/*font-family: Arial, sans-serif;*/
+			margin-top: 10px;
+			margin-bottom: 5px;
 		}
+
 
 		.label_gracias {
 			font-family: verdana;
@@ -242,8 +248,7 @@ $imagenBase64 = "data:image/png;base64," . base64_encode(file_get_contents($nomb
 			<tr>
 				<td class="logo_factura">
 					<div>
-						<img src="<?= $imagenBase64 ?>" width="150"
-							height="150">
+						<img src="<?= $imagenBase64 ?>" width="150">
 					</div>
 				</td>
 				<td class="info_empresa">
@@ -255,15 +260,15 @@ $imagenBase64 = "data:image/png;base64," . base64_encode(file_get_contents($nomb
 						<span><b><?php echo strtoupper($configuracion['nombre']); ?></b></span>
 						<p><?php echo $configuracion['razon_social']; ?>
 						</p>
-						<p><?php echo $configuracion['direccion']; ?>
-						</p>
-						<p>RUC:
+						<p>
 							<?php echo $configuracion['nit']; ?>
 						</p>
-						<p>Teléfono:
+						<p><?php echo $configuracion['direccion']; ?>
+						</p>
+						<p>
 							<?php echo $configuracion['telefono']; ?>
 						</p>
-						<p>Email:
+						<p>
 							<?php echo $configuracion['email']; ?>
 						</p>
 					</div>
@@ -273,7 +278,7 @@ $imagenBase64 = "data:image/png;base64," . base64_encode(file_get_contents($nomb
 				</td>
 				<td class="info_factura">
 					<div class="round">
-						<span class="h3">Comprobante</span>
+						<span class="h3">Recibo de Venta</span>
 						<p>No.:
 							<strong>00-000000<?php echo $factura['nofactura']; ?></strong>
 						</p>
@@ -295,7 +300,7 @@ $imagenBase64 = "data:image/png;base64," . base64_encode(file_get_contents($nomb
 			<tr>
 				<td class="info_cliente">
 					<div class="round">
-						<span class="h3">Cliente</span>
+						<span class="h3">Datos de Cliente</span>
 						<table class="datos_cliente">
 							<tr>
 								<td><label>Cedula:</label>
@@ -330,8 +335,8 @@ $imagenBase64 = "data:image/png;base64," . base64_encode(file_get_contents($nomb
 				<tr>
 					<th width="50px">Cant.</th>
 					<th class="textleft">Descripción</th>
-					<th class="textright" width="70px">P. Unitario.</th>
-					<th class="textright" width="70px"> Precio Total</th>
+					<th class="textright" width="70px">P.Unitario</th>
+					<th class="textright" width="70px">Total</th>
 				</tr>
 			</thead>
 			<tbody id="detalle_productos">
@@ -394,21 +399,19 @@ $total 		= number_format(round($tl_sniva + $impuesto, 2), 2);
 			</tfoot>
 		</table>
 		<div>
-			<p class="nota">Si usted tiene preguntas sobre esta factura, <br>pongase en contacto con nombre, teléfono y
-				Email</p>
-			<h4 class="label_gracias">¡Gracias por su compra!</h4>
+			<p class="nota">
+				Si tiene alguna pregunta o inquietud respecto a esta recibo de venta,<br>
+				por favor comuníquese con ANDPRODUCCIONES: 0984452560
+			</p>
+			<h4 class="label_gracias">¡Gracias por confiar en nosotros!</h4>
 		</div>
-
-	</div>
 
 </body>
 
 </html>
 
 <script>
-	setTimeout(function() {
-		window.close();
-	}, 1000);
+	setTimeout(() => window.close(), 5000);
 </script>
 
 <?php
@@ -422,7 +425,8 @@ $html = ob_get_clean();
 
 //imprimirFacturaComandas($factura, $tl_sniva, $total, $data);
 
-require_once'../libreries/dompdf/autoload.inc.php';
+require_once'../pdf/vendor/autoload.php';
+
 use Dompdf\Dompdf;
 
 // Crear una instancia de Dompdf
@@ -443,7 +447,7 @@ $dompdf->setPaper('A5');
 $dompdf->render();
 
 // Nombre del archivo PDF
-$nombreArchivo = "factura.pdf";
+$nombreArchivo = "Recibo_de_venta.pdf";
 
 // Mostrar el PDF en el navegador para su descarga
 $dompdf->stream($nombreArchivo, array("Attachment" => false));

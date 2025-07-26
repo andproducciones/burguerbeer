@@ -1,17 +1,26 @@
 <?php
-
-
-include "../conexion.php";
-include "includes/functions.php";
-require_once 'includes/email.php';
 session_start();
+
+require_once '../conexion.php';
+require_once 'includes/functions.php';
+require_once 'includes/email.php';
+//require_once 'includes/sesion.php';
+
+verificarSesionPOS(); // Protección POS sin timeout
+
 date_default_timezone_set('America/Guayaquil');
 mysqli_set_charset($conection, 'utf8mb4');
-//print_r($_POST);exit;
 
 
 
-if (!empty($_POST)) {
+
+
+
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+
+    $_POST = sanearPost($_POST);
+
     //Extraer datos del Producto para el Modal
     if ($_POST['action'] == 'infoProducto') {
         $producto_id = $_POST['producto'];
@@ -5605,6 +5614,9 @@ if (!empty($_POST)) {
 
 
     //print_r($data);exit;
+} else {
+    echo json_encode(['error' => 'Acceso no autorizado']);
+    exit;
 }
 
 function tipoPagoNombre($tipo)

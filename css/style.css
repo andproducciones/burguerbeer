@@ -1,121 +1,130 @@
-*{
-	margin: 0;
-	padding: 0;	
-	box-sizing: border-box;
-
+/* Reset y base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-body{
-	background-image: url(../img/fondo_login.jpg);
-	background-size: cover;
-	background-repeat: no-repeat;
-}
-h3{
-	font-family: 'Arial';
-	font-size: 18pt;
-	letter-spacing: 1px;
-	width: 100%;
-	background:#587f51;
-	padding: 15px;
-	color: #f2cd34;
-	text-align: center;
-	text-transform: uppercase;
-}
-#container{
-
-	background: rgba(0,0,0,0.40);
-	width: 100%;
-	height: 100vh;
-	display: -webkit-flex;
-	display: -moz-flex;
-	display: -ms-flex;
-	display: -o-flex;
-	display: flex;
-	justify-content: center;
-	align-items: center;
+body {
+    background-image: url(../img/fondo_login.jpg);
+    background-size: cover;
+    background-repeat: no-repeat;
+    font-family: 'Arial', sans-serif;
 }
 
+/* Título del formulario */
+h3 {
+    font-size: 18pt;
+    letter-spacing: 1px;
+    width: 100%;
+    background: #587f51;
+    padding: 15px;
+    color: #f2cd34;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+/* Contenedor principal */
+#container {
+    background: rgba(0, 0, 0, 0.4);
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Formulario */
 #container form {
-	background: rgba(255,255,255,0.30);
-	width: 400px;
-	padding: 10px;
+    background: rgba(255, 255, 255, 0.3);
+    width: 400px;
+    padding: 10px 20px 30px 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+    animation: fadeIn 0.5s ease-in-out;
 }
 
-#container form img{ 
-	margin: 15px auto;
-	text-align: center;
-	display: block;
-	}
-#container form input{
-	width: 90%;
-	padding: 5px;
-	font-size: 16pt;
-	display: block;
-	margin: 25px auto;
-	border-radius: 5px;
-	border: 1px solid #85929e;
-	text-align: center;
-
-}
-#container form input[type="submit"]
-{	background: #f2cd34;
-	padding: 10px;
-	color:#fff;
-	letter-spacing: 1px;
-	border: 0 ;
-	cursor: pointer;
-}
-.alert{
-	font-family: 'Arial';
-	font-size: 16px;
-	text-align: center;
+/* Imagen del login */
+#container form img {
+    margin: 15px auto;
+    display: block;
 }
 
-@media screen and (max-width: 460px){
-	#container form {
-		width: 90%;
-	}
+/* Inputs */
+#container form input {
+    width: 90%;
+    padding: 8px;
+    font-size: 16pt;
+    display: block;
+    margin: 20px auto;
+    border-radius: 5px;
+    border: 1px solid #85929e;
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.85);
+    transition: all 0.3s ease-in-out;
 }
 
-
-
-.textright{
-	text-align: right;
-}
-.textcenter{
-	text-align: center;
-}
-.div_acciones{
-
-display: -webkit-flex;
-display: -moz-flex;
-display: -ms-flex;
-display: -o-flex;
-display: flex;
-justify-content: center;
-
+#container form input:focus {
+    outline: none;
+    border: 1px solid #f2cd34;
+    background-color: #fff;
 }
 
-.totalfactura{
-
-display: -webkit-flex;
-display: -moz-flex;
-display: -ms-flex;
-display: -o-flex;
-display: flex;
-justify-content: space-between;
+/* Botón */
+#container form input[type="submit"] {
+    background: #f2cd34;
+    padding: 10px;
+    color: #000;
+    font-weight: bold;
+    letter-spacing: 1px;
+    border: 0;
+    cursor: pointer;
+    transition: background-color 0.3s;
 }
 
-.pagada, .anulada{
-
-color: #FFF;
-background: #60a756;
-text-align: center;
-border-radius: 5px;
-padding: 4px 15px;
+#container form input[type="submit"]:hover {
+    background: #d4b62a;
 }
-.anulada{
 
-background: #f36a6a;
+/* Alerta */
+.alert {
+    font-size: 15px;
+    background: rgba(230, 50, 50, 0.9);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 5px;
+    text-align: center;
+    margin-top: -10px;
+    margin-bottom: 20px;
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+    animation: fadeIn 0.4s ease-in-out;
 }
-/*************************** sistema**************************************/
+
+/* Animación */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media screen and (max-width: 460px) {
+    #container form {
+        width: 90%;
+    }
+
+    #container form input {
+        font-size: 14pt;
+    }
+
+    h3 {
+        font-size: 16pt;
+    }
+}

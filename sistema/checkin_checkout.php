@@ -158,7 +158,6 @@ $query_futuras = mysqli_query($conection, "
 							<th>Salida</th>
 							<th>A</th>
 							<th>N</th>
-
 							<th>Total</th>
 							<th>Abono</th>
 							<th>Faltante</th>
@@ -167,6 +166,7 @@ $query_futuras = mysqli_query($conection, "
 						</tr>
 					</thead>
 					<tbody>
+						<?php if ($query && mysqli_num_rows($query) > 0): ?>
 						<?php while ($row = mysqli_fetch_assoc($query)) { ?>
 						<tr>
 							<td><?= $row['cliente'] ?>
@@ -186,39 +186,44 @@ $query_futuras = mysqli_query($conection, "
 							<td>$<?= number_format($row['abono'], 2) ?>
 							</td>
 							<td>$<?= number_format($row['total'] - $row['abono'], 2) ?>
-							</td> <!-- Faltante -->
-
-							<td><span
-									class="estado <?= $row['estado'] ?>"><?= ucfirst($row['estado']) ?></span>
-								<?php if ($row['facturada'] == 1) { ?>
-								<span class="badge bg-success">Facturada</span>
-								<?php } ?>
 							</td>
 							<td>
-								<?php if ($row['estado'] == 'confirmada') { ?>
+								<span
+									class="estado <?= $row['estado'] ?>"><?= ucfirst($row['estado']) ?></span>
+								<?php if ($row['facturada'] == 1): ?>
+								<span class="badge bg-success">Facturada</span>
+								<?php endif; ?>
+							</td>
+							<td>
+								<?php if ($row['estado'] == 'confirmada'): ?>
 								<button class="btn btn_checkin"
 									onclick="cambiarEstadoReserva(<?= $row['idreserva'] ?>, 'checkin')">
 									<i class="fas fa-sign-in-alt"></i> Check-In
 								</button>
-								<?php } elseif ($row['estado'] == 'checkin') { ?>
+								<?php elseif ($row['estado'] == 'checkin'): ?>
 								<button class="btn btn_checkout"
 									onclick="confirmarCheckout(<?= $row['idreserva'] ?>, <?= $row['total'] ?>, <?= $row['abono'] ?>)">
 									<i class="fas fa-sign-out-alt"></i> Check-Out
 								</button>
-
-								<?php } ?>
-
-								<?php if ($row['estado'] == 'checkout' && $row['facturada'] == 0) { ?>
+								<?php elseif ($row['estado'] == 'checkout' && $row['facturada'] == 0): ?>
 								<button class="btn btn_facturar"
 									onclick="facturarReserva(<?= $row['idreserva'] ?>)">
 									<i class="fas fa-file-invoice-dollar"></i> Facturar
 								</button>
-								<?php }?>
-
+								<?php else: ?>
+								<span style="color:gray;">Sin acciones</span>
+								<?php endif; ?>
 							</td>
+
 						</tr>
 						<?php } ?>
+						<?php else: ?>
+						<tr>
+							<td colspan="11" align="center">No hay reservas programadas para hoy.</td>
+						</tr>
+						<?php endif; ?>
 					</tbody>
+
 				</table>
 			</div>
 			<div class="tabla-futuras">
@@ -253,6 +258,7 @@ $query_futuras = mysqli_query($conection, "
 						</tr>
 						<?php endif; ?>
 					</tbody>
+
 				</table>
 
 			</div>

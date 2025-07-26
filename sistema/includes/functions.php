@@ -921,4 +921,60 @@ function imprimirDesayunosHoy()
     } catch (Exception $e) {
         return "Error al imprimir: " . $e->getMessage();
     }
+
+
+}
+
+function verificarSesionPOS()
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['active'], $_SESSION['idUser'], $_SESSION['rol']) || $_SESSION['active'] !== true) {
+        session_unset();
+        session_destroy();
+        header("Location: ../");
+        exit;
+    }
+
+    $ip_actual = $_SERVER['REMOTE_ADDR'] ?? '';
+    $ua_actual = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+    if (
+        isset($_SESSION['ip'], $_SESSION['ua']) &&
+        ($_SESSION['ip'] !== $ip_actual || $_SESSION['ua'] !== $ua_actual)
+    ) {
+        session_unset();
+        session_destroy();
+        header("Location: ../index.php?secure=fail");
+        exit;
+    }
+}
+
+
+
+function sanearPost(array $post): array
+{
+    $limpio = [];
+
+    foreach ($post as $key => $valor) {
+        if (is_array($valor)) {
+            $limpio[$key] = sanearPost($valor); // Recursivo si hay arrays
+        } else {
+            // 1. Eliminar etiquetas HTML y JS
+            $valor = strip_tags($valor);
+
+            // 2. Eliminar caracteres comunes en ataques (SQL, XSS, etc.)
+            $valor = preg_replace('/[<>{}"\'()%;$&#*!=\\\\[\]{}]/', '', $valor);
+
+            // 3. Quitar espacios extremos y codificar caracteres especiales
+            $valor = trim($valor);
+            $valor = htmlspecialchars($valor, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+            $limpio[$key] = $valor;
+        }
+    }
+
+    return $limpio;
 }
