@@ -196,17 +196,17 @@ $query_futuras = mysqli_query($conection, "
 							</td>
 							<td>
 								<?php if ($row['estado'] == 'confirmada'): ?>
-								<button class="btn btn_checkin"
+								<button class="btn btn_ver"
 									onclick="cambiarEstadoReserva(<?= $row['idreserva'] ?>, 'checkin')">
 									<i class="fas fa-sign-in-alt"></i> Check-In
 								</button>
 								<?php elseif ($row['estado'] == 'checkin'): ?>
-								<button class="btn btn_checkout"
+								<button class="btn btn_editar"
 									onclick="confirmarCheckout(<?= $row['idreserva'] ?>, <?= $row['total'] ?>, <?= $row['abono'] ?>)">
 									<i class="fas fa-sign-out-alt"></i> Check-Out
 								</button>
 								<?php elseif ($row['estado'] == 'checkout' && $row['facturada'] == 0): ?>
-								<button class="btn btn_facturar"
+								<button class="btn btn_cancelar"
 									onclick="facturarReserva(<?= $row['idreserva'] ?>)">
 									<i class="fas fa-file-invoice-dollar"></i> Facturar
 								</button>

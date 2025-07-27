@@ -2,6 +2,8 @@
 
 date_default_timezone_set('America/Guayaquil');
 
+use Dompdf\Dompdf;
+
 function fechaC()
 {
     $mes = array("","Enero",
@@ -308,6 +310,8 @@ function imprimirFactura($factura, $nombreCliente, $tl_sniva, $total, $productos
         echo "Error: " . $e->getMessage();
     }
 }
+
+
 function imprimirPrecuenta($mesa, $nombreCliente, $tl_sniva, $total, $productos)
 {
 
@@ -651,8 +655,6 @@ function imprimirCierreCaja($data)
             $printer->text("$observaciones\n");
             $printer->text("------------------------------------------------\n");
         }
-
-        $printer->cut();
         if (!empty($compras)) {
             $printer->setEmphasis(true);
             $printer->text("COMPRAS\n");
@@ -977,4 +979,310 @@ function sanearPost(array $post): array
     }
 
     return $limpio;
+}
+
+function enviarComprobanteReserva($idreserva)
+{
+    include "../conexion.php";
+    require_once __DIR__ . '/email.php';
+    require_once __DIR__ . '/../pdf/vendor/autoload.php';
+
+
+    $id = intval($idreserva);
+    if ($id <= 0) {
+        return "ID de reserva inválido";
+    }
+
+    // CONSULTA
+    $query = mysqli_query($conection, "
+        SELECT r.*, CONCAT(c.nombre, ' ', c.p_apellido) AS cliente, c.usuario, c.telefono, c.correo_c
+        FROM reservas r
+        INNER JOIN clientes c ON r.id_cliente = c.usuario
+        WHERE r.idreserva = $id
+    ");
+    if (!$query || mysqli_num_rows($query) == 0) {
+        return "Reserva no encontrada";
+    }
+    $reserva = mysqli_fetch_assoc($query);
+
+    // VALIDAR ESTADO
+    $estadoValido = in_array(strtolower($reserva['estado']), ['confirmada', 'checkin', 'checkout']);
+    if (!$estadoValido) {
+        return true;
+    }
+
+    // GENERAR PDF
+    $_GET['modoCorreo'] = true;
+    $_GET['id'] = $id; // ← Esto es lo que necesitas
+
+    ob_start();
+    include __DIR__ . '/../pdf/reservas/verReservaPDF.php';
+    $pdf_html = ob_get_clean();
+
+    $dompdf = new Dompdf();
+    $options = $dompdf->getOptions();
+    $options->set('isRemoteEnabled', true);
+    $dompdf->setOptions($options);
+    $dompdf->loadHtml($pdf_html);
+    $dompdf->setPaper('A5', 'portrait');
+    $dompdf->render();
+
+    $archivo_temp = __DIR__ . "/comprobante_temp_{$id}.pdf";
+    file_put_contents($archivo_temp, $dompdf->output());
+
+    // ENVIAR CORREO
+    $nombreCliente = $reserva['cliente'];
+    $correoCliente = $reserva['correo_c'];
+    $titulo = in_array(strtolower($reserva['estado']), ['checkin', 'checkout', 'finalizada']) ? 'Comprobante de estadía' : 'Comprobante de reserva';
+
+    $logoCID = 'logoGrupo';
+    $plantillaHTML = file_get_contents(__DIR__ . '/plantillas/plantilla_comprobante.php');
+    $plantillaHTML = str_replace('{{NOMBRE}}', $nombreCliente, $plantillaHTML);
+    $plantillaHTML = str_replace('{{TITULO}}', $titulo, $plantillaHTML);
+
+    $enviado = enviarCorreo(
+        $correoCliente,
+        $nombreCliente,
+        "$titulo – Grupo Cañalimeña",
+        $plantillaHTML,
+        [$archivo_temp],
+        [['ruta' => __DIR__ . '/../../img/logo.jpg', 'cid' => $logoCID]]
+    );
+
+    unlink($archivo_temp);
+
+    if ($enviado) {
+        return true;
+    } else {
+        $error = $GLOBALS['lastPHPMailerError'] ?? 'Sin detalle técnico';
+        return "Error al enviar correo a $correoCliente – Detalle: $error";
+    }
+}
+
+
+function imprimirComprobanteEstadia($idreserva)
+{
+    include "../../conexion.php";
+    $query = mysqli_query($conection, "
+        SELECT r.*, CONCAT(c.nombre, ' ', c.p_apellido) AS cliente,
+               c.direccion, c.telefono, c.usuario AS usuario_cliente
+        FROM reservas r
+        INNER JOIN clientes c ON r.id_cliente = c.usuario
+        WHERE r.idreserva = $idreserva
+        LIMIT 1
+    ");
+    if (!$query || mysqli_num_rows($query) == 0) {
+        return;
+    }
+
+    $reserva = mysqli_fetch_assoc($query);
+    $cliente = $reserva['cliente'];
+    $entrada = date('l d \d\e F \d\e Y', strtotime($reserva['fecha_entrada']));
+    $salida  = date('l d \d\e F \d\e Y', strtotime($reserva['fecha_salida']));
+    $total   = number_format($reserva['total'], 2);
+    $usuario_cliente = $reserva['usuario_cliente'];
+
+    $numeroContrato = "01-" . date('Y') . "-" . str_pad($idreserva, 4, '0', STR_PAD_LEFT);
+    $hash = strtoupper(substr(sha1("ESTADIA$idreserva" . $reserva['fecha_entrada']), 0, 10));
+
+    $detalle = mysqli_query($conection, "
+        SELECT h.numero, d.adultos, d.ninos, d.incluye_desayuno, d.incluye_tour, lt.nombre AS lugar_tour
+        FROM reservas_detalle d
+        INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
+        LEFT JOIN lugares_tour lt ON lt.id = d.lugar_tour
+        WHERE d.idreserva = $idreserva
+    ");
+
+    $habitaciones = [];
+    $adultos = $ninos = 0;
+    $servicios = [];
+
+    while ($row = mysqli_fetch_assoc($detalle)) {
+        $habitaciones[] = $row['numero'];
+        $adultos += $row['adultos'];
+        $ninos   += $row['ninos'];
+        if ($row['incluye_desayuno']) {
+            $servicios[] = "🥐 Desayuno";
+        }
+        if ($row['incluye_tour']) {
+            $servicios[] = "🗺️ Tour: " . ($row['lugar_tour'] ?? 'Destino');
+        }
+    }
+
+    $printer = new Printer(new WindowsPrintConnector("comandas"));
+    $printer->setJustification(Printer::JUSTIFY_CENTER);
+    $printer->setEmphasis(true);
+    $printer->text("GRUPO CAÑALIMEÑA\n");
+    $printer->setEmphasis(false);
+    $printer->text("1801096106001\n");
+    $printer->text("Espejo y 16 de Diciembre\n");
+    $printer->text("hostalcanalimena.wixsite.com/hostalpage\n");
+    $printer->text("0985385025\n");
+    $printer->text("----------------------------------------\n");
+    $printer->setEmphasis(true);
+    $printer->text("COMPROBANTE DE ESTADÍA\n");
+    $printer->setEmphasis(false);
+    $printer->text("Contrato N°: $numeroContrato\n");
+    $printer->text("Verificación: #$hash\n");
+    $printer->text("----------------------------------------\n");
+
+    $printer->setJustification(Printer::JUSTIFY_LEFT);
+    $printer->text("Cliente: $cliente ($usuario_cliente)\n");
+    $printer->text("Entrada: $entrada\n");
+    $printer->text("Salida:  $salida\n");
+    $printer->text("Hab(s): " . implode(", ", $habitaciones) . "\n");
+    $printer->text("Adultos: $adultos  Niños: $ninos\n");
+    if (!empty($servicios)) {
+        $printer->text("Servicios:\n");
+        foreach ($servicios as $s) {
+            $printer->text(" - $s\n");
+        }
+    }
+
+    $printer->text("----------------------------------------\n");
+    $printer->setEmphasis(true);
+    $printer->text("Total pagado: $ $total\n");
+    $printer->setEmphasis(false);
+    $printer->text("----------------------------------------\n\n\n\n");
+
+    // Firma
+    $printer->setJustification(Printer::JUSTIFY_CENTER);
+    $printer->text("________________________________________\n");
+    $printer->text("$cliente ($usuario_cliente)\n");
+
+    $printer->text("----------------------------------------\n");
+    $printer->text("Al firmar, el cliente declara que:\n");
+    $printer->text("- Ha leído y acepta todos los términos\n");
+    $printer->text("  y condiciones del servicio.\n");
+    $printer->text("- Se compromete a pagar el valor total\n");
+    $printer->text("  de la estadía y servicios contratados.\n");
+    $printer->text("----------------------------------------\n");
+    $printer->text("Yolanda Silva – Gerente General\n");
+    $printer->text("Grupo Cañalimeña\n");
+    $printer->text("----------------------------------------\n");
+    $printer->cut();
+    $printer->setJustification(Printer::JUSTIFY_CENTER);
+    $printer->text("TÉRMINOS Y CONDICIONES\n");
+    $printer->setJustification(Printer::JUSTIFY_LEFT);
+    // --- HORARIOS Y CONDICIONES DE INGRESO ---
+    $printer->text("- Check-in disponible desde las 12:00 PM.\n");
+    $printer->text("- Check-out debe realizarse hasta las\n");
+    $printer->text("  12:00 PM del día de salida.\n");
+    $printer->text("- Early o late check-in están sujetos a\n");
+    $printer->text("  disponibilidad del establecimiento.\n");
+    $printer->text("- Late check-out genera un recargo\n");
+    $printer->text("  de $10 por habitación (máx. 6 horas).\n");
+
+    // --- USO DE HABITACIÓN Y CONDUCTA ---
+    $printer->text("- No se permite reingresar después del\n");
+    $printer->text("  check-out o entrega de llaves.\n");
+    $printer->text("- Está prohibido fumar dentro de las\n");
+    $printer->text("  habitaciones o realizar fiestas.\n");
+    $printer->text("- Actividades sociales solo están\n");
+    $printer->text("  permitidas en zonas comunes designadas.\n");
+    $printer->text("- El hotel se reserva el derecho de\n");
+    $printer->text("  admisión y permanencia en caso de\n");
+    $printer->text("  incumplimiento o eventualidad.\n");
+    $printer->text("- Se exige trato respetuoso hacia\n");
+    $printer->text("  el personal y otros huéspedes.\n");
+    $printer->text("- Comportamientos agresivos serán\n");
+    $printer->text("  causa de desalojo inmediato.\n");
+
+
+    // --- RESPONSABILIDAD POR DAÑOS ---
+    $printer->text("- El huésped será responsable por todo\n");
+    $printer->text("  daño causado dentro de la habitación o\n");
+    $printer->text("  áreas comunes del hotel.\n");
+    $printer->text("- Se cobrará el 100% del valor del bien\n");
+    $printer->text("  dañado más $10 diarios si queda\n");
+    $printer->text("  inhabilitado.\n");
+
+    // --- VISITAS EXTERNAS ---
+    $printer->text("- Solo se permiten visitas con permiso\n");
+    $printer->text("  previo y registro en recepción.\n");
+    $printer->text("- De detectarse visita no autorizada,\n");
+    $printer->text("  se cobrará como persona adicional.\n");
+
+
+    // --- SERVICIOS ADICIONALES ---
+    $printer->text("- El desayuno continental ($2.99) está\n");
+    $printer->text("  disponible únicamente si fue incluido\n");
+    $printer->text("  en la reserva o contratado al ingresar.\n");
+    $printer->text("- Los tours son organizados por terceros\n");
+    $printer->text("  aliados. Grupo Cañalimeña solo garantiza\n");
+    $printer->text("  hora y destino, no su ejecución.\n");
+
+    // --- PARQUEADERO ---
+    $printer->text("- El parqueadero es un servicio externo\n");
+    $printer->text("  no operado por el hotel.\n");
+    $printer->text("- El cliente es responsable de su uso y\n");
+    $printer->text("  Grupo Cañalimeña no asume responsabilidad\n");
+    $printer->text("  por robos, accidentes o daños.\n");
+
+    // --- FACTURACIÓN ---
+    $printer->text("- Cañalimeña solo emite nota de venta\n");
+    $printer->text("  física sin IVA.\n");
+    $printer->text("- Si el huésped desea comprobante fiscal,\n");
+    $printer->text("  debe solicitarlo de forma expresa y\n");
+    $printer->text("  anticipada durante su estadía.\n");
+    $printer->text("- El hotel no emite facturas posteriores\n");
+    $printer->text("  al check-out por omisión del huésped.\n");
+    $printer->text("- Solo se emitirán notas de venta por montos ya\n");
+    $printer->text("  efectivamente abonados o pagados.\n");
+
+    // --- OBJETOS PERDIDOS ---
+    $printer->text("- Objetos olvidados se guardan máx. 7\n");
+    $printer->text("  días. No garantizamos recuperación ni\n");
+    $printer->text("  envío. Cliente asume responsabilidad.\n");
+
+    $printer->text("- Grupo Cañalimeña no se hace\n");
+    $printer->text("  responsable por fallos de terceros\n");
+    $printer->text("  (tours, taxis, parqueo, etc.) ni por\n");
+    $printer->text("  eventos fortuitos como apagones,\n");
+    $printer->text("  lluvias o cortes de servicio público.\n");
+
+    // --- POLÍTICA PARA MASCOTAS ---
+    $printer->text("- Se permiten mascotas bajo solicitud\n");
+    $printer->text("  previa, sujetas a disponibilidad.\n");
+    $printer->text("- Se aplicará un recargo diario por\n");
+    $printer->text("  limpieza de acuerdo al tamaño:\n");
+    $printer->text("   * Pequeña: $5\n");
+    $printer->text("   * Mediana: $7\n");
+    $printer->text("   * Grande: $10\n");
+    $printer->text("- El cargo es por mascota, por día.\n");
+    $printer->text("- Toda mancha, daño o deterioro a\n");
+    $printer->text("  mobiliario será cobrado según la\n");
+    $printer->text("  cláusula de responsabilidad por daños.\n");
+
+
+
+    // --- PROTECCIÓN DE DATOS ---
+    $printer->text("- Todos los datos personales registrados\n");
+    $printer->text("  están protegidos conforme a la Ley\n");
+    $printer->text("  Orgánica de Protección de Datos (LOPDP).\n");
+
+    // --- AVISO LEGAL ---
+    $printer->setJustification(Printer::JUSTIFY_CENTER);
+    $printer->setEmphasis(true);
+    $printer->text("AVISO LEGAL\n");
+    $printer->setEmphasis(false);
+    $printer->text("La permanencia en el establecimiento\n");
+    $printer->text("implica la aceptación total e irrevocable\n");
+    $printer->text("de todos los términos y condiciones aquí\n");
+    $printer->text("expuestos.\n");
+    $printer->text("Reservas realizadas en línea, vía telefónica\n");
+    $printer->text("o mediante plataformas digitales, así como\n");
+    $printer->text("los abonos electrónicos, constituyen\n");
+    $printer->text("aceptación electrónica válida según ley.\n");
+    $printer->text("Toda permanencia, uso del cuarto,\n");
+    $printer->text("pago, abono o check-in implica un\n");
+    $printer->text("contrato verbal de hospedaje con\n");
+    $printer->text("aceptación expresa de estas normas.\n");
+
+
+    $printer->setEmphasis(true);
+    $printer->text("¡Gracias por su estadía!\n");
+    $printer->setEmphasis(false);
+    $printer->cut();
+    $printer->close();
 }

@@ -12,11 +12,6 @@ date_default_timezone_set('America/Guayaquil');
 mysqli_set_charset($conection, 'utf8mb4');
 
 
-
-
-
-
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     $_POST = sanearPost($_POST);
@@ -3648,6 +3643,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $estado_reserva = 'pendiente';
             }
 
+            // Enviar comprobante si la reserva fue confirmada
+
+
+
             $sql = "INSERT INTO reservas (
             id_cliente, fecha_entrada, fecha_salida, total,
             estado_pago, estado, observaciones, canal_reserva, usuario_id
@@ -3733,7 +3732,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
 
             mysqli_commit($conection);
+
+            enviarComprobanteReserva($idreserva);
             echo 'ok';
+
         } catch (Exception $e) {
             mysqli_rollback($conection);
             echo 'Error: ' . $e->getMessage();
@@ -3802,6 +3804,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             // Si antes no había abonos y ahora hay, actualizar estado de la reserva a confirmada
             if ($nuevo_total_abonado > 0) {
                 $estado_pago = ($nuevo_total_abonado >= $total) ? 'pagado' : 'parcial';
+
                 $upd = mysqli_query($conection, "UPDATE reservas SET estado = 'confirmada', estado_pago = '$estado_pago' WHERE idreserva = $id");
                 if (!$upd) {
                     throw new Exception('Error al actualizar el estado de la reserva');
@@ -4648,8 +4651,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
             }
 
+
             mysqli_commit($conection);
+
+            enviarComprobanteReserva($idreserva);
+
             echo 'ok';
+
+
         } catch (Exception $e) {
             mysqli_rollback($conection);
             echo 'Error: ' . $e->getMessage();
@@ -4774,7 +4783,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             WHERE d.idreserva = $idreserva");
 
             mysqli_commit($conection);
+
+            enviarComprobanteReserva($idreserva);
+
             echo 'OK';
+
         } catch (Exception $e) {
             mysqli_rollback($conection);
             echo 'Error: ' . $e->getMessage();
@@ -4810,10 +4823,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $query = mysqli_query($conection, $sql);
 
         if ($query) {
+
+            // Enviar comprobante de RESERVA solo si pasa a CONFIRMADA
+            if ($estado === 'confirmada') {
+
+                enviarComprobanteReserva($idreserva);
+            }
+
+            // Enviar comprobante de ESTADÍA si es CHECK-IN o CHECKOUT
+            if (in_array($estado, ['checkin', 'checkout'])) {
+
+                enviarComprobanteReserva($idreserva);
+            }
+
             echo 'OK';
         } else {
             echo 'Error al actualizar';
         }
+
+
 
         exit;
     }

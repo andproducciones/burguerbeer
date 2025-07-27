@@ -183,20 +183,19 @@ if ($query && mysqli_num_rows($query) > 0) {
 					<td align="center">
 						<a class="btn" style="background: blue;"
 							href="pdf/reservas/verReservaPDF.php?id=<?= $data['idreserva']; ?>"
-							target="_blank" title="Ver reserva PDF">
-							<i class="fas fa-file-pdf"></i>
-						</a>
+							target="_blank" title="Ver reserva PDF"><i class="fas fa-file-pdf"></i></a>
 						<?php if ($data['estado'] == 'pendiente' || $data['estado'] == 'confirmada') { ?>
 						<button class="btn btn_editar anadirForm"
 							co="<?= $data["idreserva"]; ?>"
 							ac="formEditarReserva" title="Editar reserva">
 							<i class="fas fa-pen"></i>
 						</button>
-						<button class="btn anadirForm" ac="formCancelarReserva"
+						<button class="btn anadirForm btn_cancelar" ac="formCancelarReserva"
 							co="<?= $data["idreserva"]; ?>">
-							<i class="fa-solid fa-ban"></i>
+							<i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+
 						</button>
-						<button class="btn btn_abono"
+						<button class="btn btn_abono btn_ver"
 							data-id="<?= $data["idreserva"]; ?>"
 							data-cliente="<?= htmlspecialchars($data["cliente"]); ?>"
 							data-total="<?= number_format($data["total"], 2); ?>"
@@ -398,7 +397,7 @@ if ($query && mysqli_num_rows($query) > 0) {
 					<button type="button" class="btn_cancel" onclick="closeModal();"><i class="fas fa-ban"></i> Cancelar</button>
 				</div>
 			</form>
-		`;
+			`;
 
 				modal.style.display = "block";
 
