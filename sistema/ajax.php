@@ -4462,12 +4462,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         const form = document.getElementById('formReserva');
         const data = new FormData(form);
 
+        // 🔄 Mostrar modal de carga
+        Swal.fire({
+            title: 'Procesando...',
+            html: 'Registrando Check-In y generando factura...',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         fetch('ajax.php', {
                 method: 'POST',
                 body: data
             })
             .then(res => res.text())
             .then(resp => {
+                Swal.close(); // ✅ Cerrar modal de carga
                 if (resp.trim() === 'ok') {
                     Swal.fire('Éxito', 'Check-in registrado y facturado', 'success');
                     closeModal('modalReserva');
@@ -4477,10 +4489,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
             })
             .catch(() => {
+                Swal.close();
                 Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
             });
     }
-
 
 
     window.addEventListener('DOMContentLoaded', recalcularTotalCheckin);
@@ -5638,6 +5650,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         echo imprimirDesayunosHoy();
         exit;
     }
+
+    if ($_POST['action'] == 'verDesayunosPorFecha') {
+
+        $fecha = $_POST['fecha'];
+
+        $query = mysqli_query($conection, "
+        SELECT h.numero AS habitacion, (rd.adultos + rd.ninos) AS total_desayunos
+        FROM reservas_detalle rd
+        INNER JOIN reservas r ON rd.idreserva = r.idreserva
+        INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+        WHERE 
+            rd.incluye_desayuno = 1
+            AND r.estado IN ('confirmada', 'checkin')
+            AND DATE('$fecha') > CURDATE()
+            AND DATE('$fecha') BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
+        ORDER BY h.numero
+    ");
+
+        if (!$query || mysqli_num_rows($query) == 0) {
+            echo "<p style='color:#666;'>No hay desayunos programados para el $fecha.</p>";
+            exit;
+        }
+
+        echo "<ul style='margin-left:20px;'>";
+        while ($row = mysqli_fetch_assoc($query)) {
+            echo "<li><strong>Hab. {$row['habitacion']}:</strong> {$row['total_desayunos']} desayuno(s)</li>";
+        }
+        echo "</ul>";
+        exit;
+    }
+
+
 
 
 

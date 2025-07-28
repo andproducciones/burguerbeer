@@ -365,6 +365,12 @@ $pagos_html
     </div>
 </div>
 
+<div style='text-align:center; margin-top:10px;'>
+    <img src='https://api.qrserver.com/v1/create-qr-code/?data=https://wa.me/593985385025&size=100x100' width='100'>
+    <p style='font-size:9px;'>Escanea para contactarnos por WhatsApp</p>
+</div>
+
+
 ";
 
 if (isset($_GET['modoCorreo'])) {

@@ -1,8 +1,13 @@
 <?php
 session_start();
-date_default_timezone_set('America/Guayaquil'); // o tu zona real
+//date_default_timezone_set('America/Guayaquil'); // o tu zona real
+
 
 include '../conexion.php';
+
+
+mysqli_set_charset($conection, 'utf8mb4');
+
 
 if ($_SESSION['rol'] != 1 && $_SESSION['rol'] != 2) {
     echo "No autorizado";
@@ -165,27 +170,42 @@ WHERE r.fecha_entrada >= CURDATE()
 ORDER BY r.fecha_entrada ASC
 ");
 
-
 $desayunosQuery = mysqli_query($conection, "
-    SELECT h.numero AS habitacion, (rd.adultos + rd.ninos) AS total_desayunos
+    SELECT 
+        h.numero AS habitacion,
+        SUM(rd.adultos + rd.ninos) AS total_desayunos
     FROM reservas_detalle rd
     INNER JOIN reservas r ON rd.idreserva = r.idreserva
     INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
     WHERE 
         rd.incluye_desayuno = 1
         AND r.estado = 'checkin'
-        AND CURDATE() BETWEEN r.fecha_entrada AND DATE_SUB(r.fecha_salida, INTERVAL 1 DAY)
+        AND CURDATE() BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
+    GROUP BY h.numero
     ORDER BY h.numero
 ");
 
 
+
+
 $desayunos =  '';
 
-$desayunos .= '<div id="bloqueDesayunos" style=" padding: 10px 15px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px; font-size: 15px;">
-    <div style="display:flex; justify-content: space-between; align-items: center;">
-        <strong>🍽️ Desayunos programados para hoy:</strong>
-        <button onclick="imprimirDesayunos()" style="padding: 4px 10px; background: #fbc02d; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">🖨️ Imprimir</button>
-    </div><br>';
+$desayunos .= '
+<div id="bloqueDesayunos">
+  <div class="desayuno-header">
+    <strong>🍽️ Desayunos programados para hoy:</strong>
+    <div class="desayuno-controles">
+      <button class="btn-imprimir-hoy" onclick="imprimirDesayunos()">🖨️ Hoy</button>
+      <input type="date" id="fecha_desayuno" min="' . date('Y-m-d', strtotime('+1 day')) . '">
+      <button class="btn-ver-fecha" onclick="verDesayunosPorFecha()">📅 Ver</button>
+    </div>
+  </div>
+  <br>
+  <div id="resultado_desayunos_fecha" style="margin-top:10px;"></div>
+';
+
+
+
 
 if ($desayunosQuery && mysqli_num_rows($desayunosQuery) > 0) {
     $desayunos .= '<ul style="margin: 5px 0 0 20px; padding: 0;">';
@@ -213,7 +233,8 @@ $desayunos .= '</div>';
 
 
   <?php
-include "includes/scripts.php";?>
+include "includes/scripts.php";
+verificarSesionPOS();?>
 
   <style>
     html,
@@ -415,24 +436,64 @@ include "includes/scripts.php";?>
 
     /* Bloque de desayunos */
     #bloqueDesayunos {
-      margin: 0;
-      padding: 10px;
+      padding: 10px 15px;
       background: #fff8e1;
       border: 1px solid #ffe082;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 15px;
+      margin-bottom: 10px;
     }
 
-    #bloqueDesayunos ul {
-      margin: 5px 0 0 20px;
-      padding: 0;
-      font-size: 12px;
+    #bloqueDesayunos strong {
+      font-size: 16px;
+    }
+
+    #bloqueDesayunos .desayuno-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    #bloqueDesayunos .desayuno-controles {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     #bloqueDesayunos button {
-      padding: 4px 8px;
-      font-size: 12px;
+      padding: 4px 10px;
+      font-size: 13px;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s ease, opacity 0.2s ease;
     }
+
+    #bloqueDesayunos button:hover {
+      opacity: 0.9;
+    }
+
+    #bloqueDesayunos .btn-imprimir-hoy {
+      background: #fbc02d;
+      color: black;
+    }
+
+    #bloqueDesayunos .btn-ver-fecha {
+      background: #03a9f4;
+      color: white;
+    }
+
+    #bloqueDesayunos input[type="date"] {
+      padding: 4px 8px;
+      font-size: 13px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+
 
     /* Modal */
     .modal {
@@ -745,13 +806,14 @@ while ($r = mysqli_fetch_assoc($reservasProximas)) {
     }, 100);
 
   });
-</script>
 
-
-<script>
-  // Auto-recarga cada 60 segundos
   setInterval(() => {
-    location.reload();
+    const modalAbierto = document.querySelector('.modal')?.style.display === 'block';
+    const swalVisible = !!document.querySelector('.swal2-container');
+
+    if (!modalAbierto && !swalVisible) {
+      location.reload();
+    }
   }, 60000);
 
   $(document).ready(function() {
@@ -790,12 +852,7 @@ while ($r = mysqli_fetch_assoc($reservasProximas)) {
         cancelButtonText: 'Cancelar'
       }).then((result) => {
         if (result.isConfirmed) {
-          Swal.fire({
-            title: 'Procesando...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-          });
-
+          mostrarProcesando('Actualizando Estado', 'Espere por favor...');
           $.post('ajax.php', {
             action: 'cambiarEstadoReserva',
             idreserva: id,
@@ -1120,4 +1177,40 @@ while ($r = mysqli_fetch_assoc($reservasProximas)) {
     });
 
   });
+
+  function verDesayunosPorFecha() {
+    const fecha = document.getElementById("fecha_desayuno").value;
+
+    if (!fecha) {
+      Swal.fire("⚠️ Fecha requerida", "Por favor selecciona una fecha.", "warning");
+      return;
+    }
+
+    fetch("ajax.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: `action=verDesayunosPorFecha&fecha=${fecha}`
+      })
+      .then(res => res.text())
+      .then(html => {
+        document.getElementById("resultado_desayunos_fecha").innerHTML = html;
+      })
+      .catch(() => {
+        Swal.fire("Error", "No se pudo consultar los desayunos.", "error");
+      });
+  }
+
+  function mostrarProcesando(titulo = 'Procesando...', mensaje = 'Por favor espere...') {
+    Swal.fire({
+      title: titulo,
+      html: mensaje,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+  }
 </script>
