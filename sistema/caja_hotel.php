@@ -185,6 +185,30 @@ $desayunosQuery = mysqli_query($conection, "
     ORDER BY h.numero
 ");
 
+// TICKETS DE TOUR HOY
+$toursQuery = mysqli_query($conection, "
+  SELECT h.numero AS habitacion, SUM(rd.adultos + rd.ninos) AS total_personas
+  FROM reservas_detalle rd
+  INNER JOIN reservas r ON rd.idreserva = r.idreserva
+  INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+  WHERE rd.incluye_tour = 1
+    AND r.estado = 'checkin'
+    AND CURDATE() BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
+  GROUP BY h.numero
+");
+
+// GARAGE HOY
+$garajeQuery = mysqli_query($conection, "
+  SELECT h.numero AS habitacion, rd.garaje
+  FROM reservas_detalle rd
+  INNER JOIN reservas r ON rd.idreserva = r.idreserva
+  INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+  WHERE rd.garaje > 0
+    AND r.estado = 'checkin'
+    AND CURDATE() BETWEEN r.fecha_entrada AND r.fecha_salida
+");
+
+
 
 
 
@@ -527,6 +551,85 @@ verificarSesionPOS();?>
       font-weight: normal;
       text-shadow: 0 0 1px rgba(0, 0, 0, 0.5);
     }
+
+    /* Bloques de tours y garaje (estructura igual a desayunos) */
+    #bloqueTours,
+    #bloqueGaraje {
+      padding: 10px 15px;
+      background: #e8f5e9;
+      /* verde claro para tours */
+      border: 1px solid #c8e6c9;
+      border-radius: 6px;
+      font-size: 15px;
+      margin-bottom: 10px;
+    }
+
+    #bloqueGaraje {
+      background: #f3e5f5;
+      /* lila claro para garaje */
+      border: 1px solid #ce93d8;
+    }
+
+    #bloqueTours strong,
+    #bloqueGaraje strong {
+      font-size: 16px;
+    }
+
+    #bloqueTours .desayuno-header,
+    #bloqueGaraje .desayuno-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    #bloqueTours .desayuno-controles,
+    #bloqueGaraje .desayuno-controles {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #bloqueTours button,
+    #bloqueGaraje button {
+      padding: 4px 10px;
+      font-size: 13px;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s ease, opacity 0.2s ease;
+    }
+
+    #bloqueTours button:hover,
+    #bloqueGaraje button:hover {
+      opacity: 0.9;
+    }
+
+    #bloqueTours .btn-imprimir-hoy {
+      background: #66bb6a;
+      color: white;
+    }
+
+    #bloqueGaraje .btn-imprimir-hoy {
+      background: #ab47bc;
+      color: white;
+    }
+
+    #bloqueTours .btn-ver-fecha,
+    #bloqueGaraje .btn-ver-fecha {
+      background: #03a9f4;
+      color: white;
+    }
+
+    #bloqueTours input[type="date"],
+    #bloqueGaraje input[type="date"] {
+      padding: 4px 8px;
+      font-size: 13px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
   </style>
 </head>
 
@@ -545,8 +648,11 @@ verificarSesionPOS();?>
           <button class="btn-refresh" onclick="location.reload()">🔄 Actualizar</button>
           <button class="btn-refresh" style="background:#28a745;" onclick="anadirForm('formReserva')">➕ Añadir
             Reserva</button>
+          <button class="btn-refresh" style="background:#17a2b8;" onclick="anadirForm('formCliente')">👥 Añadir
+            Persona</button>
         </div>
       </div>
+
 
       <div class="resumen-superior">
         <div class="resumen-box total">Total: <span id="countTotal">0</span></div>
@@ -575,8 +681,9 @@ while ($hab = mysqli_fetch_assoc($query)):
     $estado = 'disponible';
     $colorClass = 'verde';
     $boton = '<button class="btn-habitacion" onclick="anadirForm(\'formCheckinDirecto\','.$hab['idhabitacion'].')">Check-In</button>';
-    $esMediodiaPasado = date('H') >= 12;
+    $esMediodiaPasado = (int)date('H') >= 12;
     $alerta_checkout = ($hab['salida_hoy'] && $esMediodiaPasado);
+
 
     $mostrarBotonFaltante = false;
     $faltante = 0;
@@ -592,7 +699,8 @@ while ($hab = mysqli_fetch_assoc($query)):
         if ($faltante > 0.01) {
             $mostrarBotonFaltante = true;
         }
-        $boton = '<button class="btn-habitacion" onclick="confirmarCheckout(' . $reserva_id . ', ' . $total . ', ' . $abono . ')">Check-Out</button>';
+        $boton = '<button class="btn-habitacion" onclick="confirmarCheckout(' . $reserva_id . ', ' . $total . ', ' . $abono . ')">Check-Out</button>
+        <button class="btn-habitacion" style="margin-top: 5px; background:#343a40; color:white;" onclick="reimprimirTicketHabitacion(' . $reserva_id . ')">🖨️ Reimprimir</button>';
     } elseif ($hab['ocupada']) {
         $estado = 'ocupada';
         $colorClass = 'rojo';
@@ -603,7 +711,10 @@ while ($hab = mysqli_fetch_assoc($query)):
         if ($faltante > 0.01) {
             $mostrarBotonFaltante = true;
         }
-        $boton = '<button class="btn-habitacion" onclick="window.open(\'pdf/reservas/verReservaPDF.php?id=' . $reserva_id . '\', \'_blank\')">Ver</button>';
+
+        $boton = '
+    <button class="btn-habitacion" onclick="window.open(\'pdf/reservas/verReservaPDF.php?id=' . $reserva_id . '\', \'_blank\')">Ver</button>
+    <button class="btn-habitacion" style="margin-top: 5px; background:#343a40; color:white;" onclick="reimprimirTicketHabitacion(' . $reserva_id . ')">🖨️ Reimprimir</button>';
     } elseif ($hab['reservada_hoy']) {
         $estado = 'reservada';
         $colorClass = 'amarillo';
@@ -678,6 +789,62 @@ while ($hab = mysqli_fetch_assoc($query)):
 
       <?php echo $desayunos; ?>
 
+      <!-- 🗺️ Tours Programados -->
+      <div id="bloqueTours" class="bloque-servicio">
+        <div class="desayuno-header">
+          <strong>🗺️ Tours programados para hoy:</strong>
+          <div class="desayuno-controles">
+            <button class="btn-imprimir-hoy" onclick="imprimirTours()">🖨️ Hoy</button>
+            <input type="date" id="fecha_tour"
+              min="<?= date('Y-m-d', strtotime('+1 day')) ?>">
+            <button class="btn-ver-fecha" onclick="verToursPorFecha()">📅 Ver</button>
+          </div>
+        </div>
+        <br>
+        <?php if ($toursQuery && mysqli_num_rows($toursQuery) > 0): ?>
+        <ul style="margin-left:20px;">
+          <?php while ($row = mysqli_fetch_assoc($toursQuery)): ?>
+          <li><strong>Hab.
+              <?= $row['habitacion'] ?>:</strong>
+            <?= $row['total_personas'] ?>
+            persona(s)
+          </li>
+          <?php endwhile; ?>
+        </ul>
+        <?php else: ?>
+        <p style="margin-left:10px;">No hay tours programados para hoy.</p>
+        <?php endif; ?>
+        <div id="resultado_tours_fecha"></div>
+      </div>
+
+      <!-- 🚗 Garaje Programado -->
+      <div id="bloqueGaraje" class="bloque-servicio">
+        <div class="desayuno-header">
+          <strong>🚗 Garajes registrados para hoy:</strong>
+          <div class="desayuno-controles">
+            <button class="btn-imprimir-hoy" onclick="imprimirGaraje()">🖨️ Hoy</button>
+            <input type="date" id="fecha_garaje"
+              min="<?= date('Y-m-d') ?>">
+            <button class="btn-ver-fecha" onclick="verGarajePorFecha()">📅 Ver</button>
+          </div>
+        </div>
+        <br>
+        <?php if ($garajeQuery && mysqli_num_rows($garajeQuery) > 0): ?>
+        <ul style="margin-left:20px;">
+          <?php while ($row = mysqli_fetch_assoc($garajeQuery)): ?>
+          <li><strong>Hab.
+              <?= $row['habitacion'] ?>:</strong>
+            <?= $row['garaje'] ?> ticket(s)
+          </li>
+          <?php endwhile; ?>
+        </ul>
+        <?php else: ?>
+        <p style="margin-left:10px;">No hay garajes registrados para hoy.</p>
+        <?php endif; ?>
+        <div id="resultado_garaje_fecha"></div>
+      </div>
+
+
       <div class="seccion-reservas">
         <h3>📅 Reservas próximas</h3>
         <table border="1" cellpadding="8" cellspacing="0" style="width:100%;border-collapse:collapse;"
@@ -730,11 +897,6 @@ while ($r = mysqli_fetch_assoc($reservasProximas)) {
 
           </tbody>
         </table>
-      </div>
-
-      <div style="margin-top: 20px;">
-        <h3>📆 Vista Calendario de Reservas</h3>
-        <div id="calendar" style="background:#fff; padding: 10px; border-radius: 6px;"></div>
       </div>
 
 
@@ -835,11 +997,22 @@ while ($r = mysqli_fetch_assoc($reservasProximas)) {
         co: co
       },
       success: function(response) {
-        $('.bodyModal').html(response);
-        $('.modal').fadeIn();
+        console.log(response);
+
+        $('.modal .bodyModal').html(response);
+        $('.modal').fadeIn('fast', function() {
+          // Activar select2 si existe
+          if ($('.js-example-basic-single').length) {
+            $('.js-example-basic-single').select2({
+              width: '100%',
+              dropdownParent: $('.modal')
+            });
+          }
+        });
       }
     });
   }
+
 
   function cambiarEstadoReserva(id, nuevoEstado) {
     if (nuevoEstado === 'checkin') {
@@ -858,7 +1031,7 @@ while ($r = mysqli_fetch_assoc($reservasProximas)) {
             idreserva: id,
             estado: 'checkin'
           }, function(response) {
-            if (response.trim() === 'OK') {
+            if (response.trim() === 'ok') {
               Swal.fire({
                 icon: 'success',
                 title: 'Check-In realizado con éxito',
@@ -888,7 +1061,7 @@ while ($r = mysqli_fetch_assoc($reservasProximas)) {
             idreserva: id,
             estado: nuevoEstado
           }, function(response) {
-            if (response.trim() === 'OK') {
+            if (response.trim() === 'ok') {
               Swal.fire('Actualizado', `La reserva fue marcada como ${nuevoEstado}`,
                   'success')
                 .then(() => location.reload());
@@ -981,7 +1154,7 @@ while ($r = mysqli_fetch_assoc($reservasProximas)) {
           metodo_pago: result.value.metodo,
           referencia: result.value.referencia
         }, function(response) {
-          if (response.trim() === 'OK') {
+          if (response.trim() === 'ok') {
             Swal.fire({
               icon: 'success',
               title: 'Check-Out realizado correctamente',
@@ -1212,5 +1385,82 @@ while ($r = mysqli_fetch_assoc($reservasProximas)) {
         Swal.showLoading();
       }
     });
+  }
+
+  function reimprimirTicketHabitacion(idreserva) {
+    mostrarProcesando('Reimprimiendo...', 'Por favor espere...');
+
+    $.post('ajax.php', {
+      action: 'reimprimirTicketReserva',
+      idreserva: idreserva
+    }, function(resp) {
+      if (resp.trim() === 'ok') {
+        Swal.fire('✅ Comprobante enviado', 'Se ha enviado el ticket a la impresora', 'success');
+      } else {
+        Swal.fire('❌ Error', resp, 'error');
+      }
+    }).fail(() => {
+      Swal.fire('❌ Error', 'No se pudo conectar con el servidor', 'error');
+    });
+  }
+
+  function imprimirTours() {
+    fetch("ajax.php", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: "action=imprimirTours"
+      })
+      .then(res => res.text())
+      .then(resp => {
+        Swal.fire(resp.trim() === "ok" ? "✅ Tours impresos" : "❌ Error", resp, resp.trim() === "ok" ? "success" :
+          "error");
+      });
+  }
+
+  function verToursPorFecha() {
+    const fecha = document.getElementById("fecha_tour").value;
+    if (!fecha) return Swal.fire("Fecha requerida", "Selecciona una fecha", "warning");
+
+    fetch("ajax.php", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `action=verToursPorFecha&fecha=${fecha}`
+      })
+      .then(res => res.text())
+      .then(html => document.getElementById("resultado_tours_fecha").innerHTML = html);
+  }
+
+  function imprimirGaraje() {
+    fetch("ajax.php", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: "action=imprimirGaraje"
+      })
+      .then(res => res.text())
+      .then(resp => {
+        Swal.fire(resp.trim() === "ok" ? "✅ Tickets de garaje impresos" : "❌ Error", resp, resp.trim() === "ok" ?
+          "success" : "error");
+      });
+  }
+
+  function verGarajePorFecha() {
+    const fecha = document.getElementById("fecha_garaje").value;
+    if (!fecha) return Swal.fire("Fecha requerida", "Selecciona una fecha", "warning");
+
+    fetch("ajax.php", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `action=verGarajePorFecha&fecha=${fecha}`
+      })
+      .then(res => res.text())
+      .then(html => document.getElementById("resultado_garaje_fecha").innerHTML = html);
   }
 </script>

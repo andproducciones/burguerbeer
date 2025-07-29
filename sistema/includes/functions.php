@@ -46,13 +46,15 @@ function buscarCliente()
 }
 
 
-require 'C:\wamp64\www\burguerbeer\sistema\libreries\mike42\autoload.php';
+require_once 'C:\wamp64\www\burguerbeer\sistema\libreries\mike42\autoload.php';
+
+require_once 'C:\wamp64\www\burguerbeer\sistema\pdf\vendor\autoload.php';
 
 use Mike42\Escpos\Printer;
+use Mike42\Escpos\EscposImage;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
-
-//use Mike42\Escpos\Printer;
-//use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
+use chillerlan\QRCode\QRCode;
+use chillerlan\QRCode\QROptions;
 
 function imprimirComandaMatricial($numeroMesa, $nombreMesera, $productos)
 {
@@ -1062,7 +1064,7 @@ function enviarComprobanteReserva($idreserva)
 
 function imprimirComprobanteEstadia($idreserva)
 {
-    include "../../conexion.php";
+    include "../conexion.php";
     $query = mysqli_query($conection, "
         SELECT r.*, CONCAT(c.nombre, ' ', c.p_apellido) AS cliente,
                c.direccion, c.telefono, c.usuario AS usuario_cliente
@@ -1086,12 +1088,12 @@ function imprimirComprobanteEstadia($idreserva)
     $hash = strtoupper(substr(sha1("ESTADIA$idreserva" . $reserva['fecha_entrada']), 0, 10));
 
     $detalle = mysqli_query($conection, "
-        SELECT h.numero, d.adultos, d.ninos, d.incluye_desayuno, d.incluye_tour, lt.nombre AS lugar_tour
-        FROM reservas_detalle d
-        INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
-        LEFT JOIN lugares_tour lt ON lt.id = d.lugar_tour
-        WHERE d.idreserva = $idreserva
-    ");
+    SELECT h.numero, d.adultos, d.ninos, d.incluye_desayuno, d.incluye_tour, lt.nombre AS lugar_tour, d.garaje
+    FROM reservas_detalle d
+    INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
+    LEFT JOIN lugares_tour lt ON lt.id = d.lugar_tour
+    WHERE d.idreserva = $idreserva
+");
 
     $habitaciones = [];
     $adultos = $ninos = 0;
@@ -1107,6 +1109,11 @@ function imprimirComprobanteEstadia($idreserva)
         if ($row['incluye_tour']) {
             $servicios[] = "Tour: " . ($row['lugar_tour'] ?? 'Destino');
         }
+
+        if (floatval($row['garaje']) > 0) {
+            $servicios[] = "Garaje";
+        }
+
     }
 
     $printer = new Printer(new WindowsPrintConnector("comandas"));
@@ -1153,11 +1160,11 @@ function imprimirComprobanteEstadia($idreserva)
     $printer->text("----------------------------------------\n");
     $printer->text("Al firmar, el cliente declara que:\n");
     $printer->text("- Ha leído y acepta todos los términos\n");
-    $printer->text("  y condiciones del servicio.\n");
+    $printer->text("  y condiciones del servicio enviados al\n");
+    $printer->text("  correo electrónico registrado.\n");
     $printer->text("- Se compromete a pagar el valor total\n");
     $printer->text("  de la estadía y servicios contratados.\n");
     $printer->text("----------------------------------------\n");
-    $printer->text("Yolanda Silva – Gerente General\n");
     $printer->text("Grupo Cañalimeña\n");
     $printer->text("----------------------------------------\n");
     $printer->setEmphasis(true);
@@ -1165,4 +1172,244 @@ function imprimirComprobanteEstadia($idreserva)
     $printer->setEmphasis(false);
     $printer->cut();
     $printer->close();
+}
+
+
+function imprimirTicketsTourYGaraje($idreserva)
+{
+    include "../conexion.php";
+
+    $reservaQ = mysqli_query($conection, "SELECT fecha_entrada, fecha_salida FROM reservas WHERE idreserva = $idreserva LIMIT 1");
+    if (!$reservaQ || mysqli_num_rows($reservaQ) == 0) {
+        return;
+    }
+
+    $reserva = mysqli_fetch_assoc($reservaQ);
+    $entrada = $reserva['fecha_entrada'];
+    $salida  = $reserva['fecha_salida'];
+
+    $dias = (strtotime($salida) - strtotime($entrada)) / 86400;
+    if ($dias < 1) {
+        $dias = 1;
+    }
+
+    $detalle = mysqli_query($conection, "
+        SELECT h.numero AS habitacion, d.adultos, d.ninos, d.incluye_desayuno, d.incluye_tour, d.lugar_tour, lt.nombre AS nombre_tour, d.garaje
+        FROM reservas_detalle d
+        INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
+        LEFT JOIN lugares_tour lt ON lt.id = d.lugar_tour
+        WHERE d.idreserva = $idreserva
+    ");
+
+    while ($row = mysqli_fetch_assoc($detalle)) {
+        $habitacion = $row['habitacion'];
+        $personas = $row['adultos'] + $row['ninos'];
+        $lugar = $row['nombre_tour'] ?? 'Destino';
+
+        for ($i = 0; $i < $dias; $i++) {
+            $fecha = date('Y-m-d', strtotime("+$i days", strtotime($entrada)));
+
+            // TICKET DE TOUR
+            if ($row['incluye_tour']) {
+                $hash = strtoupper(substr(sha1("TOUR$habitacion$fecha$lugar"), 0, 10));
+                $qr = "TOUR|$habitacion|$fecha|$lugar|$hash";
+
+                $printer = new Printer(new WindowsPrintConnector("comandas"));
+                $printer->setJustification(Printer::JUSTIFY_CENTER);
+                $printer->setEmphasis(true);
+                $printer->text("TICKET DE TOUR\n");
+                $printer->setEmphasis(false);
+                $printer->text("Habitación: $habitacion\n");
+                $printer->text("Fecha: $fecha\n");
+                $printer->text("Destino: $lugar\n");
+                $printer->text("Personas: $personas\n");
+                $printer->feed(1);
+                $printer->text("Firma:\n___________________________\n");
+                $printer->text("Verificación: #$hash\n");
+                $printer->qrCode($qr, Printer::QR_ECLEVEL_L, 4);
+                $printer->feed(1);
+                $printer->setJustification(Printer::JUSTIFY_LEFT);
+                $printer->text("📜 Términos:\n");
+                $printer->text("- Este ticket es válido para la fecha impresa.\n");
+                $printer->text("- Grupo Cañalimeña no se responsabiliza por retrasos,\n  cancelaciones ni daños ocasionados por el proveedor\n  del servicio turístico externo.\n");
+                $printer->text("- Se recomienda llegar 15 minutos antes de la hora de\n  salida del tour.\n");
+                $printer->feed(2);
+                $printer->cut();
+                $printer->close();
+            }
+
+            // TICKET DE GARAJE
+            if (floatval($row['garaje']) > 0) {
+                $hash = strtoupper(substr(sha1("GARAJE$habitacion$fecha"), 0, 10));
+                $qr = "GARAJE|$habitacion|$fecha|$hash";
+
+                $printer = new Printer(new WindowsPrintConnector("comandas"));
+                $printer->setJustification(Printer::JUSTIFY_CENTER);
+                $printer->setEmphasis(true);
+                $printer->text("TICKET DE GARAJE\n");
+                $printer->setEmphasis(false);
+                $printer->text("Habitación: $habitacion\n");
+                $printer->text("Fecha: $fecha\n");
+                $printer->text("Horario: 18h00 - 09h00\n");
+                $printer->text("Un (1) vehículo por habitación\n");
+                $printer->feed(1);
+                $printer->text("Firma:\n___________________________\n");
+                $printer->text("Verificación: #$hash\n");
+                $printer->qrCode($qr, Printer::QR_ECLEVEL_L, 4);
+                $printer->feed(1);
+                $printer->setJustification(Printer::JUSTIFY_LEFT);
+                $printer->text("📜 Términos:\n");
+                $printer->text("- Solo se permite un vehículo por habitación.\n");
+                $printer->text("- Por ticket perdido se cobrará una multa de $5.00.\n");
+                $printer->text("- El parqueo está habilitado de 18h00 a 09h00.\n");
+                $printer->text("- Grupo Cañalimeña no se responsabiliza de cualquier\n daño o por objetos dejados en el vehículo.\n");
+                $printer->feed(2);
+                $printer->cut();
+                $printer->close();
+            }
+        }
+    }
+}
+
+function imprimirTicketsTourHoy()
+{
+    try {
+        include "../conexion.php";
+
+
+        $nombreImpresora = "comandas";
+        $hoy = date('Y-m-d');
+
+        // Datos del hotel
+        $config = mysqli_fetch_assoc(mysqli_query($conection, "SELECT * FROM configuracion LIMIT 1"));
+        $razon_social = $config['razon_social'] ?? '';
+        $nit = $config['nit'] ?? '';
+        $direccion = $config['direccion'] ?? '';
+        $telefono = $config['telefono'] ?? '';
+
+        // Consulta
+        $query = mysqli_query($conection, "
+            SELECT 
+                h.numero AS habitacion,
+                rd.adultos + rd.ninos AS total_personas,
+                CONCAT(c.nombre, ' ', c.p_apellido) AS cliente,
+                r.idreserva
+            FROM reservas_detalle rd
+            INNER JOIN reservas r ON r.idreserva = rd.idreserva
+            INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+            INNER JOIN clientes c ON c.usuario = r.id_cliente
+            WHERE rd.incluye_tour = 1
+              AND r.estado = 'checkin'
+              AND '$hoy' BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
+            ORDER BY h.numero
+        ");
+
+        if (!$query || mysqli_num_rows($query) == 0) {
+            throw new Exception("No hay tours programados hoy.");
+        }
+
+        $printer = new Printer(new WindowsPrintConnector($nombreImpresora));
+
+        while ($row = mysqli_fetch_assoc($query)) {
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->setEmphasis(true);
+            $printer->text(strtoupper($razon_social) . "\n");
+            $printer->setEmphasis(false);
+            $printer->text("RUC: $nit\nTel: $telefono\n$direccion\n");
+            $printer->text(str_repeat("-", 42) . "\n");
+            $printer->setEmphasis(true);
+            $printer->text("TICKET DE TOUR\n");
+            $printer->setEmphasis(false);
+            $printer->text("Fecha: " . date('d/m/Y') . "\n");
+            $printer->text("Hab: {$row['habitacion']}\n");
+            $printer->text("Cliente: " . mb_strtoupper($row['cliente']) . "\n");
+            $printer->text("Cantidad: {$row['total_personas']} persona(s)\n");
+            $printer->text(str_repeat("-", 42) . "\n");
+            $printer->text("Presentar este ticket al abordar\n");
+            $printer->text("Multa por pérdida: $2\n");
+
+            $codigo = md5($row['idreserva'] . $row['habitacion'] . $hoy);
+            $printer->text("Código: {$codigo}\n");
+            $printer->text("Verif: grupo-canalimena.com/verificar.php?code={$codigo}\n");
+            $printer->feed(1);
+            $printer->text("Impreso: " . date('d/m/Y H:i') . "\n");
+            $printer->cut();
+        }
+
+        $printer->close();
+        return true;
+
+    } catch (Exception $e) {
+        return "Error al imprimir tour: " . $e->getMessage();
+    }
+}
+
+function imprimirTicketsGarajeHoy()
+{
+    try {
+        include "../conexion.php";
+
+        $nombreImpresora = "comandas";
+        $hoy = date('Y-m-d');
+
+        $config = mysqli_fetch_assoc(mysqli_query($conection, "SELECT * FROM configuracion LIMIT 1"));
+        $razon_social = $config['razon_social'] ?? '';
+        $nit = $config['nit'] ?? '';
+        $direccion = $config['direccion'] ?? '';
+        $telefono = $config['telefono'] ?? '';
+
+        $query = mysqli_query($conection, "
+            SELECT 
+                h.numero AS habitacion,
+                rd.garaje,
+                CONCAT(c.nombre, ' ', c.p_apellido) AS cliente,
+                r.idreserva
+            FROM reservas_detalle rd
+            INNER JOIN reservas r ON r.idreserva = rd.idreserva
+            INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+            INNER JOIN clientes c ON c.usuario = r.id_cliente
+            WHERE rd.garaje > 0
+              AND r.estado = 'checkin'
+              AND '$hoy' BETWEEN r.fecha_entrada AND r.fecha_salida
+            ORDER BY h.numero
+        ");
+
+        if (!$query || mysqli_num_rows($query) == 0) {
+            throw new Exception("No hay garajes registrados hoy.");
+        }
+
+        $printer = new Printer(new WindowsPrintConnector($nombreImpresora));
+
+        while ($row = mysqli_fetch_assoc($query)) {
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->setEmphasis(true);
+            $printer->text(strtoupper($razon_social) . "\n");
+            $printer->setEmphasis(false);
+            $printer->text("RUC: $nit\nTel: $telefono\n$direccion\n");
+            $printer->text(str_repeat("-", 42) . "\n");
+            $printer->setEmphasis(true);
+            $printer->text("TICKET DE GARAJE\n");
+            $printer->setEmphasis(false);
+            $printer->text("Fecha: " . date('d/m/Y') . "\n");
+            $printer->text("Hab: {$row['habitacion']}\n");
+            $printer->text("Cliente: " . mb_strtoupper($row['cliente']) . "\n");
+            $printer->text("Vehículos: {$row['garaje']}\n");
+            $printer->text(str_repeat("-", 42) . "\n");
+            $printer->text("Presentar al ingreso o salida\n");
+            $printer->text("Multa por pérdida: $2\n");
+
+            $codigo = md5($row['idreserva'] . $row['habitacion'] . $hoy);
+            $printer->text("Código: {$codigo}\n");
+            $printer->text("Verif: grupo-canalimena.com/verificar.php?code={$codigo}\n");
+            $printer->feed(1);
+            $printer->text("Impreso: " . date('d/m/Y H:i') . "\n");
+            $printer->cut();
+        }
+
+        $printer->close();
+        return true;
+
+    } catch (Exception $e) {
+        return "Error al imprimir garaje: " . $e->getMessage();
+    }
 }

@@ -5,7 +5,6 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Dompdf\Dompdf;
 
 require_once __DIR__ . '/../../../conexion.php';
-// ✅ Siempre funciona bien
 
 date_default_timezone_set('America/Guayaquil');
 function formatearFechaEspanol($fechaStr)
@@ -173,6 +172,13 @@ $numero_formateado = "01-" . date('Y') . "-" . str_pad($reserva['idreserva'], 4,
 
 $condiciones_html = '';
 
+$qr_url = 'https://api.qrserver.com/v1/create-qr-code/?data=https://wa.me/593985385025&size=100x100';
+$qr_data = @file_get_contents($qr_url);
+
+$qr_base64 = $qr_data ? base64_encode($qr_data) : '';
+$qr_img = $qr_base64 ? "<img src='data:image/png;base64,{$qr_base64}' width='100'>" : "<p style='color:red;'>QR no disponible</p>";
+
+
 if (in_array(strtolower($reserva['estado']), ['checkin', 'checkout', 'finalizada'])) {
     // Condiciones para ESTADÍA
     $condiciones_html = "
@@ -238,6 +244,7 @@ if (in_array(strtolower($reserva['estado']), ['checkin', 'checkout', 'finalizada
 
 // =================== HTML ===================
 $html = "
+<meta charset='UTF-8'>
 <style>
     @page { size: A5; margin: 10px 20px; }
     body { font-family: Arial, sans-serif; font-size: 11px; color: #111; }
@@ -348,8 +355,7 @@ $pagos_html
     $condiciones_html
 
     <div style='margin-top:20px; font-size:10px;'>
-        <p><strong>Nombre del Cliente:</strong> {$reserva['cliente']}</p><br><br><br>
-        <p><strong>Firma del Cliente:</strong> ____________________________</p>
+        <p><strong>Nombre del Cliente:</strong> {$reserva['cliente']}</p>
     </div>
 
     <div style='margin-top:25px; font-size:10px; text-align:right; padding-right:15px;'>
@@ -364,11 +370,11 @@ $pagos_html
         <p style='font-size:10px; text-align:center;'>Grupo Cañalimeña – RUC 1801096106 – Baños de Agua Santa, Ecuador</p>
     </div>
 </div>
-
 <div style='text-align:center; margin-top:10px;'>
-    <img src='https://api.qrserver.com/v1/create-qr-code/?data=https://wa.me/593985385025&size=100x100' width='100'>
+    {$qr_img}
     <p style='font-size:9px;'>Escanea para contactarnos por WhatsApp</p>
 </div>
+
 
 
 ";

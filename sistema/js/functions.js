@@ -18,7 +18,7 @@ $('#myTable').DataTable({
                 ]
         });
 
-$('.js-example-basic-single').select2();
+
 
 $('.btn_menu').click(function(e){
 e.preventDefault();
@@ -1286,7 +1286,7 @@ function handleResponse(response) {
         case '6':
             showAlert('error', 'Todas las cajas abiertas');
             break;
-        case 'Ok':
+        case 'ok':
             showSuccessAlert('Relizado Correctamente', 'Se ha relizado Correctamente', function() {
                 location.reload();
             });
@@ -1328,7 +1328,7 @@ function showSuccessAlert(title, text, callback) {
         title: title,
         text: text,
         showConfirmButton: true,
-        confirmButtonText: 'Ok',
+        confirmButtonText: 'ok',
         allowOutsideClick: false
     }).then((result) => {
         if (result.isConfirmed && typeof callback === 'function') {
@@ -2308,6 +2308,69 @@ function addHabitacion() {
     recalcularTotalReserva();
 }
 
+function recalcularTotalReserva() {
+    const noches = calcularNoches();
+    if (noches <= 0) return;
+
+    let total = 0;
+    const habitacionesUsadas = [];
+
+    document.querySelectorAll('.habitacion-row').forEach((row) => {
+        const selectHabitacion = row.querySelector('.id_habitacion');
+        const idHab = selectHabitacion?.value;
+
+        // Validar habitación duplicada
+        if (idHab) {
+            if (habitacionesUsadas.includes(idHab)) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Habitación duplicada',
+                    text: 'No puedes seleccionar la misma habitación más de una vez.'
+                });
+                selectHabitacion.value = '';
+                return;
+            }
+            habitacionesUsadas.push(idHab);
+        }
+
+        const adultos = parseInt(row.querySelector('.input_adultos')?.value) || 0;
+        const ninos = parseInt(row.querySelector('.input_ninos')?.value) || 0;
+
+        const tarifaSelect = row.querySelector('.select_tarifa');
+        const precioAdulto = parseFloat(tarifaSelect?.selectedOptions[0]?.dataset.precio || 0);
+
+        // Tarifa niño = 75% del adulto
+        const precioNino = parseFloat((precioAdulto * 0.75).toFixed(2));
+
+        const tarifaNinoField = row.querySelector('.tarifa_nino_aplicada');
+        if (tarifaNinoField) tarifaNinoField.value = precioNino.toFixed(2);
+
+        // Extras
+        const precioDesayuno = row.querySelector('.chk_desayuno')?.checked
+            ? parseFloat(row.querySelector('.precio_desayuno')?.selectedOptions[0]?.dataset?.precio || 0)
+            : 0;
+
+        const precioTour = row.querySelector('.chk_tour')?.checked
+            ? parseFloat(row.querySelector('.precio_tour')?.selectedOptions[0]?.dataset?.precio || 0)
+            : 0;
+
+        // Garaje (valor ya viene final desde el form, no se multiplica)
+        const precioGaraje = row.querySelector('.chk_garaje')?.checked
+            ? parseFloat(row.querySelector('.input_garaje')?.value || 0)
+            : 0;
+
+        // Subtotales
+        const subtotalAdulto = adultos * (precioAdulto + precioDesayuno + precioTour) * noches;
+        const subtotalNino = ninos * (precioNino + precioDesayuno + precioTour) * noches;
+
+        total += subtotalAdulto + subtotalNino + precioGaraje;
+    });
+
+    document.getElementById('total').value = total.toFixed(2);
+}
+
+
+
 
 function removeHabitacion(btn) {
     const container = document.getElementById('habitacionesContainer');
@@ -2326,62 +2389,47 @@ function calcularNoches() {
     return (isNaN(diff) || diff <= 0) ? 0 : diff;
 }
 
-function recalcularTotalReserva() {
-    const noches = calcularNoches();
-    if (noches <= 0) return;
-
-    let total = 0;
-    const habitacionesUsadas = [];
-
-    document.querySelectorAll('.habitacion-row').forEach((row, idx) => {
-        const selectHabitacion = row.querySelector('.id_habitacion');
-        const idHab = selectHabitacion?.value;
-        if (idHab) {
-            if (habitacionesUsadas.includes(idHab)) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Habitación duplicada',
-                    text: 'No puedes seleccionar la misma habitación más de una vez.'
-                });
-                selectHabitacion.value = '';
-                return;
-            }
-            habitacionesUsadas.push(idHab);
-        }
-
-        const adultos = parseInt(row.querySelector('.input_adultos')?.value || 0);
-        const ninos = parseInt(row.querySelector('.input_ninos')?.value || 0);
-
-        const precioAdulto = parseFloat(row.querySelector('.select_tarifa')?.selectedOptions[0]?.dataset.precio || 0);
-        const precioNino = parseFloat(row.querySelector('.select_tarifa_nino')?.selectedOptions[0]?.dataset.precio || 0);
-        const precioDesayuno = row.querySelector('.chk_desayuno')?.checked
-            ? parseFloat(row.querySelector('.precio_desayuno')?.selectedOptions[0]?.dataset?.precio || 0)
-            : 0;
-
-        const precioTour = row.querySelector('.chk_tour')?.checked
-            ? parseFloat(row.querySelector('.precio_tour')?.selectedOptions[0]?.dataset?.precio || 0)
-            : 0;
 
 
-        const subtotalAdulto = adultos * (precioAdulto + precioDesayuno + precioTour) * noches;
-        const subtotalNino = ninos * (precioNino + precioDesayuno + precioTour) * noches;
 
-        total += subtotalAdulto + subtotalNino;
-    });
-
-    document.getElementById('total').value = total.toFixed(2);
-}
 
 function togglePrecio(checkbox, clase) {
-    const select = checkbox.closest('.habitacion-row').querySelector(`.${clase}`);
+    const row = checkbox.closest('.habitacion-row');
+    const select = row.querySelector(`.${clase}`);
+
+    if (!select) return;
+
     if (checkbox.checked) {
         select.disabled = false;
+
+        // Si es tour, activar también el lugar_tour
+        if (clase === 'precio_tour') {
+            const lugar = row.querySelector('.lugar_tour');
+            if (lugar) lugar.disabled = false;
+        }
+
+        // Si es garaje y estaba en 0, poner 1 como default
+        if (clase === 'input_garaje' && select.value === '0') {
+            select.value = '1';
+        }
+
     } else {
         select.disabled = true;
-        select.value = '';
+        select.value = (clase === 'input_garaje') ? '0' : '';
+
+        // Desactivar lugar de tour también
+        if (clase === 'precio_tour') {
+            const lugar = row.querySelector('.lugar_tour');
+            if (lugar) {
+                lugar.disabled = true;
+                lugar.selectedIndex = 0;
+            }
+        }
     }
+
     recalcularTotalReserva();
 }
+
 
 function actualizarHabitacionesDisponibles() {
     const entrada = document.getElementById('fecha_entrada').value;
@@ -2510,33 +2558,43 @@ function sendDataReserva(modo = 'nueva') {
     const data = new FormData(form);
     data.set('action', (modo === 'editar') ? 'editarReserva' : 'guardarReserva');
 
+    // Mostrar modal de "Procesando..."
+    Swal.fire({
+        title: 'Procesando...',
+        text: 'Por favor espera mientras se guarda la reserva.',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     fetch('ajax.php', {
         method: 'POST',
         body: data
     })
     .then(res => res.text())
     .then(response => {
+        Swal.close(); // Cierra el modal de "Procesando"
         console.log(response);
         if (response.trim() === 'ok') {
             Swal.fire({
                 icon: 'success',
                 title: 'Éxito',
                 text: (modo === 'editar') ? 'Reserva actualizada correctamente' : 'Reserva guardada correctamente'
+            }).then(() => {
+                closeModal('modalReserva');
+                location.reload();
             });
-            closeModal('modalReserva');
-            location.reload();
         } else {
             Swal.fire('Error', response, 'error');
         }
     })
     .catch(err => {
+        Swal.close();
         console.error(err);
         Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
     });
 }
-
-
-
 
 
 $(document).on('click', '.anadirForm', function () {
@@ -2558,6 +2616,8 @@ $(document).on('click', '.anadirForm', function () {
     $('.modal').hide();
     delete window.tarifasDisponibles;
     delete window.tarifasExtras;
+
+  
 
     // Si es cancelar reserva, verificar abono antes
     if (action === 'formCancelarReserva') {
@@ -2608,6 +2668,8 @@ $(document).on('click', '.anadirForm', function () {
                 dividirBtn: dividirBtn
             },
             success: function (response) {
+
+                console.log(response);
                 if (response != '6') {
                     $('.modal .bodyModal').html(response);
                     $('.modal').fadeIn('fast', function () {
@@ -2692,3 +2754,179 @@ function abrirFormularioCliente() {
     });
 }
 
+
+$(document).on('click', '.btn_eliminar_cliente', function (e) {
+    e.preventDefault();
+
+    const cedula = $(this).data('cedula');
+
+    console.log(cedula);
+
+    Swal.fire({
+        title: '¿Estás seguro?',
+        text: "Este cliente será desactivado del sistema.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: 'ajax.php',
+                type: 'POST',
+                data: { action: 'eliminarCliente', cedula: cedula },
+                success: function (response) {
+
+                    console.log(response);
+                    if (response.trim() === 'ok') {
+                        Swal.fire('Eliminado', 'El cliente ha sido eliminado.', 'success').then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', 'No se pudo eliminar el cliente. Código: ' + response, 'error');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error', 'Error de conexión con el servidor.', 'error');
+                }
+            });
+        }
+    });
+});
+
+$(document).on('click', '.btn_activar', function () {
+    const cedula = $(this).data('cedula');
+
+    Swal.fire({
+        title: '¿Activar cliente?',
+        text: '¿Deseas reactivar este cliente?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, activar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#d33'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Activando...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            $.post('ajax.php', {
+                action: 'activarCliente',
+                cedula: cedula
+            }, function (resp) {
+                Swal.close();
+                if (resp.trim() === 'ok') {
+                    Swal.fire('Activado', 'El cliente ha sido reactivado.', 'success')
+                        .then(() => location.reload());
+                } else if (resp == 1) {
+                    Swal.fire('Error', 'Parámetro inválido.', 'error');
+                } else if (resp == 2) {
+                    Swal.fire('No válido', 'Cliente no encontrado o ya está activo.', 'warning');
+                } else if (resp == 3) {
+                    Swal.fire('Error', 'No se pudo activar el cliente.', 'error');
+                } else {
+                    Swal.fire('Error', resp, 'error');
+                }
+            }).fail(() => {
+                Swal.close();
+                Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
+            });
+        }
+    });
+});
+
+
+$(document).on('click', '.btn_eliminar_usuario', function () {
+    const cedula = $(this).data('cedula');
+
+    Swal.fire({
+        title: '¿Eliminar usuario?',
+        text: 'Esta acción lo desactivará del sistema.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Procesando...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            $.post('ajax.php', {
+                action: 'eliminarUsuario',
+                cedula: cedula
+            }, function (resp) {
+                Swal.close();
+                if (resp.trim() === 'ok') {
+                    Swal.fire('Desactivado', 'El usuario fue eliminado lógicamente.', 'success')
+                        .then(() => location.reload());
+                } else if (resp == 1) {
+                    Swal.fire('Error', 'ID inválido.', 'error');
+                } else if (resp == 2) {
+                    Swal.fire('No válido', 'Usuario no encontrado o ya eliminado.', 'warning');
+                } else {
+                    Swal.fire('Error', 'No se pudo eliminar el usuario.', 'error');
+                }
+            }).fail(() => {
+                Swal.close();
+                Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
+            });
+        }
+    });
+});
+
+$(document).on('click', '.btn_activar_usuario', function () {
+    const cedula = $(this).data('cedula');
+
+    Swal.fire({
+        title: '¿Activar usuario?',
+        text: 'El usuario podrá volver a ingresar al sistema.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, activar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#d33'
+    }).then((result) => {
+
+        console.log(result)
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Procesando...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            $.post('ajax.php', {
+                action: 'activarUsuario',
+                cedula: cedula
+            }, function (resp) {
+                Swal.close();
+                if (resp.trim() === 'ok') {
+                    Swal.fire('Activado', 'El usuario ha sido reactivado.', 'success')
+                        .then(() => location.reload());
+                } else if (resp == 1) {
+                    Swal.fire('Error', 'ID inválido.', 'error');
+                } else if (resp == 2) {
+                    Swal.fire('No válido', 'Usuario no encontrado o ya está activo.', 'warning');
+                } else {
+                    Swal.fire('Error', 'No se pudo activar el usuario.', 'error');
+                }
+            }).fail(() => {
+                Swal.close();
+                Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
+            });
+        }
+    });
+});

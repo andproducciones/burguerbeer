@@ -1486,6 +1486,7 @@ display: flex;
 #formReserva .form_group label {
     font-weight: bold;
     margin-bottom: 5px;
+	margin: 5px auto 5px auto;
 }
 
 #formReserva input[type="text"],

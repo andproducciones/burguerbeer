@@ -780,107 +780,271 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 
     if ($_POST['action'] == 'formCliente') {
+        $isEdit = !empty($_POST['co']);
+        $btnCerrar = '<a href="#" class="boton rojo closeModal" onclick="' . ($isEdit ? 'closeModal3()' : 'closeModal2()') . '"><i class="fas fa-ban"></i> Cerrar</a>';
 
-        //print_r($_POST);exit;
+        echo '
+    <div class="scroll">
+    <form id="form_add_product" method="post" onsubmit="event.preventDefault(); sendDataForm();">
+        <h1><i class="fas fa-id-badge fa-3x"></i><br><br>Añadir Cliente</h1>
 
+        <div class="alertAddProduct"></div>
 
-        if (empty($_POST['co'])) {
-            $btn =  '<a href="#" class="boton rojo closeModal" onclick="closeModal2();"><i class="fas fa-ban"></i> Cerrar</a>';
-        } else {
-            $btn =  '<a href="#" class="boton rojo closeModal" onclick="closeModal3();"><i class="fas fa-ban"></i> Cerrar</a>';
-        }
+        <label for="cedula">Cédula *</label>
+        <input type="text" name="cedula" id="cedula" required pattern="\\d{10}" placeholder="Ej: 1723456789">
 
+        <label for="nombre">Nombre *</label>
+        <input type="text" name="nombre" id="nombre" required>
 
-        echo '<div class="scroll"><form action="" method="post" name="form_add_product" id="form_add_product" onsubmit="event.preventDefault(); sendDataForm();">
-			                <h1><i class="fas fa-id-badge fa-3x"></i><br><br>Añadir Cliente</h1>
-				<div class="alertAddProduct"></div>
-				<label for="usuario_c">Número de Cédula</label>
-				<input type="text" name="cedula" id="cedula">
-				<label for="nombre">Nombre</label>
-				<input type="text" name="nombre" id="nombre" >
-				<label for="p_apellidos">Apellido Paterno</label>
-				<input type="text" name="p_apellido" id="p_apellido">
-				<label for="s_apellidos">Apellido Materno</label>
-				<input type="text" name="s_apellido" id="s_apellido">
-				<label for="correo_c">Correo</label>
-				<input type="email" name="correo" id="correo" >
-				<label for="direccion">Dirección</label>
-				<input type="text" name="direccion" id="direccion" >
-				<label for="telefono">Teléfono</label>
-				<input type="text" name="telefono" id="telefono" >
-				<input type="hidden" name="action" value="addCliente">
-				<div class="acciones">
-				<button type="submit" class="boton"><i class="fas fa-save"></i> Guardar</button>
-			   '.$btn.'
-			    </div>
-			</form>
-			                
-			                </div>
-		           		  ';
+        <label for="apellido">Apellido *</label>
+        <input type="text" name="apellido" id="apellido" required>
 
+        <label for="correo">Correo electrónico *</label>
+        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+            <input type="text" name="correo_usuario" id="correo_usuario" placeholder="usuario" required style="flex:1;">
+            <span style="align-self:center;">@</span>
+            <select name="correo_dominio" id="correo_dominio" onchange="mostrarInputOtro(\'correo_dominio\')" required>
+                <option value="gmail">gmail</option>
+                <option value="yahoo">yahoo</option>
+                <option value="hotmail">hotmail</option>
+                <option value="outlook">outlook</option>
+                <option value="otro">Otro</option>
+            </select>
+            <input type="text" name="correo_dominio_otro" id="correo_dominio_otro" placeholder="Dominio" style="display:none;flex:1;">
+            <select name="correo_extension" id="correo_extension" onchange="mostrarInputOtro(\'correo_extension\')" required>
+                <option value=".com">.com</option>
+                <option value=".es">.es</option>
+                <option value=".ec">.ec</option>
+                <option value="otro">Otro</option>
+            </select>
+            <input type="text" name="correo_extension_otro" id="correo_extension_otro" placeholder=".xxx" style="display:none;flex:1;">
+        </div>
 
+        <label for="ciudad">Ciudad *</label>
+        <select name="ciudad" id="ciudad" onchange="mostrarInputOtro(\'ciudad\')" required>
+            <option value="">Seleccione ciudad</option>
+            <option value="Quito">Quito</option>
+            <option value="Guayaquil">Guayaquil</option>
+            <option value="Cuenca">Cuenca</option>
+            <option value="Ambato">Ambato</option>
+            <option value="Baños">Baños</option>
+            <option value="Otro">Otro</option>
+        </select>
+        <input type="text" name="ciudad_otro" id="ciudad_otro" placeholder="Escriba ciudad" style="display:none;">
+
+        <label for="telefono">Teléfono</label>
+        <input type="text" name="telefono" id="telefono" pattern="\\d{7,10}" placeholder="0991234567">
+
+        <input type="hidden" name="action" value="addCliente">
+
+        <div class="acciones">
+            <button type="submit" class="boton"><i class="fas fa-save"></i> Guardar</button>
+            ' . $btnCerrar . '
+        </div>
+    </form>
+    </div>';
     }
+
 
 
 
     if ($_POST['action'] == 'addCliente') {
 
-        //print_r($_POST);
-        //print_r($_FILES);
-        //exit;
+        // Verificar campos obligatorios
+        if (
+            empty($_POST['cedula']) || empty($_POST['nombre']) || empty($_POST['apellido']) ||
+            empty($_POST['correo_usuario']) || empty($_POST['correo_dominio']) || empty($_POST['correo_extension']) ||
+            (($_POST['correo_dominio'] == 'otro') && empty($_POST['correo_dominio_otro'])) ||
+            (($_POST['correo_extension'] == 'otro') && empty($_POST['correo_extension_otro'])) ||
+            empty($_POST['ciudad']) || (($_POST['ciudad'] == 'Otro') && empty($_POST['ciudad_otro'])) ||
+            empty($_POST['telefono'])
+        ) {
+            echo 1; // Campos vacíos
+            exit;
+        }
 
+        require '../conexion.php';
+
+        // Sanitizar y normalizar campos
+        function formatearTexto($texto)
+        {
+            return ucfirst(strtolower(trim($texto)));
+        }
+
+        $cedula     = mysqli_real_escape_string($conection, trim($_POST['cedula']));
+        $nombre     = formatearTexto($_POST['nombre']);
+        $apellido   = formatearTexto($_POST['apellido']);
+        $telefono   = mysqli_real_escape_string($conection, trim($_POST['telefono']));
+
+        // Correo electrónico
+        $dominio    = ($_POST['correo_dominio'] === 'otro') ? $_POST['correo_dominio_otro'] : $_POST['correo_dominio'];
+        $extension  = ($_POST['correo_extension'] === 'otro') ? $_POST['correo_extension_otro'] : $_POST['correo_extension'];
+        $correo     = strtolower(trim($_POST['correo_usuario'])) . '@' . strtolower(trim($dominio)) . strtolower(trim($extension));
+        $correo     = mysqli_real_escape_string($conection, $correo);
+
+        // Ciudad
+        $ciudad     = ($_POST['ciudad'] === 'Otro') ? $_POST['ciudad_otro'] : $_POST['ciudad'];
+        $ciudad     = formatearTexto($ciudad);
+        $ciudad     = mysqli_real_escape_string($conection, $ciudad);
+
+        // Validar cédula existente
+        $check = mysqli_query($conection, "SELECT * FROM clientes WHERE usuario = '$cedula' AND estatus = 1");
+        if (mysqli_num_rows($check) > 0) {
+            echo 2; // Duplicado
+            exit;
+        }
+
+        // Insertar en la base de datos
+        $query = mysqli_query($conection, "
+        INSERT INTO clientes (usuario, nombre, p_apellido, correo_c, direccion, telefono, estatus)
+        VALUES ('$cedula', '$nombre', '$apellido', '$correo', '$ciudad', '$telefono', 1)
+    ");
+
+        if ($query) {
+            $arrayData = [
+                'cedula'   => $cedula,
+                'nombre'   => $nombre,
+                'apellido' => $apellido
+            ];
+            echo json_encode($arrayData, JSON_UNESCAPED_UNICODE);
+        } else {
+            echo 3; // Error en inserción
+        }
+        exit;
+    }
+
+
+    if ($_POST['action'] == 'formEditarCliente') {
+        $cedula = $_POST['co'];
+        $query = mysqli_query($conection, "SELECT * FROM clientes WHERE usuario = '$cedula'");
+        $data = mysqli_fetch_assoc($query);
+
+        if (!$data) {
+            echo '<p class="error">Cliente no encontrado</p>';
+            exit;
+        }
+
+        $btn = '<a href="#" class="boton rojo closeModal" onclick="closeModal3();"><i class="fas fa-ban"></i> Cerrar</a>';
+
+        echo '<div class="scroll">
+            <form action="" method="post" name="form_add_product" id="form_add_product" onsubmit="event.preventDefault(); sendDataForm();">
+                <h1><i class="fas fa-id-badge fa-3x"></i><br><br>Editar Cliente</h1>
+                <div class="alertAddProduct"></div>
+                <label for="usuario_c">Número de Cédula</label>
+                <input type="text" name="cedula" id="cedula" value="'.$data['usuario'].'" readonly>
+                <label for="nombre">Nombre</label>
+                <input type="text" name="nombre" id="nombre" value="'.$data['nombre'].'">
+                <label for="p_apellidos">Apellido Paterno</label>
+                <input type="text" name="p_apellido" id="p_apellido" value="'.$data['p_apellido'].'">
+                <label for="s_apellidos">Apellido Materno</label>
+                <input type="text" name="s_apellido" id="s_apellido" value="'.$data['s_apellido'].'">
+                <label for="correo_c">Correo</label>
+                <input type="email" name="correo" id="correo" value="'.$data['correo_c'].'">
+                <label for="direccion">Dirección</label>
+                <input type="text" name="direccion" id="direccion" value="'.$data['direccion'].'">
+                <label for="telefono">Teléfono</label>
+                <input type="text" name="telefono" id="telefono" value="'.$data['telefono'].'">
+                <input type="hidden" name="action" value="updateCliente">
+                <div class="acciones">
+                    <button type="submit" class="boton"><i class="fas fa-save"></i> Actualizar</button>
+                    '.$btn.'
+                </div>
+            </form>
+        </div>';
+    }
+
+    if ($_POST['action'] == 'updateCliente') {
         if (empty($_POST['cedula']) || empty($_POST['nombre']) || empty($_POST['p_apellido']) || empty($_POST['correo']) || empty($_POST['direccion']) || empty($_POST['telefono'])) {
             echo 1;
             exit;
-
-        } else {
-
-
-            $usuario 		= $_POST['cedula'];
-            $nombre 		= $_POST['nombre'];
-            $p_apellido 	= $_POST['p_apellido'];
-            $s_apellido 	= $_POST['s_apellido'];
-            $correo 		= $_POST['correo'];
-            $direccion 		= $_POST['direccion'];
-            $telefono 		= $_POST['telefono'];
-
-
-            $query = mysqli_query($conection, "SELECT * FROM clientes WHERE usuario = '$usuario'");
-
-            $result = mysqli_num_rows($query);
-
-
-            if ($result > 0) {
-                echo 2;
-                exit;
-
-            } else {
-
-                $query_insert = mysqli_query($conection, "INSERT INTO clientes(usuario,nombre,p_apellido,s_apellido,correo_c,direccion,telefono) VALUES('$usuario','$nombre','$p_apellido','$s_apellido','$correo','$direccion','$telefono')");
-
-                if ($query_insert) {
-
-                    $arrayData = array();
-
-                    $arrayData['cedula'] 	= $usuario;
-                    $arrayData['nombre'] 	= $nombre;
-                    $arrayData['apellido'] 	= $p_apellido;
-
-                    echo json_encode($arrayData, JSON_UNESCAPED_UNICODE);
-                    exit;
-
-                } else {
-
-                    echo 3;
-                    exit;
-
-                }
-            }
-
-
         }
 
+        $usuario     = $_POST['cedula'];
+        $nombre      = $_POST['nombre'];
+        $p_apellido  = $_POST['p_apellido'];
+        $s_apellido  = $_POST['s_apellido'];
+        $correo = isset($_POST['correo']) ? strtolower(trim(preg_replace('/\s+/', '', $_POST['correo']))) : '';
+        $direccion   = $_POST['direccion'];
+        $telefono    = $_POST['telefono'];
+
+        $query_update = mysqli_query($conection, "UPDATE clientes 
+        SET nombre='$nombre', 
+            p_apellido='$p_apellido', 
+            s_apellido='$s_apellido', 
+            correo_c='$correo', 
+            direccion='$direccion', 
+            telefono='$telefono' 
+        WHERE usuario='$usuario'");
+
+        if ($query_update) {
+            $arrayData = array(
+                'cedula'   => $usuario,
+                'nombre'   => $nombre,
+                'apellido' => $p_apellido
+            );
+            echo json_encode($arrayData, JSON_UNESCAPED_UNICODE);
+            exit;
+        } else {
+            echo 3;
+            exit;
+        }
     }
+
+    if ($_POST['action'] == 'eliminarCliente') {
+        $cedula = $_POST['cedula'];
+
+        if (empty($cedula)) {
+            echo 1; // Error por parámetro vacío
+            exit;
+        }
+
+        // Verificar que el cliente exista
+        $query = mysqli_query($conection, "SELECT * FROM clientes WHERE usuario = '$cedula' AND estatus = 1");
+        if (mysqli_num_rows($query) == 0) {
+            echo 2; // No encontrado o ya eliminado
+            exit;
+        }
+
+        // Eliminación lógica
+        $query_delete = mysqli_query($conection, "UPDATE clientes SET estatus = 2 WHERE usuario = '$cedula'");
+
+        if ($query_delete) {
+            echo 'ok';
+            exit;
+        } else {
+            echo 3; // Error de consulta
+            exit;
+        }
+    }
+
+    if ($_POST['action'] == 'activarCliente') {
+        $cedula = trim($_POST['cedula'] ?? '');
+
+        if ($cedula === '') {
+            echo 1; // Error: parámetro vacío
+            exit;
+        }
+
+        // Verificar que el cliente exista y esté inactivo
+        $query = mysqli_query($conection, "SELECT id FROM clientes WHERE usuario = '$cedula' AND estatus = 2 LIMIT 1");
+
+        if (mysqli_num_rows($query) == 0) {
+            echo 2; // Cliente no encontrado o ya activo
+            exit;
+        }
+
+        // Activar el cliente
+        $query_update = mysqli_query($conection, "UPDATE clientes SET estatus = 1 WHERE usuario = '$cedula'");
+
+        if ($query_update) {
+            echo 'ok';
+        } else {
+            echo 3; // Error al ejecutar el UPDATE
+        }
+        exit;
+    }
+
+
 
 
 
@@ -980,6 +1144,138 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
 
     }
+
+    if ($_POST['action'] == 'formEditarUsuario') {
+        $cedula = $_POST['co'];
+
+        $query = mysqli_query($conection, "SELECT * FROM usuario WHERE usuario = '$cedula' LIMIT 1");
+        $data = mysqli_fetch_assoc($query);
+
+        if (!$data) {
+            echo 'Usuario no encontrado';
+            exit;
+        }
+
+        echo '
+    <div>
+        <form action="" method="post" name="form_add_product" id="form_add_product" onsubmit="event.preventDefault(); sendDataForm();">
+            <h1><i class="fas fa-id-badge fa-3x"></i><br><br>Editar Usuario</h1>
+
+            <label for="usuario">Cédula</label>
+            <input type="number" name="usuario" id="usuario" value="' . $data['usuario'] . '" readonly>
+
+            <label for="nombre">Nombre</label>
+            <input type="text" name="nombre" id="nombre" value="' . $data['nombre'] . '">
+
+            <label for="apellido">Apellido</label>
+            <input type="text" name="apellido" id="apellido" value="' . $data['apellido'] . '">
+
+            <label for="correo">Correo</label>
+            <input type="email" name="correo" id="correo" value="' . $data['correo'] . '">
+
+            <label for="clave">Nueva Contraseña (opcional)</label>
+            <input type="password" name="clave" id="clave" placeholder="Solo si deseas cambiar">
+
+            <label for="rol">Tipo de Usuario</label>
+            <select name="rol" id="rol" class="notItemOne">
+                <option value="">Seleccione</option>
+                <option value="1" ' . ($data['rol'] == 1 ? 'selected' : '') . '>Administrador</option>
+                <option value="2" ' . ($data['rol'] == 2 ? 'selected' : '') . '>Vendedor</option>
+            </select>
+
+            <label for="lugar">Lugar</label>
+            <select name="lugar" id="lugar" class="notItemOne">
+                <option value="">Seleccione</option>
+                <option value="1" ' . ($data['lugar'] == 1 ? 'selected' : '') . '>Hotel</option>
+                <option value="2" ' . ($data['lugar'] == 2 ? 'selected' : '') . '>Burguer</option>
+            </select>
+
+            <input type="hidden" name="action" value="updateUsuario">
+            <button type="submit" class="btn_new"><i class="fas fa-save"></i> Actualizar</button>
+            <a href="#" class="btn_ok closeModal" onclick="closeModal2();"><i class="fas fa-ban"></i> Cerrar</a>
+        </form>
+    </div>';
+    }
+
+    if ($_POST['action'] == 'updateUsuario') {
+        if (empty($_POST['usuario']) || empty($_POST['nombre']) || empty($_POST['apellido']) || empty($_POST['correo']) || empty($_POST['rol']) || empty($_POST['lugar'])) {
+            echo 1; // Campos obligatorios vacíos
+            exit;
+        }
+
+        $usuario  = $_POST['usuario'];
+        $nombre   = $_POST['nombre'];
+        $apellido = $_POST['apellido'];
+        $correo   = strtolower(trim(preg_replace('/\s+/', '', $_POST['correo'])));
+        $clave    = $_POST['clave'];
+        $rol      = $_POST['rol'];
+        $lugar    = $_POST['lugar'];
+
+        if ($clave != '') {
+            // Con contraseña nueva
+            $update = mysqli_query($conection, "UPDATE usuario SET nombre='$nombre', apellido='$apellido', correo='$correo', clave='$clave', rol='$rol', lugar='$lugar' WHERE usuario = '$usuario'");
+        } else {
+            // Sin cambiar contraseña
+            $update = mysqli_query($conection, "UPDATE usuario SET nombre='$nombre', apellido='$apellido', correo='$correo', rol='$rol', lugar='$lugar' WHERE usuario = '$usuario'");
+        }
+
+        if ($update) {
+            echo 'ok';
+        } else {
+            echo 2; // Error SQL
+        }
+        exit;
+    }
+
+    if ($_POST['action'] == 'eliminarUsuario') {
+
+        $cedula = trim($_POST['cedula'] ?? '');
+
+        if ($cedula === '') {
+            echo 1; // Cedula vacía
+            exit;
+        }
+
+        // Verificar si el usuario existe y está activo
+        $query = mysqli_query($conection, "SELECT usuario FROM usuario WHERE usuario = '$cedula' AND estatus = 1 LIMIT 1");
+
+        if (mysqli_num_rows($query) == 0) {
+            echo 2; // No encontrado o ya eliminado
+            exit;
+        }
+
+        // Eliminación lógica
+        $query_delete = mysqli_query($conection, "UPDATE usuario SET estatus = 2 WHERE usuario = '$cedula'");
+
+        echo $query_delete ? 'ok' : 3;
+        exit;
+    }
+
+    if ($_POST['action'] == 'activarUsuario') {
+        $cedula = trim($_POST['cedula'] ?? '');
+
+        if ($cedula === '') {
+            echo 1; // Cedula vacía
+            exit;
+        }
+
+        // Verificar si el usuario existe y está desactivado
+        $query = mysqli_query($conection, "SELECT usuario FROM usuario WHERE usuario = '$cedula' AND estatus = 2 LIMIT 1");
+
+        if (mysqli_num_rows($query) == 0) {
+            echo 2; // No encontrado o ya activo
+            exit;
+        }
+
+        // Activación lógica
+        $query_update = mysqli_query($conection, "UPDATE usuario SET estatus = 1 WHERE usuario = '$cedula'");
+
+        echo $query_update ? 'ok' : 3;
+        exit;
+    }
+
+
+
 
     if ($_POST['action'] == 'formProducto') {
 
@@ -2071,7 +2367,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             // Confirmar la transacción
             mysqli_commit($conection);
-            echo 'Ok'; // Caja abierta correctamente
+            echo 'ok'; // Caja abierta correctamente
             exit;
 
         } catch (Exception $e) {
@@ -2571,7 +2867,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $_SESSION['data_cierre_pdf'][$k] = $v;
         }
 
-        exit('OK');
+        exit('ok');
     }
 
 
@@ -3414,6 +3710,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <div style="display: flex; gap: 5px;">
             <select name="id_cliente" id="id_cliente" class="js-example-basic-single notItemOne" required
                 style="flex: 1;">
+                <option value="">Seleccione un Cliente</option>
                 <?php while ($c = mysqli_fetch_assoc($clientes)) {
                     echo '<option value="'.$c['usuario'].'">'.$c['nombre'].'</option>';
                 } ?>
@@ -3458,14 +3755,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 onchange="recalcularTotalReserva()">
 
             <label>Niños:</label>
-
-            <select name="tarifa_nino[]" class="select_tarifa_nino" onchange="recalcularTotalReserva()">
-                <?php foreach ($tarifa_data as $t) {
-                    echo '<option value="'.$t['id'].'" data-precio="'.$t['precio_por_persona'].'" data-nombre="'.strtolower($t['nombre']).'">'.ucfirst($t['nombre']).' ($'.$t['precio_por_persona'].')</option>';
-                } ?>
-            </select>
             <input type="number" name="ninos[]" class="input_ninos" value="0" min="0"
                 onchange="recalcularTotalReserva()">
+            <input type="text" name="tarifa_nino_aplicada[]" class="tarifa_nino_aplicada" value="0.00" readonly
+                title="Tarifa calculada automáticamente">
+
 
 
             <!-- Extras -->
@@ -3496,6 +3790,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 } ?>
             </select>
 
+            <label><input type="checkbox" class="chk_garaje" onchange="togglePrecio(this, 'input_garaje')">
+                Garaje</label>
+            <select name="garaje[]" class="input_garaje" onchange="recalcularTotalReserva()" disabled>
+                <?php
+                    for ($i = 2; $i <= 6; $i += 0.5) {
+                        $val = number_format($i, 1);
+                        echo "<option value=\"$val\">$val</option>";
+                    }
+        ?>
+            </select>
+
 
             <span class="btn_remove" onclick="removeHabitacion(this)"><i class="fas fa-times"></i></span>
         </div>
@@ -3517,9 +3822,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <div class="form_group">
         <label for="metodo_pago">Método de Pago de Abono:</label>
         <select name="metodo_pago" id="metodo_pago" required>
-            <option value="efectivo">Efectivo</option>
-            <option value="tarjeta">Tarjeta</option>
-            <option value="transferencia">Transferencia</option>
+            <option value="1">Efectivo</option>
+            <option value="2">Tarjeta</option>
+            <option value="3">Transferencia</option>
         </select>
     </div>
 
@@ -3614,7 +3919,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     if ($_POST['action'] == 'guardarReserva') {
         mysqli_begin_transaction($conection);
-
         try {
             $id_cliente     = intval($_POST['id_cliente']);
             $fecha_entrada  = $_POST['fecha_entrada'];
@@ -3624,14 +3928,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $abono          = floatval($_POST['abono']);
             $usuario_id     = $_SESSION['idUser'] ?? 1;
             $canal_reserva  = 'recepción';
-
-            $metodo_pago     = mysqli_real_escape_string($conection, $_POST['metodo_pago'] ?? 'efectivo');
+            $metodo_pago    = mysqli_real_escape_string($conection, $_POST['metodo_pago'] ?? 'efectivo');
             $referencia_pago = mysqli_real_escape_string($conection, $_POST['referencia_pago'] ?? '');
 
+            // Validaciones iniciales
             if ($id_cliente <= 0 || empty($fecha_entrada) || empty($fecha_salida)) {
                 throw new Exception('Faltan datos obligatorios');
             }
 
+            // Estados
             if ($abono >= $total) {
                 $estado_pago = 'pagado';
                 $estado_reserva = 'confirmada';
@@ -3643,10 +3948,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $estado_reserva = 'pendiente';
             }
 
-            // Enviar comprobante si la reserva fue confirmada
-
-
-
+            // Insertar cabecera reserva
             $sql = "INSERT INTO reservas (
             id_cliente, fecha_entrada, fecha_salida, total,
             estado_pago, estado, observaciones, canal_reserva, usuario_id
@@ -3656,67 +3958,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         )";
 
             if (!mysqli_query($conection, $sql)) {
-                throw new Exception('Error al registrar la reserva principal');
+                throw new Exception('Error al registrar la reserva');
             }
 
             $idreserva = mysqli_insert_id($conection);
 
-            // Validar arrays
-            if (!isset($_POST['id_habitacion'], $_POST['tarifa'], $_POST['tarifa_nino'], $_POST['adultos'], $_POST['ninos'])) {
-                throw new Exception('Faltan datos de habitaciones');
-            }
-
+            // Arrays esperados
             $ids_hab         = $_POST['id_habitacion'];
             $tarifas_adulto  = $_POST['tarifa'];
-            $tarifas_nino    = $_POST['tarifa_nino'];
             $adultos         = $_POST['adultos'];
             $ninos           = $_POST['ninos'];
+            $tarifas_nino_aplicadas = $_POST['tarifa_nino_aplicada'];
             $precio_desayuno = $_POST['precio_desayuno'] ?? [];
             $precio_tour     = $_POST['precio_tour'] ?? [];
             $lugares_tour    = $_POST['lugar_tour'] ?? [];
+            $garajes         = $_POST['garaje'] ?? [];
 
-            for ($i = 0; $i < count($ids_hab); $i++) {
+            $n = count($ids_hab);
+            $dias = max(1, ceil((strtotime($fecha_salida) - strtotime($fecha_entrada)) / 86400));
+            $acumulado_total = 0;
+
+            for ($i = 0; $i < $n; $i++) {
                 $idh = intval($ids_hab[$i]);
                 $tfa = intval($tarifas_adulto[$i]);
-                $tfn = intval($tarifas_nino[$i]);
                 $adt = intval($adultos[$i]);
                 $nin = intval($ninos[$i]);
 
+                // Obtener precio tarifa adulto
                 $precio_adulto = 0;
                 $resA = mysqli_query($conection, "SELECT precio_por_persona FROM tarifas_habitaciones WHERE id = $tfa LIMIT 1");
-                if ($resA && mysqli_num_rows($resA) > 0) {
-                    $rowA = mysqli_fetch_assoc($resA);
-                    $precio_adulto = floatval($rowA['precio_por_persona']);
+                if ($resA && mysqli_num_rows($resA)) {
+                    $precio_adulto = floatval(mysqli_fetch_assoc($resA)['precio_por_persona']);
                 }
 
-                $precio_nino = 0;
-                $resN = mysqli_query($conection, "SELECT precio_por_persona FROM tarifas_habitaciones WHERE id = $tfn LIMIT 1");
-                if ($resN && mysqli_num_rows($resN) > 0) {
-                    $rowN = mysqli_fetch_assoc($resN);
-                    $precio_nino = floatval($rowN['precio_por_persona']);
-                }
+                // Precio niño directo desde el form
+                $precio_nino = floatval($tarifas_nino_aplicadas[$i]);
 
+                // Extras
                 $precioD = floatval($precio_desayuno[$i] ?? 0);
                 $precioT = floatval($precio_tour[$i] ?? 0);
                 $incluye_desayuno = ($precioD > 0) ? 1 : 0;
                 $incluye_tour     = ($precioT > 0) ? 1 : 0;
-                $lugar_tour = mysqli_real_escape_string($conection, $lugares_tour[$i] ?? '');
+                $lugar_tour       = mysqli_real_escape_string($conection, $lugares_tour[$i] ?? '');
 
-                $subtotal = $adt * ($precio_adulto + $precioD + $precioT) + $nin * ($precio_nino + $precioD + $precioT);
+                // Garaje
+                $precioGaraje = floatval($garajes[$i] ?? 0);
+
+                $subtotal = ($adt * ($precio_adulto + $precioD + $precioT) * $dias) +
+                            ($nin * ($precio_nino + $precioD + $precioT) * $dias) +
+                            $precioGaraje;
+
+                $acumulado_total += $subtotal;
 
                 $insertDetalle = "INSERT INTO reservas_detalle (
                 idreserva, id_habitacion, adultos, ninos,
                 incluye_desayuno, incluye_tour, lugar_tour,
-                precio_unitario, precio_nino, precio_desayuno, precio_tour, subtotal
+                precio_unitario, precio_nino, precio_desayuno, precio_tour, garaje, subtotal
             ) VALUES (
                 $idreserva, $idh, $adt, $nin,
                 $incluye_desayuno, $incluye_tour, '$lugar_tour',
-                $precio_adulto, $precio_nino, $precioD, $precioT, $subtotal
+                $precio_adulto, $precio_nino, $precioD, $precioT, $precioGaraje, $subtotal
             )";
 
                 if (!mysqli_query($conection, $insertDetalle)) {
-                    throw new Exception('Error al insertar detalle de habitación');
+                    throw new Exception('Error al insertar detalle');
                 }
+            }
+
+            if (round($acumulado_total, 2) !== round($total, 2)) {
+                throw new Exception('El total no coincide con el cálculo interno');
             }
 
             if ($abono > 0) {
@@ -3733,16 +4043,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             mysqli_commit($conection);
 
-            enviarComprobanteReserva($idreserva);
-            echo 'ok';
+            if ($estado_reserva === 'confirmada') {
+                enviarComprobanteReserva($idreserva);
+            }
 
+            echo 'ok';
         } catch (Exception $e) {
             mysqli_rollback($conection);
             echo 'Error: ' . $e->getMessage();
         }
         exit;
     }
-
 
     if ($_POST['action'] == 'agregarAbono') {
         mysqli_begin_transaction($conection);
@@ -4342,19 +4653,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 
     <!-- TARIFA NIÑO -->
+    <!-- TARIFA NIÑO -->
+    <input type="hidden" name="tarifa_nino" id="tarifa_nino">
     <div class="form_group">
-        <label for="tarifa_nino">Tarifa Niño:</label>
-        <select name="tarifa_nino" id="tarifa_nino" onchange="recalcularTotalCheckin();">
-            <?php foreach ($tarifa_data as $t) { ?>
-            <option value="<?= $t['id'] ?>"
-                data-precio="<?= $t['precio_por_persona'] ?>">
-                <?= ucfirst($t['nombre']) ?>
-                ($<?= $t['precio_por_persona'] ?>)
-            </option>
-            <?php } ?>
-        </select><br>
+        <label for="ninos">Niños:</label>
         <input type="number" name="ninos" id="ninos" value="0" min="0" onchange="recalcularTotalCheckin();">
+        <span style="font-size: 11px; color: gray;">Se aplica automáticamente el 75% de la tarifa adulto</span>
     </div>
+
 
 
 
@@ -4370,20 +4676,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         </select>
     </div>
 
-    <div class="form_group">
-        <label><input type="checkbox" id="chk_tour" onchange="togglePrecioCheckin(this, 'precio_tour')"> Tour</label>
-        <select name="precio_tour" id="precio_tour" disabled onchange="recalcularTotalCheckin();">
-            <option value="">Seleccione</option>
-            <?php foreach ($extras_data['tour'] as $t) { ?>
-            <option value="<?= $t ?>">
-                $<?= number_format($t, 2) ?></option>
-            <?php } ?>
-        </select>
-    </div>
+    <label><input type="checkbox" id="chk_tour" onchange="togglePrecioCheckin(this, 'precio_tour'); toggleTourLugar();">
+        Tour</label>
+    <select name="precio_tour" id="precio_tour" disabled onchange="recalcularTotalCheckin();">
+        <option value="">Seleccione</option>
+        <?php foreach ($extras_data['tour'] as $t) { ?>
+        <option value="<?= $t ?>">
+            $<?= number_format($t, 2) ?></option>
+        <?php } ?>
+    </select>
 
     <div class="form_group">
         <label>Lugar del Tour:</label>
-        <select name="lugar_tour" id="lugar_tour" class="js-example-basic-single">
+        <select name="lugar_tour" id="lugar_tour" class="js-example-basic-single" disabled>
             <option value="">Seleccione un Tour</option>
             <?php foreach ($tour_data as $t) { ?>
             <option value="<?= $t['id'] ?>">
@@ -4393,6 +4698,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         </select>
     </div>
 
+
+    <label><input type="checkbox" class="chk_garaje" onchange="togglePrecioCheckin(this, 'garaje_valor')">
+        Garaje</label>
+    <select name="garaje_valor" id="garaje_valor" class="garaje_valor" disabled onchange="recalcularTotalCheckin();">
+        <option value="">Seleccione</option>
+        <?php for ($i = 2; $i <= 6; $i += 0.5): ?>
+        <option value="<?= number_format($i, 2) ?>">
+            <?= number_format($i, 2) ?>
+        </option>
+        <?php endfor; ?>
+    </select>
+
+
+
     <div class="form_group">
         <label for="total">Total ($):</label>
         <input type="number" step="0.01" name="total" id="total" readonly>
@@ -4401,9 +4720,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <div class="form_group">
         <label for="metodo_pago">Método de Pago:</label>
         <select name="metodo_pago" id="metodo_pago" required>
-            <option value="efectivo">Efectivo</option>
-            <option value="tarjeta">Tarjeta</option>
-            <option value="transferencia">Transferencia</option>
+            <option value="1">Efectivo</option>
+            <option value="2">Tarjeta</option>
+            <option value="3">Transferencia</option>
         </select>
     </div>
 
@@ -4421,36 +4740,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 <script>
     function togglePrecioCheckin(checkbox, id) {
         const select = document.getElementById(id);
+        if (!select) return;
+
         select.disabled = !checkbox.checked;
-        if (!checkbox.checked) select.value = '';
+
+        if (!checkbox.checked) {
+            select.value = '';
+        }
+
         recalcularTotalCheckin();
     }
+
 
     function recalcularTotalCheckin() {
         const adultos = parseInt(document.getElementById('adultos')?.value || 0);
         const ninos = parseInt(document.getElementById('ninos')?.value || 0);
-
-        const tarifaAdulto = document.getElementById('tarifa')?.selectedOptions[0]?.dataset.precio || 0;
-        const tarifaNino = document.getElementById('tarifa_nino')?.selectedOptions[0]?.dataset.precio || 0;
-
         const noches = parseInt(document.getElementById('noches')?.value || 1);
+
+        const tarifaAdulto = parseFloat(document.getElementById('tarifa')?.selectedOptions[0]?.dataset.precio || 0);
+        const tarifaNino = tarifaAdulto * 0.75;
+        document.getElementById('tarifa_nino').value = tarifaNino.toFixed(2);
 
 
         const precioDesayuno = parseFloat(document.getElementById('precio_desayuno')?.value || 0);
         const precioTour = parseFloat(document.getElementById('precio_tour')?.value || 0);
 
-        const chkDesayuno = document.getElementById('chk_desayuno').checked;
-        const chkTour = document.getElementById('chk_tour').checked;
+        const chkDesayuno = document.getElementById('chk_desayuno')?.checked;
+        const chkTour = document.getElementById('chk_tour')?.checked;
+        const chkGaraje = document.querySelector('.chk_garaje')?.checked;
+        const garajeValor = parseFloat(document.getElementById('garaje_valor')?.value || 0);
 
-        const totalAdultos = adultos * (parseFloat(tarifaAdulto) + (chkDesayuno ? precioDesayuno : 0) + (chkTour ?
-            precioTour : 0)) * noches;
-        const totalNinos = ninos * (parseFloat(tarifaNino) + (chkDesayuno ? precioDesayuno : 0) + (chkTour ?
-            precioTour : 0)) * noches;
+        // Cálculo por persona
+        const totalAdultos = adultos * (tarifaAdulto + (chkDesayuno ? precioDesayuno : 0) + (chkTour ? precioTour :
+            0)) * noches;
+        const totalNinos = ninos * (tarifaNino + (chkDesayuno ? precioDesayuno : 0) + (chkTour ? precioTour : 0)) *
+            noches;
 
+        // Cálculo de garaje
+        const totalGaraje = chkGaraje ? garajeValor * noches : 0;
 
-        const total = totalAdultos + totalNinos;
+        // Total final
+        const total = totalAdultos + totalNinos + totalGaraje;
+
         document.getElementById('total').value = total.toFixed(2);
     }
+
 
     function sendDataCheckin() {
         const total = parseFloat(document.getElementById('total').value || 0);
@@ -4459,8 +4793,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             return;
         }
 
+        const chkGaraje = document.getElementById('chk_garaje');
+        const selectGaraje = document.getElementById('garaje_valor');
+
+        if (chkGaraje?.checked && (!selectGaraje?.value || parseFloat(selectGaraje.value) <= 0)) {
+            Swal.fire('Error', 'Debes seleccionar un valor válido para el garaje.', 'error');
+            return;
+        }
+
         const form = document.getElementById('formReserva');
         const data = new FormData(form);
+
+        const chkTour = document.getElementById('chk_tour')?.checked;
+        const precioTour = document.getElementById('precio_tour')?.value;
+        const lugarTour = document.getElementById('lugar_tour')?.value;
+
+        if (chkTour && (!precioTour || precioTour <= 0)) {
+            Swal.fire('Error', 'Debes seleccionar un precio válido para el tour.', 'error');
+            return;
+        }
+
+        if (chkTour && !lugarTour) {
+            Swal.fire('Error', 'Debes seleccionar el lugar del tour.', 'error');
+            return;
+        }
+
 
         // 🔄 Mostrar modal de carga
         Swal.fire({
@@ -4479,7 +4836,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             })
             .then(res => res.text())
             .then(resp => {
-                Swal.close(); // ✅ Cerrar modal de carga
+                Swal.close();
                 if (resp.trim() === 'ok') {
                     Swal.fire('Éxito', 'Check-in registrado y facturado', 'success');
                     closeModal('modalReserva');
@@ -4494,8 +4851,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             });
     }
 
+    function toggleTourLugar() {
+        const tourCheck = document.getElementById('chk_tour');
+        const lugarTour = document.getElementById('lugar_tour');
+        lugarTour.disabled = !tourCheck.checked;
+        if (!tourCheck.checked) {
+            lugarTour.value = '';
+        }
+    }
 
-    window.addEventListener('DOMContentLoaded', recalcularTotalCheckin);
+
+
+
+    window.addEventListener('DOMContentLoaded', () => {
+        recalcularTotalCheckin();
+        toggleTourLugar(); // ✅ asegura coherencia inicial
+    });
 </script>
 
 <?php
@@ -4513,15 +4884,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $adultos         = intval($_POST['adultos']);
             $ninos           = intval($_POST['ninos']);
             $tarifa_adulto_id = intval($_POST['tarifa']);
-            $tarifa_nino_id   = intval($_POST['tarifa_nino']);
             $noches          = intval($_POST['noches']);
+
             $incluye_tour     = isset($_POST['precio_tour']) && $_POST['precio_tour'] !== '' ? 1 : 0;
             $incluye_desayuno = isset($_POST['precio_desayuno']) && $_POST['precio_desayuno'] !== '' ? 1 : 0;
             $valor_tour       = floatval($_POST['precio_tour'] ?? 0);
             $valor_desayuno   = floatval($_POST['precio_desayuno'] ?? 0);
-            $tour_destino = isset($_POST['lugar_tour']) && trim($_POST['lugar_tour']) != ''
-    ? "'" . mysqli_real_escape_string($conection, $_POST['lugar_tour']) . "'"
-    : "''";
+
+            $chk_garaje       = isset($_POST['chk_garaje']);
+            $valor_garaje     = floatval($_POST['garaje_valor'] ?? 0);
+
+            $tour_destino     = isset($_POST['lugar_tour']) && trim($_POST['lugar_tour']) != ''
+                ? "'" . mysqli_real_escape_string($conection, $_POST['lugar_tour']) . "'"
+                : "''";
+
             $total_enviado    = floatval($_POST['total']);
             $metodo_pago      = mysqli_real_escape_string($conection, $_POST['metodo_pago']);
             $referencia       = mysqli_real_escape_string($conection, $_POST['referencia_pago']);
@@ -4535,23 +4911,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $fecha_salida  = date('Y-m-d', strtotime("+$noches days"));
             $hora_checkin  = date('Y-m-d H:i:s');
 
-            // Obtener tarifas
-            $precio_adulto = 0;
-            $precio_nino   = 0;
-            $tarifas = mysqli_query($conection, "SELECT id, precio_por_persona FROM tarifas_habitaciones WHERE id IN ($tarifa_adulto_id, $tarifa_nino_id)");
-            while ($t = mysqli_fetch_assoc($tarifas)) {
-                if ($t['id'] == $tarifa_adulto_id) {
-                    $precio_adulto = floatval($t['precio_por_persona']);
-                }
-                if ($t['id'] == $tarifa_nino_id) {
-                    $precio_nino   = floatval($t['precio_por_persona']);
-                }
+            // Obtener tarifa de adulto
+            $rowTarifa = mysqli_fetch_assoc(mysqli_query($conection, "SELECT precio_por_persona FROM tarifas_habitaciones WHERE id = $tarifa_adulto_id LIMIT 1"));
+            if (!$rowTarifa) {
+                throw new Exception('Tarifa de habitación inválida');
             }
+            $precio_adulto = floatval($rowTarifa['precio_por_persona']);
+            $precio_nino = round($precio_adulto * 0.75, 2);
 
-            // Calcular totales
+            // Calcular subtotales
             $subtotal_adultos = $adultos * ($precio_adulto + $valor_desayuno + $valor_tour) * $noches;
             $subtotal_ninos   = $ninos * ($precio_nino + $valor_desayuno + $valor_tour) * $noches;
-            $total_calculado  = round($subtotal_adultos + $subtotal_ninos, 2);
+            $subtotal_garaje  = $chk_garaje ? $valor_garaje * $noches : 0;
+            $total_calculado  = round($subtotal_adultos + $subtotal_ninos + $subtotal_garaje, 2);
 
             if (abs($total_calculado - $total_enviado) > 0.01) {
                 throw new Exception("El total no coincide con el cálculo del sistema");
@@ -4586,7 +4958,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             $idreserva = mysqli_insert_id($conection);
 
-            // Detalle
+            // Detalle de la habitación
             $sql_det = "INSERT INTO reservas_detalle (
             idreserva, id_habitacion, adultos, ninos, incluye_desayuno, incluye_tour, 
             lugar_tour, precio_unitario, precio_nino, precio_desayuno, precio_tour, subtotal
@@ -4617,59 +4989,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
 
             $idfactura = mysqli_insert_id($conection);
-            $dias = $noches;
 
-            $detalle = mysqli_query($conection, "
-            SELECT d.*, h.numero AS habitacion_numero 
-            FROM reservas_detalle d
-            INNER JOIN habitaciones h ON d.id_habitacion = h.idhabitacion
-            WHERE d.idreserva = $idreserva
-        ");
+            // Detalle factura
+            $personas = $adultos + $ninos;
+            $habitacion_nombre = mysqli_fetch_assoc(mysqli_query($conection, "SELECT numero FROM habitaciones WHERE idhabitacion = $habitacion LIMIT 1"))['numero'];
 
-            while ($row = mysqli_fetch_assoc($detalle)) {
-                $habitacion = $row['habitacion_numero'];
-                $adultos = intval($row['adultos']);
-                $ninos = intval($row['ninos']);
-                $desayuno = intval($row['incluye_desayuno']);
-                $tour = intval($row['incluye_tour']);
-                $lugar_tour = $row['lugar_tour'];
-
-                if ($adultos > 0) {
-                    $pa = floatval($row['precio_unitario']);
-                    mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
-                VALUES ($idfactura, 0, 'Hospedaje Adultos - Hab. $habitacion', $adultos, $pa * $dias, 'hospedaje')");
-                }
-
-                if ($ninos > 0) {
-                    $pn = floatval($row['precio_nino']);
-                    mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
-                VALUES ($idfactura, 0, 'Hospedaje Niños - Hab. $habitacion', $ninos, $pn * $dias, 'hospedaje')");
-                }
-
-                if ($desayuno) {
-                    $val = mysqli_fetch_assoc(mysqli_query($conection, "SELECT valor FROM tarifa_extras WHERE tipo_extra = 'desayuno' AND habilitado = 1 LIMIT 1"));
-                    $precio = floatval($val['valor']);
-                    $personas = $adultos + $ninos;
-                    mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
-                VALUES ($idfactura, 0, 'Desayuno - Hab. $habitacion', $personas, $precio * $dias, 'desayuno')");
-                }
-
-                if ($tour) {
-                    $val = mysqli_fetch_assoc(mysqli_query($conection, "SELECT valor FROM tarifa_extras WHERE tipo_extra = 'tour' AND habilitado = 1 LIMIT 1"));
-                    $precio = floatval($val['valor']);
-                    $personas = $adultos + $ninos;
-                    mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
-                VALUES ($idfactura, 0, 'Tour: $lugar_tour - Hab. $habitacion', $personas, $precio * $dias, 'tour')");
-                }
+            if ($adultos > 0) {
+                mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
+                VALUES ($idfactura, 0, 'Hospedaje Adultos - Hab. $habitacion_nombre', $adultos, $precio_adulto * $noches, 'hospedaje')");
             }
 
+            if ($ninos > 0) {
+                mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
+                VALUES ($idfactura, 0, 'Hospedaje Niños - Hab. $habitacion_nombre', $ninos, $precio_nino * $noches, 'hospedaje')");
+            }
+
+            if ($incluye_desayuno) {
+                mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
+                VALUES ($idfactura, 0, 'Desayuno - Hab. $habitacion_nombre', $personas, $valor_desayuno * $noches, 'desayuno')");
+            }
+
+            if ($incluye_tour) {
+                mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
+                VALUES ($idfactura, 0, 'Tour: $tour_destino - Hab. $habitacion_nombre', $personas, $valor_tour * $noches, 'tour')");
+            }
+
+            if ($chk_garaje && $valor_garaje > 0) {
+                mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
+                VALUES ($idfactura, 0, 'Garaje - Hab. $habitacion_nombre', 1, $valor_garaje * $noches, 'garaje')");
+            }
 
             mysqli_commit($conection);
 
             enviarComprobanteReserva($idreserva);
 
-            echo 'ok';
+            imprimirComprobanteEstadia($idreserva);
 
+            imprimirTicketsTourYGaraje($idreserva);
+
+            echo 'ok';
 
         } catch (Exception $e) {
             mysqli_rollback($conection);
@@ -4695,6 +5053,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if (mysqli_num_rows($res) == 0) {
                 throw new Exception('Reserva no válida o ya procesada');
             }
+
             $reserva = mysqli_fetch_assoc($res);
             $cliente_id = intval($reserva['id_cliente']);
             $facturada = intval($reserva['facturada']);
@@ -4780,6 +5139,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                 // Marcar reserva como facturada
                 mysqli_query($conection, "UPDATE reservas SET facturada = 1 WHERE idreserva = $idreserva");
+
+                enviarComprobanteReserva($idreserva);
+
+
             }
 
             // Actualizar estado y hora de checkout
@@ -4796,9 +5159,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             mysqli_commit($conection);
 
-            enviarComprobanteReserva($idreserva);
 
-            echo 'OK';
+
+
+
+            echo 'ok';
 
         } catch (Exception $e) {
             mysqli_rollback($conection);
@@ -4843,12 +5208,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
 
             // Enviar comprobante de ESTADÍA si es CHECK-IN o CHECKOUT
-            if (in_array($estado, ['checkin', 'checkout'])) {
+            if (in_array($estado, ['checkin'])) {
 
                 enviarComprobanteReserva($idreserva);
+                imprimirComprobanteEstadia($idreserva);
+                imprimirTicketsTourYGaraje($idreserva);
             }
 
-            echo 'OK';
+            echo 'ok';
         } else {
             echo 'Error al actualizar';
         }
@@ -5224,7 +5591,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         WHERE idhabitacion = $id
     ");
 
-        echo $query ? 'OK' : 'Error al desactivar la habitación';
+        echo $query ? 'ok' : 'Error al desactivar la habitación';
         exit;
     }
 
@@ -5242,7 +5609,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         WHERE idhabitacion = $id
     ");
 
-        echo $query ? 'OK' : 'Error al activar la habitación';
+        echo $query ? 'ok' : 'Error al activar la habitación';
         exit;
     }
 
@@ -5680,6 +6047,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         echo "</ul>";
         exit;
     }
+
+    if ($_POST['action'] == 'reimprimirTicketReserva') {
+
+
+        $id = intval($_POST['idreserva']);
+        $resultado = imprimirComprobanteEstadia($id); // tu función personalizada
+
+        echo ($resultado === true) ? 'ok' : $resultado;
+        exit;
+    }
+
+    if ($_POST['action'] == 'verGarajePorFecha') {
+        include '../conexion.php';
+        $fecha = $_POST['fecha'] ?? '';
+        if (!$fecha) {
+            echo "Fecha inválida.";
+            exit;
+        }
+
+        $query = mysqli_query($conection, "
+        SELECT 
+            h.numero AS habitacion,
+            rd.garaje
+        FROM reservas_detalle rd
+        INNER JOIN reservas r ON r.idreserva = rd.idreserva
+        INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+        WHERE rd.garaje > 0
+          AND r.estado = 'checkin'
+          AND '$fecha' BETWEEN r.fecha_entrada AND r.fecha_salida
+    ");
+
+        if ($query && mysqli_num_rows($query) > 0) {
+            echo "<ul style='margin-left:20px;'>";
+            while ($row = mysqli_fetch_assoc($query)) {
+                echo "<li><strong>Hab. {$row['habitacion']}:</strong> {$row['garaje']} ticket(s)</li>";
+            }
+            echo "</ul>";
+        } else {
+            echo "<p>No hay garajes registrados para esa fecha.</p>";
+        }
+        exit;
+    }
+
+    if ($_POST['action'] == 'verToursPorFecha') {
+        include '../conexion.php';
+        $fecha = $_POST['fecha'] ?? '';
+        if (!$fecha) {
+            echo "Fecha inválida.";
+            exit;
+        }
+
+        $query = mysqli_query($conection, "
+        SELECT 
+            h.numero AS habitacion,
+            SUM(rd.adultos + rd.ninos) AS total_personas
+        FROM reservas_detalle rd
+        INNER JOIN reservas r ON r.idreserva = rd.idreserva
+        INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+        WHERE rd.incluye_tour = 1
+          AND r.estado = 'checkin'
+          AND '$fecha' BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
+        GROUP BY h.numero
+    ");
+
+        if ($query && mysqli_num_rows($query) > 0) {
+            echo "<ul style='margin-left:20px;'>";
+            while ($row = mysqli_fetch_assoc($query)) {
+                echo "<li><strong>Hab. {$row['habitacion']}:</strong> {$row['total_personas']} persona(s)</li>";
+            }
+            echo "</ul>";
+        } else {
+            echo "<p>No hay tours registrados para esa fecha.</p>";
+        }
+        exit;
+    }
+
+
+
 
 
 
