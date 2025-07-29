@@ -699,8 +699,12 @@ while ($hab = mysqli_fetch_assoc($query)):
         if ($faltante > 0.01) {
             $mostrarBotonFaltante = true;
         }
-        $boton = '<button class="btn-habitacion" onclick="confirmarCheckout(' . $reserva_id . ', ' . $total . ', ' . $abono . ')">Check-Out</button>
-        <button class="btn-habitacion" style="margin-top: 5px; background:#343a40; color:white;" onclick="reimprimirTicketHabitacion(' . $reserva_id . ')">🖨️ Reimprimir</button>';
+        $boton = '
+        <button class="btn-habitacion" onclick="confirmarCheckout(' . $reserva_id . ', ' . $total . ', ' . $abono . ')">Check-Out</button>
+        <button class="btn-habitacion" style="margin-top: 5px;" onclick="window.open(\'pdf/reservas/verReservaPDF.php?id=' . $reserva_id . '\', \'_blank\')">🧾 Ver</button>
+        <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirComprobanteEstadia((' . $reserva_id . ')">🖨️ Contrato</button>
+        <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirComprobanteEstadiaCLiente(' . $reserva_id . ')">🖨️ Nota de Venta</button>
+        <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirTicketsTourYGaraje(' . $reserva_id . ')">🖨️ Tours o Garaje</button>';
     } elseif ($hab['ocupada']) {
         $estado = 'ocupada';
         $colorClass = 'rojo';
@@ -713,8 +717,10 @@ while ($hab = mysqli_fetch_assoc($query)):
         }
 
         $boton = '
-    <button class="btn-habitacion" onclick="window.open(\'pdf/reservas/verReservaPDF.php?id=' . $reserva_id . '\', \'_blank\')">Ver</button>
-    <button class="btn-habitacion" style="margin-top: 5px; background:#343a40; color:white;" onclick="reimprimirTicketHabitacion(' . $reserva_id . ')">🖨️ Reimprimir</button>';
+        <button class="btn-habitacion" style="margin-top: 5px;" onclick="window.open(\'pdf/reservas/verReservaPDF.php?id=' . $reserva_id . '\', \'_blank\')">🧾 Ver</button>
+        <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirComprobanteEstadia(' . $reserva_id . ')">🖨️ Contrato</button>
+        <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirComprobanteEstadiaCLiente(' . $reserva_id . ')">🖨️ Nota de Venta</button>
+        <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirTicketsTourYGaraje(' . $reserva_id . ')">🖨️ Tours o Garaje</button>';
     } elseif ($hab['reservada_hoy']) {
         $estado = 'reservada';
         $colorClass = 'amarillo';
@@ -833,8 +839,8 @@ while ($hab = mysqli_fetch_assoc($query)):
         <ul style="margin-left:20px;">
           <?php while ($row = mysqli_fetch_assoc($garajeQuery)): ?>
           <li><strong>Hab.
-              <?= $row['habitacion'] ?>:</strong>
-            <?= $row['garaje'] ?> ticket(s)
+              <?= $row['habitacion'] ?></strong>
+
           </li>
           <?php endwhile; ?>
         </ul>
@@ -976,7 +982,7 @@ while ($r = mysqli_fetch_assoc($reservasProximas)) {
     if (!modalAbierto && !swalVisible) {
       location.reload();
     }
-  }, 60000);
+  }, 600000);
 
   $(document).ready(function() {
     $('#tablaFuturas').DataTable({
@@ -1462,5 +1468,72 @@ while ($r = mysqli_fetch_assoc($reservasProximas)) {
       })
       .then(res => res.text())
       .then(html => document.getElementById("resultado_garaje_fecha").innerHTML = html);
+  }
+
+  function reimprimirComprobanteEstadia(idreserva) {
+    $.ajax({
+      url: 'ajax.php',
+      type: 'POST',
+      data: {
+        id: idreserva,
+        action: 'reimprimirComprobanteEstadia'
+      },
+      success: function(response) {
+        if (response.trim() === 'ok') {
+          Swal.fire('✅ Éxito', 'Comprobante reimpreso correctamente.', 'success');
+        } else {
+          Swal.fire('⚠️ Error', 'No se pudo imprimir el comprobante.', 'error');
+          console.error(response);
+        }
+      },
+      error: function() {
+        Swal.fire('⚠️ Error', 'Error de conexión al servidor.', 'error');
+      }
+    });
+  }
+
+  function reimprimirComprobanteEstadiaCLiente(idreserva) {
+    $.ajax({
+      url: 'ajax.php',
+      type: 'POST',
+      data: {
+        id: idreserva,
+        action: 'reimprimirComprobanteEstadiaCliente'
+      },
+      success: function(response) {
+        console.log(response);
+        if (response.trim() === 'ok') {
+          Swal.fire('✅ Éxito', 'Comprobante del cliente reimpreso correctamente.', 'success');
+        } else {
+          Swal.fire('⚠️ Error', 'No se pudo imprimir el comprobante del cliente.', 'error');
+          console.error(response);
+        }
+      },
+      error: function() {
+        Swal.fire('⚠️ Error', 'Error de conexión al servidor.', 'error');
+      }
+    });
+  }
+
+  function reimprimirTicketsTourYGaraje(idreserva) {
+    $.ajax({
+      url: 'ajax.php',
+      type: 'POST',
+      data: {
+        id: idreserva,
+        action: 'reimprimirTicketsTourYGaraje'
+      },
+      success: function(response) {
+        if (response.trim() === 'ok') {
+          Swal.fire('✅ Éxito', 'Tickets de tour y garaje reimpresos correctamente.', 'success');
+        } else {
+          Swal.fire('⚠️ Error', 'No se pudieron imprimir los tickets.', 'error');
+          console.error(response);
+        }
+      },
+      error: function() {
+        Swal.fire('⚠️ Error', 'Error de conexión al servidor.', 'error');
+      }
+    });
   }
 </script>

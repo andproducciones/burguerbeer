@@ -7,13 +7,17 @@ use Dompdf\Dompdf;
 require_once __DIR__ . '/../../../conexion.php';
 
 date_default_timezone_set('America/Guayaquil');
-function formatearFechaEspanol($fechaStr)
-{
-    $dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-    $meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-    $fecha = strtotime($fechaStr);
-    return ucfirst($dias[date('w', $fecha)]) . " " . date('d', $fecha) . " de " . $meses[date('n', $fecha) - 1] . " de " . date('Y', $fecha);
+
+if (!isset($_GET['modoCorreo'])) {
+    function formatearFechaEspanol($fechaStr)
+    {
+        $dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+        $meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        $fecha = strtotime($fechaStr);
+        return ucfirst($dias[date('w', $fecha)]) . " " . date('d', $fecha) . " de " . $meses[date('n', $fecha) - 1] . " de " . date('Y', $fecha);
+    }
 }
+
 
 $fecha_emision = formatearFechaEspanol(date('Y-m-d H:i')) . " a las " . date('H:i');
 
@@ -44,6 +48,7 @@ $query_det = mysqli_query($conection, "
     SELECT h.numero, rd.adultos, rd.ninos,
            rd.incluye_desayuno, rd.incluye_tour,
            rd.precio_unitario, rd.precio_nino, rd.precio_desayuno, rd.precio_tour, rd.subtotal,
+           rd.garaje,
            lt.nombre AS lugar_tour
     FROM reservas_detalle rd
     INNER JOIN habitaciones h ON h.idhabitacion = rd.id_habitacion
@@ -53,8 +58,29 @@ $query_det = mysqli_query($conection, "
 
 $habitaciones = "";
 $total_personas = 0;
+$detalles = [];
 
+$tiene_desayuno = false;
+$tiene_tour = false;
+$tiene_garaje = false;
+
+// Recorremos resultados primero para detectar qué columnas mostrar
 if ($query_det && mysqli_num_rows($query_det) > 0) {
+    while ($row = mysqli_fetch_assoc($query_det)) {
+        $detalles[] = $row;
+
+        if ($row['incluye_desayuno']) {
+            $tiene_desayuno = true;
+        }
+        if ($row['incluye_tour']) {
+            $tiene_tour = true;
+        }
+        if ($row['garaje'] > 0) {
+            $tiene_garaje = true;
+        }
+    }
+
+    // Encabezado de la tabla
     $habitaciones .= "
     <table class='detalle'>
         <thead>
@@ -63,36 +89,53 @@ if ($query_det && mysqli_num_rows($query_det) > 0) {
                 <th>Adultos</th>
                 <th>Niños</th>
                 <th>Tarifa Adulto</th>
-                <th>Tarifa Niño</th>
-                <th>Desayuno</th>
-                <th>Tour</th>
-                <th>Lugar Tour</th>
-                <th>Subtotal</th>
+                <th>Tarifa Niño</th>";
+    if ($tiene_desayuno) {
+        $habitaciones .= "<th>Desayuno</th>";
+    }
+    if ($tiene_tour) {
+        $habitaciones .= "<th>Tour</th><th>Lugar Tour</th>";
+    }
+    if ($tiene_garaje) {
+        $habitaciones .= "<th>Garaje</th>";
+    }
+    $habitaciones .= "<th>Subtotal</th>
             </tr>
         </thead>
         <tbody>";
-    while ($row = mysqli_fetch_assoc($query_det)) {
+
+    // Cuerpo de la tabla
+    foreach ($detalles as $row) {
         $total_personas += $row['adultos'] + $row['ninos'];
-        $desayuno = ($row['incluye_desayuno']) ? 'Sí ($' . number_format($row['precio_desayuno'], 2) . ')' : 'No';
-        $tour     = ($row['incluye_tour']) ? 'Sí ($' . number_format($row['precio_tour'], 2) . ')' : 'No';
+        $desayuno   = ($row['incluye_desayuno']) ? 'Sí ($' . number_format($row['precio_desayuno'], 2) . ')' : 'No';
+        $tour       = ($row['incluye_tour']) ? 'Sí ($' . number_format($row['precio_tour'], 2) . ')' : 'No';
         $lugar_tour = $row['lugar_tour'] ?? '-';
+        $garaje_txt = ($row['garaje'] > 0) ? 'Sí ($' . number_format($row['garaje'], 2) . ')' : 'No';
 
         $habitaciones .= "<tr>
             <td>{$row['numero']}</td>
             <td>{$row['adultos']}</td>
             <td>{$row['ninos']}</td>
             <td>$" . number_format($row['precio_unitario'], 2) . "</td>
-            <td>$" . number_format($row['precio_nino'], 2) . "</td>
-            <td>$desayuno</td>
-            <td>$tour</td>
-            <td>$lugar_tour</td>
-            <td>$" . number_format($row['subtotal'], 2) . "</td>
+            <td>$" . number_format($row['precio_nino'], 2) . "</td>";
+        if ($tiene_desayuno) {
+            $habitaciones .= "<td>$desayuno</td>";
+        }
+        if ($tiene_tour) {
+            $habitaciones .= "<td>$tour</td><td>$lugar_tour</td>";
+        }
+        if ($tiene_garaje) {
+            $habitaciones .= "<td>$garaje_txt</td>";
+        }
+        $habitaciones .= "<td>$" . number_format($row['subtotal'], 2) . "</td>
         </tr>";
     }
+
     $habitaciones .= "</tbody></table>";
 } else {
     $habitaciones = "<p>No hay habitaciones asociadas.</p>";
 }
+
 
 // =================== PAGOS ===================
 $pagos_html = '';
@@ -185,24 +228,24 @@ if (in_array(strtolower($reserva['estado']), ['checkin', 'checkout', 'finalizada
 <div class='terminos'>
     <p><strong>Términos y Condiciones de la Estadía:</strong></p>
     <ul style='padding-left:15px; margin:0; font-size:9px;'>
-        <li>Check-in desde las 12:00 PM. Check-out hasta las 12:00 PM.</li>
-        <li>Early Check-in sujeto a disponibilidad. Late Check-out tiene recargo de $10 por habitación hasta 6 horas adicionales.</li>
+        <li>Check-in desde las 12:00 hasta las 03:00 del día siguiente. Check-out hasta las 12:00.</li>
+        <li>Late Check-out con recargo de $10 hasta 6 horas adicionales, sujeto a disponibilidad.</li>
         <li>No se permite reingreso a habitaciones tras el check-out o entrega de llaves.</li>
         <li>Prohibido fumar o hacer fiestas en habitaciones. Actividades sociales solo en zonas comunes.</li>
-        <li>Se exige trato respetuoso hacia el personal y huéspedes. Conductas agresivas serán motivo de desalojo.</li>
-        <li>Grupo Cañalimeña se reserva el derecho de admisión y permanencia ante incumplimientos.</li>
-        <li>El huésped será responsable por daños causados: 100% del valor del bien más $10 diarios si queda inhabilitado.</li>
-        <li>Solo se permiten visitas con autorización previa y registro. Visitas no autorizadas se cobran como persona adicional.</li>
-        <li>Desayuno y tours aplican solo si están incluidos en la reserva. Tours operados por terceros.</li>
-        <li>El parqueadero es un servicio externo. El cliente asume plena responsabilidad sobre su uso.</li>
-        <li>Solo se entrega nota de venta física. Para factura con RUC debe solicitarse durante la estadía. No se emite posterior.</li>
-        <li>Objetos olvidados se conservan 7 días. No garantizamos recuperación ni envío.</li>
-        <li>Se permiten mascotas con aviso previo. Costo por día según tamaño: pequeña $5, mediana $7, grande $10. Manchas o daños aplican cláusula de responsabilidad.</li>
-        <li>Grupo Cañalimeña no se responsabiliza por fallos de terceros (tours, parqueo, taxis) ni por causas fortuitas (apagones, clima, etc.).</li>
-        <li>Los datos están protegidos según la Ley Orgánica de Protección de Datos Personales (LOPDP).</li>
+        <li>El cliente es responsable por daños: se cobrará el 100% del valor del bien más $10 diarios por inhabilitación.</li>
+        <li>Visitas solo con autorización previa. No autorizadas se consideran persona adicional.</li>
+        <li>Desayunos y tours aplican solo si están incluidos. Tours operados por terceros.</li>
+        <li>El parqueadero tiene costo variable ($3 a $5). Pérdida del ticket genera recargo de $2.</li>
+        <li>Se admiten mascotas con aviso previo. Costo por noche: $5 (pequeña), $7 (mediana), $10 (grande).</li>
+        <li>Manchas o daños por mascotas aplican cláusula de indemnización.</li>
+        <li>Solo se emite nota de venta física si se solicita en recepción antes del check-out. No se emite posterior.</li>
+        <li>Objetos olvidados se conservan 7 días. No se garantiza recuperación ni envío.</li>
+        <li>Conductas agresivas o inapropiadas serán motivo de desalojo sin reembolso.</li>
+        <li>Grupo Cañalimeña se reserva el derecho de admisión y permanencia.</li>
+        <li>Datos personales protegidos según la Ley Orgánica de Protección de Datos Personales (LOPDP).</li>
     </ul>
     <p style='margin-top:5px; font-style:italic; font-size:9px;'>
-        <strong>Aviso:</strong> La permanencia en el establecimiento implica la aceptación total de estos términos. Reservas o abonos digitales constituyen aceptación electrónica legal.
+        <strong>Aviso:</strong> La permanencia implica aceptación total de estos términos. Abonos o firmas digitales constituyen aceptación legal electrónica.
     </p>
 </div>";
 
@@ -212,34 +255,32 @@ if (in_array(strtolower($reserva['estado']), ['checkin', 'checkout', 'finalizada
 <div class='terminos'>
     <p><strong>Términos y Condiciones de la Reserva:</strong></p>
     <ul style='padding-left:15px; margin:0; font-size:9px;'>
-        <li>Check-in desde las 12:00 PM. Check-out hasta las 12:00 PM del día de salida.</li>
-        <li>Early Check-in sujeto a disponibilidad. Late Check-out tiene recargo de $10 por habitación (hasta 6 horas).</li>
-        <li>Se requiere abono mínimo del 50% para confirmar. Reservas sin abono no están garantizadas.</li>
+        <li>Check-in desde las 12:00 hasta las 03:00 del día siguiente. Check-out hasta las 12:00 del día de salida.</li>
+        <li>Late Check-out con recargo de $10 hasta 6 horas, sujeto a disponibilidad.</li>
+        <li>La reserva se confirma solo con abono mínimo. Sin abono, no se garantiza disponibilidad.</li>
         <li>Cancelaciones:
             <ul style='margin-left:10px; list-style:circle;'>
-                <li>Hasta 72h antes: sin penalización.</li>
-                <li>Entre 48h y 71h: penalización del 50%.</li>
+                <li>Hasta 72h antes: devolución total del abono.</li>
+                <li>Entre 72h y 24h antes: devolución del 50%.</li>
                 <li>Menos de 24h o no presentación: sin reembolso.</li>
-                <li>Casos de fuerza mayor serán evaluados con respaldo legal o médico.</li>
             </ul>
         </li>
-        <li>Niños de 4 a 8 años: 20% de descuento. Desde 9 años aplica tarifa de adulto.</li>
-        <li>Pago por: efectivo, tarjeta o transferencia con comprobante.</li>
-        <li>El parqueadero es externo. Cliente asume su uso y riesgos.</li>
-        <li>Desayunos y tours son opcionales. Tours operados por terceros. Solo garantizamos hora y destino.</li>
-        <li>La factura debe solicitarse expresamente antes del Check-out. No se emite posterior si no fue pedida.</li>
-        <li>Objetos olvidados serán custodiados por 7 días. No se garantiza recuperación ni envío.</li>
-        <li>Se permiten mascotas previa notificación. Costo diario según tamaño: pequeña $5, mediana $7, grande $10. Daños o manchas se cobran según cláusula de daños.</li>
-        <li>Los datos personales están protegidos conforme a la LOPDP vigente.</li>
+        <li>Niños de 0 a 3 años no pagan. De 4 a 8 años tienen 25% de descuento. Desde 9 años aplican tarifa completa.</li>
+        <li>Se aceptan pagos por efectivo, tarjeta o transferencia con referencia válida.</li>
+        <li>El garaje tiene costo variable entre $3 y $5 por noche. Pérdida del ticket implica recargo de $2.</li>
+        <li>Desayunos y tours son opcionales y deben constar en la reserva. Tours operados por terceros.</li>
+        <li>No se responde por calidad de servicios de terceros (tours, parqueadero, taxis).</li>
+        <li>Solo se emite nota de venta física si se solicita en recepción antes del check-out. No se emite posterior.</li>
+        <li>Se admiten mascotas con aviso previo. Costo por noche: $5 (pequeña), $7 (mediana), $10 (grande).</li>
+        <li>Daños o manchas causados por mascotas se cobrarán más $10 por cada día de inhabilitación de la habitación.</li>
+        <li>Datos personales protegidos conforme a la LOPDP vigente.</li>
     </ul>
     <p style='margin-top:5px; font-style:italic; font-size:9px;'>
-        <strong>Aviso:</strong> Al realizar un abono, el cliente acepta íntegramente estos términos. Reservas digitales implican aceptación electrónica válida.
+        <strong>Aviso:</strong> El registro de abono, firma o permanencia constituyen aceptación electrónica de estos términos legales.
     </p>
 </div>";
-
-
-
 }
+
 
 
 // =================== HTML ===================
@@ -352,7 +393,10 @@ $pagos_html
 
 
 <div style='page-break-before: always;'>
-    $condiciones_html
+   
+
+
+$condiciones_html
 
     <div style='margin-top:20px; font-size:10px;'>
         <p><strong>Nombre del Cliente:</strong> {$reserva['cliente']}</p>

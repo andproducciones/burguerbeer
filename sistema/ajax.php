@@ -4699,7 +4699,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     </div>
 
 
-    <label><input type="checkbox" class="chk_garaje" onchange="togglePrecioCheckin(this, 'garaje_valor')">
+    <label><input type="checkbox" class="chk_garaje" name="chk_garaje"
+            onchange="togglePrecioCheckin(this, 'garaje_valor')">
         Garaje</label>
     <select name="garaje_valor" id="garaje_valor" class="garaje_valor" disabled onchange="recalcularTotalCheckin();">
         <option value="">Seleccione</option>
@@ -4876,9 +4877,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 
     if ($_POST['action'] == 'guardarCheckinDirecto') {
+
+
+        //print_r($_POST);
+        //exit;
         mysqli_begin_transaction($conection);
 
+
+
+
         try {
+
+
+
             $cliente         = intval($_POST['id_cliente']);
             $habitacion      = intval($_POST['id_habitacion']);
             $adultos         = intval($_POST['adultos']);
@@ -4894,9 +4905,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $chk_garaje       = isset($_POST['chk_garaje']);
             $valor_garaje     = floatval($_POST['garaje_valor'] ?? 0);
 
-            $tour_destino     = isset($_POST['lugar_tour']) && trim($_POST['lugar_tour']) != ''
-                ? "'" . mysqli_real_escape_string($conection, $_POST['lugar_tour']) . "'"
-                : "''";
+            $tour_destino = isset($_POST['lugar_tour']) && trim($_POST['lugar_tour']) != ''
+            ? mysqli_real_escape_string($conection, $_POST['lugar_tour'])
+            : '';
 
             $total_enviado    = floatval($_POST['total']);
             $metodo_pago      = mysqli_real_escape_string($conection, $_POST['metodo_pago']);
@@ -4916,6 +4927,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if (!$rowTarifa) {
                 throw new Exception('Tarifa de habitación inválida');
             }
+
             $precio_adulto = floatval($rowTarifa['precio_por_persona']);
             $precio_nino = round($precio_adulto * 0.75, 2);
 
@@ -4960,12 +4972,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             // Detalle de la habitación
             $sql_det = "INSERT INTO reservas_detalle (
-            idreserva, id_habitacion, adultos, ninos, incluye_desayuno, incluye_tour, 
-            lugar_tour, precio_unitario, precio_nino, precio_desayuno, precio_tour, subtotal
-        ) VALUES (
-            $idreserva, $habitacion, $adultos, $ninos, $incluye_desayuno, $incluye_tour,
-            $tour_destino, $precio_adulto, $precio_nino, $valor_desayuno, $valor_tour, $total_calculado
-        )";
+                idreserva, id_habitacion, adultos, ninos, incluye_desayuno, incluye_tour, 
+                lugar_tour, precio_unitario, precio_nino, precio_desayuno, precio_tour, subtotal, garaje
+            ) VALUES (
+                $idreserva, $habitacion, $adultos, $ninos, $incluye_desayuno, $incluye_tour,
+                '$tour_destino', $precio_adulto, $precio_nino, $valor_desayuno, $valor_tour, $total_calculado, $valor_garaje
+            )";
+
             if (!mysqli_query($conection, $sql_det)) {
                 throw new Exception('Error al guardar detalle de habitación');
             }
@@ -5014,6 +5027,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 VALUES ($idfactura, 0, 'Tour: $tour_destino - Hab. $habitacion_nombre', $personas, $valor_tour * $noches, 'tour')");
             }
 
+
             if ($chk_garaje && $valor_garaje > 0) {
                 mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
                 VALUES ($idfactura, 0, 'Garaje - Hab. $habitacion_nombre', 1, $valor_garaje * $noches, 'garaje')");
@@ -5021,11 +5035,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             mysqli_commit($conection);
 
-            enviarComprobanteReserva($idreserva);
-
             imprimirComprobanteEstadia($idreserva);
-
+            imprimirComprobanteEstadiaCliente($idreserva);
             imprimirTicketsTourYGaraje($idreserva);
+            enviarComprobanteReserva($idreserva);
 
             echo 'ok';
 
@@ -6018,6 +6031,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
+    if ($_POST['action'] == 'reimprimirComprobanteEstadia') {
+        $id = intval($_POST['id']);
+        $res = imprimirComprobanteEstadia($id);
+        echo 'ok';
+        exit;
+    }
+
+    if ($_POST['action'] == 'reimprimirComprobanteEstadiaCliente') {
+        $id = intval($_POST['id']);
+        $res = imprimirComprobanteEstadiaCliente($id);
+        echo 'ok';
+        exit;
+    }
+
+    if ($_POST['action'] == 'reimprimirTicketsTourYGaraje') {
+        $id = intval($_POST['id']);
+        $res = imprimirTicketsTourYGaraje($id);
+        echo 'ok';
+        exit;
+    }
+
+
     if ($_POST['action'] == 'verDesayunosPorFecha') {
 
         $fecha = $_POST['fecha'];
@@ -6145,5 +6180,6 @@ function tipoPagoNombre($tipo)
         default: return 'Otro';
     }
 }
+
 exit;
 ?>

@@ -1,6 +1,9 @@
 {
   "require": {
     "dompdf/dompdf": "dev-master",
-    "chillerlan/php-qrcode": "^5.0"
-  }
+    "chillerlan/php-qrcode": "^5.0",
+    "endroid/qr-code": "^4.6"
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
 }
