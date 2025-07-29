@@ -2946,3 +2946,14 @@ function mostrarInputOtro(idSelect) {
     }
 }
 
+function seleccionarNinos(valor) {
+    document.getElementById('ninos').value = valor;
+    recalcularTotalCheckin();
+
+    // Quitar clase "selected" de todos
+    const botones = document.querySelectorAll('#selector_ninos .btn-numero');
+    botones.forEach(btn => btn.classList.remove('selected'));
+
+    // Marcar el seleccionado
+    botones[valor].classList.add('selected');
+}

@@ -827,7 +827,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             <option value="Guayaquil">Guayaquil</option>
             <option value="Cuenca">Cuenca</option>
             <option value="Ambato">Ambato</option>
-            <option value="Baños">Baños</option>
+            <option value="Guaranda">Guaranda</option>
+            <option value="Cuenca">Cuenca</option>
             <option value="Otro">Otro</option>
         </select>
         <input type="text" name="ciudad_otro" id="ciudad_otro" placeholder="Escriba ciudad" style="display:none;">
@@ -4634,7 +4635,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 
     <label for="noches">Noches</label>
-    <input type="number" name="noches" id="noches" min="1" value="1" required onchange="recalcularTotalCheckin();">
+    <div id="selector_noches" class="grupo-opciones">
+        <input type="radio" name="noches" id="noche1" value="1" checked onchange="recalcularTotalCheckin();">
+        <label for="noche1">1</label>
+
+        <input type="radio" name="noches" id="noche2" value="2" onchange="recalcularTotalCheckin();">
+        <label for="noche2">2</label>
+
+        <input type="radio" name="noches" id="noche3" value="3" onchange="recalcularTotalCheckin();">
+        <label for="noche3">3</label>
+
+        <input type="radio" name="noches" id="noche4" value="4" onchange="recalcularTotalCheckin();">
+        <label for="noche4">4</label>
+
+        <input type="radio" name="noches" id="noche5" value="5" onchange="recalcularTotalCheckin();">
+        <label for="noche5">5</label>
+
+        <input type="radio" name="noches" id="noche6" value="6" onchange="recalcularTotalCheckin();">
+        <label for="noche6">6</label>
+    </div>
+
+
 
 
     <div class="form_group">
@@ -4648,26 +4669,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             </option>
             <?php } ?>
         </select><br>
-        <input type="number" name="adultos" id="adultos" value="1" min="1" onchange="recalcularTotalCheckin();">
+        <label>Adultos</label>
+        <div id="grupo_adultos" class="grupo-opciones">
+            <!-- Genera botones de 1 a 6 -->
+            <input type="radio" name="adultos" id="adulto1" value="1" checked onchange="recalcularTotalCheckin();">
+            <label for="adulto1">1</label>
+
+            <input type="radio" name="adultos" id="adulto2" value="2" onchange="recalcularTotalCheckin();">
+            <label for="adulto2">2</label>
+
+            <input type="radio" name="adultos" id="adulto3" value="3" onchange="recalcularTotalCheckin();">
+            <label for="adulto3">3</label>
+
+            <input type="radio" name="adultos" id="adulto4" value="4" onchange="recalcularTotalCheckin();">
+            <label for="adulto4">4</label>
+
+            <input type="radio" name="adultos" id="adulto5" value="5" onchange="recalcularTotalCheckin();">
+            <label for="adulto5">5</label>
+
+            <input type="radio" name="adultos" id="adulto6" value="6" onchange="recalcularTotalCheckin();">
+            <label for="adulto6">6</label>
+        </div>
+
     </div>
 
 
     <!-- TARIFA NIÑO -->
     <!-- TARIFA NIÑO -->
-    <input type="hidden" name="tarifa_nino" id="tarifa_nino">
     <div class="form_group">
-        <label for="ninos">Niños:</label>
-        <input type="number" name="ninos" id="ninos" value="0" min="0" onchange="recalcularTotalCheckin();">
-        <span style="font-size: 11px; color: gray;">Se aplica automáticamente el 75% de la tarifa adulto</span>
-    </div>
+        <label for="ninos">Niños</label>
+        <div id="grupo_ninos" class="grupo-opciones">
+            <input type="radio" name="ninos" id="nino0" value="0" checked onchange="recalcularTotalCheckin();">
+            <label for="nino0">0</label>
 
+            <input type="radio" name="ninos" id="nino1" value="1" onchange="recalcularTotalCheckin();">
+            <label for="nino1">1</label>
+
+            <input type="radio" name="ninos" id="nino2" value="2" onchange="recalcularTotalCheckin();">
+            <label for="nino2">2</label>
+
+            <input type="radio" name="ninos" id="nino3" value="3" onchange="recalcularTotalCheckin();">
+            <label for="nino3">3</label>
+
+            <input type="radio" name="ninos" id="nino4" value="4" onchange="recalcularTotalCheckin();">
+            <label for="nino4">4</label>
+
+            <input type="radio" name="ninos" id="nino5" value="5" onchange="recalcularTotalCheckin();">
+            <label for="nino5">5</label>
+
+            <input type="radio" name="ninos" id="nino6" value="6" onchange="recalcularTotalCheckin();">
+            <label for="nino6">6</label>
+        </div>
+        <span style="font-size: 11px; color: gray;">Se aplica automáticamente el 75% de la tarifa adulto</span>
+
+
+    </div>
 
 
 
     <div class="form_group">
         <label><input type="checkbox" id="chk_desayuno" onchange="togglePrecioCheckin(this, 'precio_desayuno')">
             Desayuno</label>
-        <select name="precio_desayuno" id="precio_desayuno" disabled onchange="recalcularTotalCheckin();" class="">
+        <select name="precio_desayuno" id="precio_desayuno" style="width: 100% !important;" disabled
+            onchange="recalcularTotalCheckin();" class="">
             <option value="">Seleccione</option>
             <?php foreach ($extras_data['desayuno'] as $d) { ?>
             <option value="<?= $d ?>">
@@ -4678,7 +4742,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     <label><input type="checkbox" id="chk_tour" onchange="togglePrecioCheckin(this, 'precio_tour'); toggleTourLugar();">
         Tour</label>
-    <select name="precio_tour" id="precio_tour" disabled onchange="recalcularTotalCheckin();">
+    <select name="precio_tour" id="precio_tour" style="width: 100% !important;" disabled
+        onchange="recalcularTotalCheckin();">
         <option value="">Seleccione</option>
         <?php foreach ($extras_data['tour'] as $t) { ?>
         <option value="<?= $t ?>">
@@ -4688,7 +4753,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     <div class="form_group">
         <label>Lugar del Tour:</label>
-        <select name="lugar_tour" id="lugar_tour" class="js-example-basic-single" disabled>
+        <select name="lugar_tour" id="lugar_tour" class="js-example-basic-single" style="width: 100% !important;"
+            disabled>
             <option value="">Seleccione un Tour</option>
             <?php foreach ($tour_data as $t) { ?>
             <option value="<?= $t['id'] ?>">
@@ -4702,7 +4768,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <label><input type="checkbox" class="chk_garaje" name="chk_garaje"
             onchange="togglePrecioCheckin(this, 'garaje_valor')">
         Garaje</label>
-    <select name="garaje_valor" id="garaje_valor" class="garaje_valor" disabled onchange="recalcularTotalCheckin();">
+    <select name="garaje_valor" id="garaje_valor" class="garaje_valor" style="width: 100% !important;" disabled
+        onchange="recalcularTotalCheckin();">
         <option value="">Seleccione</option>
         <?php for ($i = 2; $i <= 6; $i += 0.5): ?>
         <option value="<?= number_format($i, 2) ?>">
@@ -4733,7 +4800,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     </div>
 
     <div class="btn_block">
-        <button type="submit" class="btn_save"><i class="fas fa-file-invoice-dollar"></i> Registrar y Facturar</button>
+        <button type="submit" class="btn_save"><i class="fas fa-file-invoice-dollar"></i> Registrar y
+            Facturar</button>
         <a href="#" class="btn_cancel closeModal" onclick="closeModal()"><i class="fas fa-times"></i> Cancelar</a>
     </div>
 </form>
@@ -4754,15 +4822,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 
     function recalcularTotalCheckin() {
-        const adultos = parseInt(document.getElementById('adultos')?.value || 0);
-        const ninos = parseInt(document.getElementById('ninos')?.value || 0);
-        const noches = parseInt(document.getElementById('noches')?.value || 1);
+        // ✅ Obtener cantidad de adultos desde radio
+        const adultosRadio = document.querySelector('input[name="adultos"]:checked');
+        const adultos = adultosRadio ? parseInt(adultosRadio.value) : 0;
 
-        const tarifaAdulto = parseFloat(document.getElementById('tarifa')?.selectedOptions[0]?.dataset.precio || 0);
+        // ✅ Obtener cantidad de niños desde radio
+        const ninosRadio = document.querySelector('input[name="ninos"]:checked');
+        const ninos = ninosRadio ? parseInt(ninosRadio.value) : 0;
+
+        // ✅ Obtener noches desde radio
+        const nochesRadio = document.querySelector('input[name="noches"]:checked');
+        const noches = nochesRadio ? parseInt(nochesRadio.value) : 1;
+
+        // ✅ Obtener tarifa seleccionada
+        const tarifaSelect = document.getElementById('tarifa');
+        const tarifaAdulto = parseFloat(tarifaSelect?.selectedOptions[0]?.dataset.precio || 0);
         const tarifaNino = tarifaAdulto * 0.75;
-        document.getElementById('tarifa_nino').value = tarifaNino.toFixed(2);
 
+        // (opcional) Mostrar tarifa niño si hay input para ello
+        const tarifaNinoInput = document.getElementById('tarifa_nino');
+        if (tarifaNinoInput) tarifaNinoInput.value = tarifaNino.toFixed(2);
 
+        // ✅ Obtener precios extras si están habilitados
         const precioDesayuno = parseFloat(document.getElementById('precio_desayuno')?.value || 0);
         const precioTour = parseFloat(document.getElementById('precio_tour')?.value || 0);
 
@@ -4771,29 +4852,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         const chkGaraje = document.querySelector('.chk_garaje')?.checked;
         const garajeValor = parseFloat(document.getElementById('garaje_valor')?.value || 0);
 
-        // Cálculo por persona
+        // ✅ Cálculo total por adultos
         const totalAdultos = adultos * (tarifaAdulto + (chkDesayuno ? precioDesayuno : 0) + (chkTour ? precioTour :
             0)) * noches;
+
+        // ✅ Cálculo total por niños
         const totalNinos = ninos * (tarifaNino + (chkDesayuno ? precioDesayuno : 0) + (chkTour ? precioTour : 0)) *
             noches;
 
-        // Cálculo de garaje
+        // ✅ Cálculo de garaje
         const totalGaraje = chkGaraje ? garajeValor * noches : 0;
 
-        // Total final
+        // ✅ Total final
         const total = totalAdultos + totalNinos + totalGaraje;
 
+        // ✅ Mostrar resultado
         document.getElementById('total').value = total.toFixed(2);
     }
 
 
+
     function sendDataCheckin() {
-        const total = parseFloat(document.getElementById('total').value || 0);
+        const total = parseFloat(document.getElementById('total')?.value || 0);
         if (isNaN(total) || total <= 0) {
             Swal.fire('Error', 'El total debe ser mayor a $0.00', 'error');
             return;
         }
 
+        // ✅ Obtener radios seleccionados
+        const adultosRadio = document.querySelector('input[name="adultos"]:checked');
+        const nochesRadio = document.querySelector('input[name="noches"]:checked');
+        const ninosRadio = document.querySelector('input[name="ninos"]:checked'); // puede ser 0
+
+        const adultos = adultosRadio ? parseInt(adultosRadio.value) : 0;
+        const noches = nochesRadio ? parseInt(nochesRadio.value) : 0;
+
+        if (!adultosRadio || adultos <= 0) {
+            Swal.fire('Error', 'Debes seleccionar al menos 1 adulto.', 'error');
+            return;
+        }
+
+        if (!nochesRadio || noches <= 0) {
+            Swal.fire('Error', 'Debes seleccionar al menos 1 noche.', 'error');
+            return;
+        }
+
+        // ✅ Validar tarifa seleccionada
+        const tarifa = document.getElementById('tarifa')?.value;
+        if (!tarifa || tarifa === '') {
+            Swal.fire('Error', 'Debes seleccionar una tarifa.', 'error');
+            return;
+        }
+
+        // ✅ Validar método de pago
+        const metodoPago = document.getElementById('metodo_pago')?.value;
+        if (!metodoPago || metodoPago === '') {
+            Swal.fire('Error', 'Debes seleccionar un método de pago.', 'error');
+            return;
+        }
+
+        // ✅ Validar garaje si está activo
         const chkGaraje = document.getElementById('chk_garaje');
         const selectGaraje = document.getElementById('garaje_valor');
 
@@ -4802,23 +4920,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             return;
         }
 
-        const form = document.getElementById('formReserva');
-        const data = new FormData(form);
-
+        // ✅ Validar tour si está activo
         const chkTour = document.getElementById('chk_tour')?.checked;
         const precioTour = document.getElementById('precio_tour')?.value;
         const lugarTour = document.getElementById('lugar_tour')?.value;
 
-        if (chkTour && (!precioTour || precioTour <= 0)) {
+        if (chkTour && (!precioTour || parseFloat(precioTour) <= 0)) {
             Swal.fire('Error', 'Debes seleccionar un precio válido para el tour.', 'error');
             return;
         }
 
-        if (chkTour && !lugarTour) {
+        if (chkTour && (!lugarTour || lugarTour === '')) {
             Swal.fire('Error', 'Debes seleccionar el lugar del tour.', 'error');
             return;
         }
 
+        // ✅ Empaquetar datos
+        const form = document.getElementById('formReserva');
+        const data = new FormData(form);
 
         // 🔄 Mostrar modal de carga
         Swal.fire({
@@ -4839,7 +4958,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             .then(resp => {
                 Swal.close();
                 if (resp.trim() === 'ok') {
-                    Swal.fire('Éxito', 'Check-in registrado y facturado', 'success');
+                    Swal.fire({
+                        title: '✅ Check-In exitoso',
+                        html: `Factura generada correctamente por <strong>$${total.toFixed(2)}</strong>`,
+                        icon: 'success'
+                    });
                     closeModal('modalReserva');
                     location.reload();
                 } else {
@@ -4851,6 +4974,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
             });
     }
+
 
     function toggleTourLugar() {
         const tourCheck = document.getElementById('chk_tour');

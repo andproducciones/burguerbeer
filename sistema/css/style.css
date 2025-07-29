@@ -1597,3 +1597,59 @@ display: flex;
 .btn_cancelar {
     background-color: #dc3545; /* rojo */
 }
+
+/* Estilo general para grupos de opciones */
+.grupo-opciones,
+.grupo-noches {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+}
+
+.grupo-opciones input[type="radio"],
+.grupo-noches input[type="radio"] {
+    display: none;
+}
+
+/* Estilo compartido para todos los botones de selección */
+.grupo-opciones label,
+.btn-noche,
+.btn-numero {
+    display: inline-block;
+    padding: 10px 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    cursor: pointer;
+    background-color: #f7f7f7;
+    font-weight: bold;
+    font-size: 14px;
+    color: #333;
+    transition: all 0.2s ease-in-out;
+}
+
+.grupo-opciones input[type="radio"]:checked + label,
+.btn-noche input[type="radio"]:checked + span,
+.btn-numero.selected {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+/* Efecto hover para todos */
+.grupo-opciones label:hover,
+.btn-noche:hover,
+.btn-numero:hover {
+    border-color: #007bff;
+}
+
+/* Ajuste para el contenido interno del botón .btn-noche */
+.btn-noche span {
+    display: block;
+    text-align: center;
+}
+
+/* Opcional: evitar estilos duplicados */
+.btn-numero.selected {
+    /* Ya está cubierto arriba con input:checked + label si cambias a usar radio */
+}
