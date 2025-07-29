@@ -2930,3 +2930,19 @@ $(document).on('click', '.btn_activar_usuario', function () {
         }
     });
 });
+
+function mostrarInputOtro(idSelect) {
+    const select = document.getElementById(idSelect);
+    const valor = select.value.toLowerCase();
+    const inputOtro = document.getElementById(idSelect + '_otro');
+
+    if (valor === 'otro') {
+        inputOtro.style.display = 'inline-block';
+        inputOtro.required = true;
+    } else {
+        inputOtro.style.display = 'none';
+        inputOtro.required = false;
+        inputOtro.value = '';
+    }
+}
+
