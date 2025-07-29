@@ -528,11 +528,17 @@ switch ($post['accion']) {
             if (empty($post['mesa']) || !isset($post['nombre'])) {
                 throw new Exception("Error: Parámetros inválidos");
             }
+<<<<<<< Updated upstream
 
     
             $mesa = intval($post['mesa']);
             //$usuario = $post['usuario'];
            $nombre = trim($post['nombre']) === '' ? 'NULL' : "'" . mysqli_real_escape_string($conection, $post['nombre']) . "'";
+=======
+            $mesa = intval($post['mesa']);
+            //$usuario = $post['usuario'];
+            $nombre = trim($post['nombre']) === '' ? 'NULL' : "'" . mysqli_real_escape_string($conection, $post['nombre']) . "'";
+>>>>>>> Stashed changes
 
     
             // ✅ Iniciar transacción
@@ -546,7 +552,10 @@ switch ($post['accion']) {
     
             // 📝 Actualizar el nombre de la mesa
             $query_update = mysqli_query($conection, "UPDATE mesas SET nombre = $nombre WHERE id = $mesa");
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
             if (!$query_update) {
                 throw new Exception("Error: No se pudo actualizar el nombre de la mesa.");
             }

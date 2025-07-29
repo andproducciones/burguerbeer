@@ -11,4 +11,7 @@ $response = array(
 );
 
 echo json_encode($response);
+<<<<<<< Updated upstream
 ?>
+=======
+>>>>>>> Stashed changes
