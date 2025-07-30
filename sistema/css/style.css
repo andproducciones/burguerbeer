@@ -1649,7 +1649,12 @@ display: flex;
     text-align: center;
 }
 
-/* Opcional: evitar estilos duplicados */
-.btn-numero.selected {
-    /* Ya está cubierto arriba con input:checked + label si cambias a usar radio */
+.lugar_tour{
+	margin: 10px 0px;
+	width: 100% !important;
 }
+
+#contenedor_lugares_tour_por_noche select {
+    margin-bottom: 10px;
+}
+

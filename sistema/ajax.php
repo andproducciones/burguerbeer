@@ -3699,10 +3699,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 
         ob_start(); ?>
+
 <form action="" method="post" name="form_reserva" id="formReserva"
     onsubmit="event.preventDefault(); sendDataReserva();">
     <input type="hidden" name="action" value="guardarReserva">
-
     <h1><i class="fas fa-calendar-plus"></i> Nueva Reserva</h1>
 
     <!-- Cliente -->
@@ -3724,84 +3724,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <!-- Fechas -->
     <div class="form_group">
         <label for="fecha_entrada">Fecha Entrada:</label>
-        <input type="date" name="fecha_entrada" id="fecha_entrada" required onchange="recalcularTotalReserva()">
+        <input type="date" name="fecha_entrada" id="fecha_entrada" required
+            onchange="recalcularTotalReserva(); actualizarHabitacionesDisponibles();">
     </div>
     <div class="form_group">
         <label for="fecha_salida">Fecha Salida:</label>
-        <input type="date" name="fecha_salida" id="fecha_salida" required onchange="recalcularTotalReserva()">
+        <input type="date" name="fecha_salida" id="fecha_salida" required
+            onchange="recalcularTotalReserva(); actualizarHabitacionesDisponibles();">
     </div>
 
     <!-- Habitaciones -->
     <hr>
     <h3>Habitaciones</h3>
     <div id="habitacionesContainer">
+        <?php mysqli_data_seek($habitaciones, 0); ?>
         <div class="habitacion-row">
-            <!-- HABITACION -->
-            <select name="id_habitacion[]" class="id_habitacion" onchange="recalcularTotalReserva()" required>
-                <option value="">Seleccione</option>
-                <?php mysqli_data_seek($habitaciones, 0);
-        while ($h = mysqli_fetch_assoc($habitaciones)) {
-            echo '<option value="'.$h['idhabitacion'].'">Hab. '.$h['numero'].'</option>';
-        } ?>
+            <!-- Selección de habitación -->
+            <select name="id_habitacion[]" class="id_habitacion" onchange="recalcularTotalReserva();" required>
+                <option value="">Seleccione Habitación</option>
+
             </select>
 
-            <!-- TARIFA -->
-            <label>Adultos:</label>
-            <select name="tarifa[]" class="select_tarifa" onchange="recalcularTotalReserva()" required>
+            <!-- Tarifa -->
+            <label>Tarifa Adulto:</label>
+            <select name="tarifa[]" class="select_tarifa" onchange="recalcularTotalReserva();" required>
                 <?php foreach ($tarifa_data as $t) {
                     echo '<option value="'.$t['id'].'" data-precio="'.$t['precio_por_persona'].'" data-nombre="'.strtolower($t['nombre']).'">'.ucfirst($t['nombre']).' ($'.$t['precio_por_persona'].')</option>';
                 } ?>
             </select>
-            <input type="number" name="adultos[]" class="input_adultos" value="1" min="1"
-                onchange="recalcularTotalReserva()">
 
+            <!-- Adultos -->
+            <label>Adultos:</label>
+            <div class="grupo-opciones grupo_adultos">
+                <!-- En el PHP, para la primera habitación (índice 0): -->
+                <?php for ($i = 1; $i <= 6; $i++) {
+                    $inputId = "adulto_0_$i";
+                    echo "<input type='radio' name='adultos[0]' id='$inputId' value='$i' ".($i == 1 ? "checked" : "")." onchange='recalcularTotalReserva();'>
+          <label for='$inputId'>$i</label>";
+                } ?>
+
+            </div>
+
+            <!-- Niños -->
             <label>Niños:</label>
-            <input type="number" name="ninos[]" class="input_ninos" value="0" min="0"
-                onchange="recalcularTotalReserva()">
-            <input type="text" name="tarifa_nino_aplicada[]" class="tarifa_nino_aplicada" value="0.00" readonly
-                title="Tarifa calculada automáticamente">
-
-
-
-            <!-- Extras -->
-            <label><input type="checkbox" class="chk_desayuno" onchange="togglePrecio(this, 'precio_desayuno')">
-                Desayuno</label>
-            <select name="precio_desayuno[]" class="precio_desayuno" onchange="recalcularTotalReserva()" disabled>
-                <option value="">$0.00</option>
-                <?php foreach ($extras_data['desayuno'] as $d) {
-                    echo '<option value="'.$d.'" data-precio="'.$d.'">$'.number_format($d, 2).'</option>';
+            <div class="grupo-opciones grupo_ninos">
+                <?php for ($i = 0; $i <= 6; $i++) {
+                    $inputId = "nino_0_$i";
+                    echo "<input type='radio' name='ninos[0]' id='$inputId' value='$i' ".($i == 0 ? "checked" : "")." onchange='recalcularTotalReserva();'>
+          <label for='$inputId'>$i</label>";
                 } ?>
-            </select>
+            </div>
+            <input type="hidden" name="tarifa_nino_aplicada[]" class="tarifa_nino_aplicada" value="0.00">
 
+            <!-- Desayuno -->
+            <label><input type="checkbox" class="chk_desayuno"
+                    onchange="togglePrecio(this, 'precio_desayuno'); recalcularTotalReserva();"> Desayuno</label>
 
-            <label><input type="checkbox" class="chk_tour" onchange="togglePrecio(this, 'precio_tour')"> Tour</label>
-            <select name="precio_tour[]" class="precio_tour" onchange="recalcularTotalReserva()" disabled>
-                <option value="">$0.00</option>
-                <?php foreach ($extras_data['tour'] as $t) {
-                    echo '<option value="'.$t.'" data-precio="'.$t.'">$'.number_format($t, 2).'</option>';
-                } ?>
-            </select>
-
-
-            <label>Lugar Tour:</label>
-            <select name="lugar_tour[]" class="lugar_tour">
+            <select name="precio_desayuno[]" class="precio_desayuno" onchange="recalcularTotalReserva();" disabled>
                 <option value="">Seleccione</option>
-                <?php foreach ($tour_data as $t) {
-                    echo '<option value="'.$t['id'].'">'.$t['nombre'].'</option>';
+                <?php foreach ($extras_data['desayuno'] as $d) {
+                    echo '<option value="'.$d.'">$'.number_format($d, 2).'</option>';
                 } ?>
             </select>
 
+            <!-- Tour -->
+            <label><input type="checkbox" class="chk_tour" onchange="togglePrecio(this, 'precio_tour')"> Tour</label>
+            <select name="precio_tour[]" class="precio_tour" onchange="recalcularTotalReserva();" disabled>
+                <option value="">Seleccione</option>
+                <?php foreach ($extras_data['tour'] as $t) {
+                    echo '<option value="'.$t.'">$'.number_format($t, 2).'</option>';
+                } ?>
+            </select>
+
+            <!-- Lugar del tour -->
+            <label>Lugar del Tour:</label>
+            <div class="bloque_lugar_tour"></div>
+
+
+            <!-- Garaje -->
             <label><input type="checkbox" class="chk_garaje" onchange="togglePrecio(this, 'input_garaje')">
                 Garaje</label>
-            <select name="garaje[]" class="input_garaje" onchange="recalcularTotalReserva()" disabled>
-                <?php
-                    for ($i = 2; $i <= 6; $i += 0.5) {
-                        $val = number_format($i, 1);
-                        echo "<option value=\"$val\">$val</option>";
-                    }
-        ?>
+            <select name="garaje[]" class="input_garaje" onchange="recalcularTotalReserva();" disabled>
+                <option value="">Seleccione</option>
+                <?php for ($i = 2; $i <= 6; $i += 0.5) {
+                    $val = number_format($i, 1);
+                    echo "<option value=\"$val\">$val</option>";
+                } ?>
             </select>
-
 
             <span class="btn_remove" onclick="removeHabitacion(this)"><i class="fas fa-times"></i></span>
         </div>
@@ -3820,6 +3829,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <input type="number" step="0.01" name="abono" id="abono" value="0.00">
     </div>
 
+    <!-- Método de pago -->
     <div class="form_group">
         <label for="metodo_pago">Método de Pago de Abono:</label>
         <select name="metodo_pago" id="metodo_pago" required>
@@ -3829,11 +3839,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         </select>
     </div>
 
+    <!-- Referencia -->
     <div class="form_group">
         <label for="referencia_pago">Referencia / Documento:</label>
         <input type="text" name="referencia_pago" id="referencia_pago" placeholder="Opcional si aplica...">
     </div>
-
 
     <!-- Observaciones -->
     <div class="form_group">
@@ -3849,8 +3859,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     </div>
 </form>
 
+
 <script>
     window.tarifasExtras = <?= json_encode($extras_data); ?> ;
+    window.lugaresTourData = <?= json_encode($tour_data); ?> ;
+    actualizarHabitacionesDisponibles();
 </script>
 <?php
                 echo ob_get_clean();
@@ -3919,25 +3932,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 
     if ($_POST['action'] == 'guardarReserva') {
+
+        //print_r($_POST);
+        //exit;
         mysqli_begin_transaction($conection);
         try {
-            $id_cliente     = intval($_POST['id_cliente']);
-            $fecha_entrada  = $_POST['fecha_entrada'];
-            $fecha_salida   = $_POST['fecha_salida'];
-            $observaciones  = mysqli_real_escape_string($conection, $_POST['observaciones'] ?? '');
-            $total          = floatval($_POST['total']);
-            $abono          = floatval($_POST['abono']);
-            $usuario_id     = $_SESSION['idUser'] ?? 1;
-            $canal_reserva  = 'recepción';
-            $metodo_pago    = mysqli_real_escape_string($conection, $_POST['metodo_pago'] ?? 'efectivo');
+            // === 1. VARIABLES PRINCIPALES ===
+            $id_cliente      = intval($_POST['id_cliente']);
+            $fecha_entrada   = $_POST['fecha_entrada'];
+            $fecha_salida    = $_POST['fecha_salida'];
+            $observaciones   = mysqli_real_escape_string($conection, $_POST['observaciones'] ?? '');
+            $total           = floatval($_POST['total']);
+            $abono           = floatval($_POST['abono']);
+            $usuario_id      = $_SESSION['idUser'] ?? 1;
+            $canal_reserva   = 'recepción';
+            $metodo_pago     = mysqli_real_escape_string($conection, $_POST['metodo_pago'] ?? 'efectivo');
             $referencia_pago = mysqli_real_escape_string($conection, $_POST['referencia_pago'] ?? '');
 
-            // Validaciones iniciales
             if ($id_cliente <= 0 || empty($fecha_entrada) || empty($fecha_salida)) {
                 throw new Exception('Faltan datos obligatorios');
             }
 
-            // Estados
+            // === 2. ESTADO DE LA RESERVA ===
             if ($abono >= $total) {
                 $estado_pago = 'pagado';
                 $estado_reserva = 'confirmada';
@@ -3949,7 +3965,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $estado_reserva = 'pendiente';
             }
 
-            // Insertar cabecera reserva
+            // === 3. GUARDAR CABECERA ===
             $sql = "INSERT INTO reservas (
             id_cliente, fecha_entrada, fecha_salida, total,
             estado_pago, estado, observaciones, canal_reserva, usuario_id
@@ -3964,84 +3980,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             $idreserva = mysqli_insert_id($conection);
 
-            // Arrays esperados
-            $ids_hab         = $_POST['id_habitacion'];
-            $tarifas_adulto  = $_POST['tarifa'];
-            $adultos         = $_POST['adultos'];
-            $ninos           = $_POST['ninos'];
-            $tarifas_nino_aplicadas = $_POST['tarifa_nino_aplicada'];
-            $precio_desayuno = $_POST['precio_desayuno'] ?? [];
-            $precio_tour     = $_POST['precio_tour'] ?? [];
-            $lugares_tour    = $_POST['lugar_tour'] ?? [];
-            $garajes         = $_POST['garaje'] ?? [];
+            // === 4. ARRAYS DE DETALLE ===
+            $ids_hab              = $_POST['id_habitacion'] ?? [];
+            $tarifas_adulto       = $_POST['tarifa'] ?? [];
+            $adultos              = $_POST['adultos'] ?? [];
+            $ninos                = $_POST['ninos'] ?? [];
+            $tarifas_nino_aplicadas = $_POST['tarifa_nino_aplicada'] ?? [];
+            $precio_desayuno      = $_POST['precio_desayuno'] ?? [];
+            $precio_tour          = $_POST['precio_tour'] ?? [];
+            $lugares_tour         = $_POST['lugar_tour'] ?? [];
+            $garajes              = $_POST['garaje'] ?? [];
 
             $n = count($ids_hab);
             $dias = max(1, ceil((strtotime($fecha_salida) - strtotime($fecha_entrada)) / 86400));
             $acumulado_total = 0;
 
+            // === 5. DETALLE POR HABITACIÓN ===
             for ($i = 0; $i < $n; $i++) {
-                $idh = intval($ids_hab[$i]);
-                $tfa = intval($tarifas_adulto[$i]);
-                $adt = intval($adultos[$i]);
-                $nin = intval($ninos[$i]);
+                $idh       = intval($ids_hab[$i]);
+                $id_tarifa = intval($tarifas_adulto[$i]);
+                $adt       = intval($adultos[$i] ?? 0);
+                $nin       = intval($ninos[$i] ?? 0);
 
-                // Obtener precio tarifa adulto
-                $precio_adulto = 0;
-                $resA = mysqli_query($conection, "SELECT precio_por_persona FROM tarifas_habitaciones WHERE id = $tfa LIMIT 1");
-                if ($resA && mysqli_num_rows($resA)) {
-                    $precio_adulto = floatval(mysqli_fetch_assoc($resA)['precio_por_persona']);
+                if ($adt <= 0) {
+                    throw new Exception("La habitación #".($i + 1)." no tiene adultos asignados");
                 }
 
-                // Precio niño directo desde el form
-                $precio_nino = floatval($tarifas_nino_aplicadas[$i]);
+                // Precio tarifa adulto
+                $precio_adulto = 0;
+                $resA = mysqli_query($conection, "SELECT precio_por_persona FROM tarifas_habitaciones WHERE id = $id_tarifa LIMIT 1");
+                if ($resA && mysqli_num_rows($resA)) {
+                    $precio_adulto = floatval(mysqli_fetch_assoc($resA)['precio_por_persona']);
+                } else {
+                    throw new Exception("No se pudo obtener la tarifa de la habitación #".($i + 1));
+                }
 
-                // Extras
-                $precioD = floatval($precio_desayuno[$i] ?? 0);
-                $precioT = floatval($precio_tour[$i] ?? 0);
-                $incluye_desayuno = ($precioD > 0) ? 1 : 0;
-                $incluye_tour     = ($precioT > 0) ? 1 : 0;
-                $lugar_tour       = mysqli_real_escape_string($conection, $lugares_tour[$i] ?? '');
+                $precio_nino        = floatval($tarifas_nino_aplicadas[$i] ?? 0);
+                $precioD            = floatval($precio_desayuno[$i] ?? 0);
+                $precioT            = floatval($precio_tour[$i] ?? 0);
+                $incluye_desayuno   = $precioD > 0 ? 1 : 0;
+                $incluye_tour       = $precioT > 0 ? 1 : 0;
+                $precioGaraje       = floatval($garajes[$i] ?? 0) * $dias;
+                $precioGaraje2       = floatval($garajes[$i] ?? 0);
+                $lugares_por_noche = $lugares_tour[$i] ?? [];
+                $lugar_tour = is_array($lugares_por_noche) ? implode(',', $lugares_por_noche) : mysqli_real_escape_string($conection, $lugares_por_noche);
 
-                // Garaje
-                $precioGaraje = floatval($garajes[$i] ?? 0);
 
-                $subtotal = ($adt * ($precio_adulto + $precioD + $precioT) * $dias) +
-                            ($nin * ($precio_nino + $precioD + $precioT) * $dias) +
-                            $precioGaraje;
+                // Subtotal completo (una sola fila por habitación)
+                $subtotal = ($adt * ($precio_adulto + $precioD + $precioT) * $dias)
+                          + ($nin * ($precio_nino + $precioD + $precioT) * $dias)
+                          + $precioGaraje;
 
-                $acumulado_total += $subtotal;
-
-                $insertDetalle = "INSERT INTO reservas_detalle (
+                $sqlDetalle = "INSERT INTO reservas_detalle (
                 idreserva, id_habitacion, adultos, ninos,
                 incluye_desayuno, incluye_tour, lugar_tour,
                 precio_unitario, precio_nino, precio_desayuno, precio_tour, garaje, subtotal
             ) VALUES (
                 $idreserva, $idh, $adt, $nin,
                 $incluye_desayuno, $incluye_tour, '$lugar_tour',
-                $precio_adulto, $precio_nino, $precioD, $precioT, $precioGaraje, $subtotal
+                $precio_adulto, $precio_nino, $precioD, $precioT, $precioGaraje2, $subtotal
             )";
 
-                if (!mysqli_query($conection, $insertDetalle)) {
-                    throw new Exception('Error al insertar detalle');
+                if (!mysqli_query($conection, $sqlDetalle)) {
+                    throw new Exception("Error al insertar el detalle de la habitación #".($i + 1));
                 }
+
+                $acumulado_total += $subtotal;
             }
 
+            // === 6. VERIFICAR TOTAL ===
             if (round($acumulado_total, 2) !== round($total, 2)) {
-                throw new Exception('El total no coincide con el cálculo interno');
+                throw new Exception("El total no coincide con el cálculo interno: $acumulado_total ≠ $total");
             }
 
+            // === 7. REGISTRAR ABONO
             if ($abono > 0) {
-                $insertPago = "INSERT INTO reservas_pagos (
+                $sqlPago = "INSERT INTO reservas_pagos (
                 idreserva, monto, metodo_pago, referencia_pago, usuario_id
             ) VALUES (
                 $idreserva, $abono, '$metodo_pago', '$referencia_pago', $usuario_id
             )";
 
-                if (!mysqli_query($conection, $insertPago)) {
+                if (!mysqli_query($conection, $sqlPago)) {
                     throw new Exception('Error al registrar el abono');
                 }
             }
 
+            // === 8. CONFIRMAR
             mysqli_commit($conection);
 
             if ($estado_reserva === 'confirmada') {
@@ -4049,12 +4074,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
 
             echo 'ok';
+
         } catch (Exception $e) {
             mysqli_rollback($conection);
             echo 'Error: ' . $e->getMessage();
         }
+
         exit;
     }
+
+
+
 
     if ($_POST['action'] == 'agregarAbono') {
         mysqli_begin_transaction($conection);
@@ -4534,6 +4564,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 
     if ($_POST['action'] == 'formCheckinDirecto') {
+
+        //print_r($_POST);
+        //exit;
         $fechaEntrada = date('Y-m-d');
         $fechaSalida = date('Y-m-d', strtotime('+1 day'));
         $estado = 'checkin';
@@ -4547,19 +4580,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $fechaEntrada = date('Y-m-d');
         $fechaSalida  = date('Y-m-d', strtotime('+1 day'));
 
-        $habitaciones = mysqli_query($conection, "
-    SELECT h.idhabitacion, h.numero 
-    FROM habitaciones h
-    WHERE h.estado = 'disponible' AND h.habilitada = 1
-            AND h.idhabitacion NOT IN (
-                SELECT d.id_habitacion
-                FROM reservas_detalle d
-                INNER JOIN reservas r ON r.idreserva = d.idreserva
-                WHERE r.estado NOT IN ('cancelada', 'checkout') 
-                AND ('$fechaEntrada' < r.fecha_salida AND '$fechaSalida' > r.fecha_entrada)
-            )
-            ORDER BY h.numero ASC
-        ");
+        $habitacion_data = null;
+        if ($id_habitacion_fijada > 0) {
+            $query = mysqli_query($conection, "
+                SELECT h.idhabitacion, h.numero 
+                FROM habitaciones h
+                WHERE h.idhabitacion = $id_habitacion_fijada AND h.habilitada = 1
+                LIMIT 1
+            ");
+            $habitacion_data = mysqli_fetch_assoc($query);
+        }
 
         // Tarifas
         $tarifas = mysqli_query($conection, "SELECT id, nombre, precio_por_persona FROM tarifas_habitaciones WHERE habilitada = 1");
@@ -4615,23 +4645,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     <div class="form_group">
         <label for="id_habitacion">Habitación:</label>
-        <select name="id_habitacion" id="id_habitacion" class="js-example-basic-single" required
-            onchange="recalcularTotalCheckin();"
-            <?= $id_habitacion_fijada > 0 ? 'disabled' : '' ?>>
-            <option value="">Seleccione habitación</option>
-            <?php while ($h = mysqli_fetch_assoc($habitaciones)) { ?>
+        <?php if ($habitacion_data): ?>
+        <select name="id_habitacion" id="id_habitacion" disabled required>
             <option
-                value="<?= $h['idhabitacion'] ?>"
-                <?= $h['idhabitacion'] == $id_habitacion_fijada ? 'selected' : '' ?>>
-                Hab. <?= $h['numero'] ?>
+                value="<?= $habitacion_data['idhabitacion'] ?>"
+                selected>
+                Hab.
+                <?= $habitacion_data['numero'] ?>
             </option>
-            <?php } ?>
         </select>
-        <?php if ($id_habitacion_fijada > 0): ?>
         <input type="hidden" name="id_habitacion"
-            value="<?= $id_habitacion_fijada ?>">
+            value="<?= $habitacion_data['idhabitacion'] ?>">
+        <?php else: ?>
+        <div class="alerta">⚠️ Habitación no válida o no habilitada.</div>
         <?php endif; ?>
     </div>
+
 
 
     <label for="noches">Noches</label>
@@ -4751,18 +4780,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <?php } ?>
     </select>
 
-    <div class="form_group">
-        <label>Lugar del Tour:</label>
-        <select name="lugar_tour" id="lugar_tour" class="js-example-basic-single" style="width: 100% !important;"
-            disabled>
-            <option value="">Seleccione un Tour</option>
-            <?php foreach ($tour_data as $t) { ?>
-            <option value="<?= $t['id'] ?>">
-                <?= $t['nombre'] ?>
-            </option>
-            <?php } ?>
-        </select>
+    <div class="form_group" id="lugares_tour_container">
+        <!-- Se llenará dinámicamente -->
     </div>
+
 
 
     <label><input type="checkbox" class="chk_garaje" name="chk_garaje"
@@ -4805,149 +4826,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <a href="#" class="btn_cancel closeModal" onclick="closeModal()"><i class="fas fa-times"></i> Cancelar</a>
     </div>
 </form>
-
 <script>
     function togglePrecioCheckin(checkbox, id) {
         const select = document.getElementById(id);
         if (!select) return;
 
         select.disabled = !checkbox.checked;
-
-        if (!checkbox.checked) {
-            select.value = '';
-        }
-
+        if (!checkbox.checked) select.value = '';
         recalcularTotalCheckin();
     }
 
-
     function recalcularTotalCheckin() {
-        // ✅ Obtener cantidad de adultos desde radio
-        const adultosRadio = document.querySelector('input[name="adultos"]:checked');
-        const adultos = adultosRadio ? parseInt(adultosRadio.value) : 0;
+        const adultos = parseInt(document.querySelector('input[name="adultos"]:checked')?.value || 0);
+        const ninos = parseInt(document.querySelector('input[name="ninos"]:checked')?.value || 0);
+        const noches = parseInt(document.querySelector('input[name="noches"]:checked')?.value || 1);
 
-        // ✅ Obtener cantidad de niños desde radio
-        const ninosRadio = document.querySelector('input[name="ninos"]:checked');
-        const ninos = ninosRadio ? parseInt(ninosRadio.value) : 0;
-
-        // ✅ Obtener noches desde radio
-        const nochesRadio = document.querySelector('input[name="noches"]:checked');
-        const noches = nochesRadio ? parseInt(nochesRadio.value) : 1;
-
-        // ✅ Obtener tarifa seleccionada
         const tarifaSelect = document.getElementById('tarifa');
         const tarifaAdulto = parseFloat(tarifaSelect?.selectedOptions[0]?.dataset.precio || 0);
         const tarifaNino = tarifaAdulto * 0.75;
 
-        // (opcional) Mostrar tarifa niño si hay input para ello
         const tarifaNinoInput = document.getElementById('tarifa_nino');
         if (tarifaNinoInput) tarifaNinoInput.value = tarifaNino.toFixed(2);
 
-        // ✅ Obtener precios extras si están habilitados
         const precioDesayuno = parseFloat(document.getElementById('precio_desayuno')?.value || 0);
         const precioTour = parseFloat(document.getElementById('precio_tour')?.value || 0);
-
         const chkDesayuno = document.getElementById('chk_desayuno')?.checked;
         const chkTour = document.getElementById('chk_tour')?.checked;
-        const chkGaraje = document.querySelector('.chk_garaje')?.checked;
+        const chkGaraje = document.getElementById('chk_garaje')?.checked;
         const garajeValor = parseFloat(document.getElementById('garaje_valor')?.value || 0);
 
-        // ✅ Cálculo total por adultos
         const totalAdultos = adultos * (tarifaAdulto + (chkDesayuno ? precioDesayuno : 0) + (chkTour ? precioTour :
             0)) * noches;
-
-        // ✅ Cálculo total por niños
         const totalNinos = ninos * (tarifaNino + (chkDesayuno ? precioDesayuno : 0) + (chkTour ? precioTour : 0)) *
             noches;
-
-        // ✅ Cálculo de garaje
         const totalGaraje = chkGaraje ? garajeValor * noches : 0;
-
-        // ✅ Total final
         const total = totalAdultos + totalNinos + totalGaraje;
 
-        // ✅ Mostrar resultado
         document.getElementById('total').value = total.toFixed(2);
     }
 
-
-
     function sendDataCheckin() {
         const total = parseFloat(document.getElementById('total')?.value || 0);
-        if (isNaN(total) || total <= 0) {
-            Swal.fire('Error', 'El total debe ser mayor a $0.00', 'error');
-            return;
-        }
+        if (isNaN(total) || total <= 0) return Swal.fire('Error', 'El total debe ser mayor a $0.00', 'error');
 
-        // ✅ Obtener radios seleccionados
-        const adultosRadio = document.querySelector('input[name="adultos"]:checked');
-        const nochesRadio = document.querySelector('input[name="noches"]:checked');
-        const ninosRadio = document.querySelector('input[name="ninos"]:checked'); // puede ser 0
-
-        const adultos = adultosRadio ? parseInt(adultosRadio.value) : 0;
-        const noches = nochesRadio ? parseInt(nochesRadio.value) : 0;
-
-        if (!adultosRadio || adultos <= 0) {
-            Swal.fire('Error', 'Debes seleccionar al menos 1 adulto.', 'error');
-            return;
-        }
-
-        if (!nochesRadio || noches <= 0) {
-            Swal.fire('Error', 'Debes seleccionar al menos 1 noche.', 'error');
-            return;
-        }
-
-        // ✅ Validar tarifa seleccionada
+        const adultos = parseInt(document.querySelector('input[name="adultos"]:checked')?.value || 0);
+        const noches = parseInt(document.querySelector('input[name="noches"]:checked')?.value || 0);
         const tarifa = document.getElementById('tarifa')?.value;
-        if (!tarifa || tarifa === '') {
-            Swal.fire('Error', 'Debes seleccionar una tarifa.', 'error');
-            return;
-        }
-
-        // ✅ Validar método de pago
         const metodoPago = document.getElementById('metodo_pago')?.value;
-        if (!metodoPago || metodoPago === '') {
-            Swal.fire('Error', 'Debes seleccionar un método de pago.', 'error');
-            return;
-        }
 
-        // ✅ Validar garaje si está activo
+        if (adultos <= 0) return Swal.fire('Error', 'Debes seleccionar al menos 1 adulto.', 'error');
+        if (noches <= 0) return Swal.fire('Error', 'Debes seleccionar al menos 1 noche.', 'error');
+        if (!tarifa) return Swal.fire('Error', 'Debes seleccionar una tarifa.', 'error');
+        if (!metodoPago) return Swal.fire('Error', 'Debes seleccionar un método de pago.', 'error');
+
         const chkGaraje = document.getElementById('chk_garaje');
         const selectGaraje = document.getElementById('garaje_valor');
-
         if (chkGaraje?.checked && (!selectGaraje?.value || parseFloat(selectGaraje.value) <= 0)) {
-            Swal.fire('Error', 'Debes seleccionar un valor válido para el garaje.', 'error');
-            return;
+            return Swal.fire('Error', 'Debes seleccionar un valor válido para el garaje.', 'error');
         }
 
-        // ✅ Validar tour si está activo
         const chkTour = document.getElementById('chk_tour')?.checked;
-        const precioTour = document.getElementById('precio_tour')?.value;
-        const lugarTour = document.getElementById('lugar_tour')?.value;
-
-        if (chkTour && (!precioTour || parseFloat(precioTour) <= 0)) {
-            Swal.fire('Error', 'Debes seleccionar un precio válido para el tour.', 'error');
-            return;
+        const precioTour = parseFloat(document.getElementById('precio_tour')?.value || 0);
+        if (chkTour) {
+            const selects = document.querySelectorAll('select[name="lugar_tour[]"]');
+            for (let i = 0; i < selects.length; i++) {
+                if (!selects[i].value || selects[i].value === '') {
+                    return Swal.fire('Error', `Debes seleccionar el lugar del tour para la noche ${i + 1}`, 'error');
+                }
+            }
+            if (isNaN(precioTour) || precioTour <= 0) {
+                return Swal.fire('Error', 'Debes ingresar un precio válido para el tour.', 'error');
+            }
         }
 
-        if (chkTour && (!lugarTour || lugarTour === '')) {
-            Swal.fire('Error', 'Debes seleccionar el lugar del tour.', 'error');
-            return;
-        }
-
-        // ✅ Empaquetar datos
         const form = document.getElementById('formReserva');
         const data = new FormData(form);
 
-        // 🔄 Mostrar modal de carga
         Swal.fire({
             title: 'Procesando...',
             html: 'Registrando Check-In y generando factura...',
             allowOutsideClick: false,
             allowEscapeKey: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
+            didOpen: () => Swal.showLoading()
         });
 
         fetch('ajax.php', {
@@ -4958,11 +4918,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             .then(resp => {
                 Swal.close();
                 if (resp.trim() === 'ok') {
-                    Swal.fire({
-                        title: '✅ Check-In exitoso',
-                        html: `Factura generada correctamente por <strong>$${total.toFixed(2)}</strong>`,
-                        icon: 'success'
-                    });
+                    Swal.fire('✅ Check-In exitoso',
+                        `Factura generada correctamente por <strong>$${total.toFixed(2)}</strong>`, 'success');
                     closeModal('modalReserva');
                     location.reload();
                 } else {
@@ -4975,24 +4932,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             });
     }
 
-
     function toggleTourLugar() {
         const tourCheck = document.getElementById('chk_tour');
-        const lugarTour = document.getElementById('lugar_tour');
-        lugarTour.disabled = !tourCheck.checked;
-        if (!tourCheck.checked) {
-            lugarTour.value = '';
+        const contenedorExistente = document.getElementById('contenedor_lugares_tour_por_noche');
+
+        if (tourCheck?.checked) {
+            generarSelectsLugaresTour();
+        } else {
+            if (contenedorExistente) contenedorExistente.remove();
         }
     }
 
+    function generarSelectsLugaresTour() {
+        const noches = parseInt(document.querySelector('input[name="noches"]:checked')?.value || 1);
+        const tours = <?= json_encode($tour_data) ?> ;
+        const contenedorExistente = document.getElementById('contenedor_lugares_tour_por_noche');
+        if (contenedorExistente) contenedorExistente.remove();
 
+        const contenedor = document.createElement('div');
+        contenedor.id = 'contenedor_lugares_tour_por_noche';
+        contenedor.classList.add('form_group');
 
+        const label = document.createElement('label');
+        label.textContent = 'Lugar del Tour por noche:';
+        contenedor.appendChild(label);
 
+        for (let i = 1; i <= noches; i++) {
+            const select = document.createElement('select');
+            select.name = 'lugar_tour[]';
+            select.className = 'js-example-basic-single';
+            select.required = true;
+            select.style.width = '100%';
+
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = `Noche ${i}: Seleccione lugar`;
+            select.appendChild(defaultOpt);
+
+            for (const t of tours) {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.nombre;
+                select.appendChild(opt);
+            }
+
+            contenedor.appendChild(select);
+        }
+
+        const refNode = document.getElementById('precio_tour');
+        refNode?.parentNode.insertBefore(contenedor, refNode.nextSibling);
+    }
+
+    // Eventos al cargar y al interactuar
     window.addEventListener('DOMContentLoaded', () => {
         recalcularTotalCheckin();
-        toggleTourLugar(); // ✅ asegura coherencia inicial
+        toggleTourLugar();
     });
+
+    document.querySelectorAll('input[name="noches"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            recalcularTotalCheckin();
+            if (document.getElementById('chk_tour')?.checked) {
+                generarSelectsLugaresTour();
+            }
+        });
+    });
+
+    document.getElementById('chk_tour')?.addEventListener('change', toggleTourLugar);
 </script>
+
 
 <?php
                             echo ob_get_clean();
@@ -5029,9 +5037,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $chk_garaje       = isset($_POST['chk_garaje']);
             $valor_garaje     = floatval($_POST['garaje_valor'] ?? 0);
 
-            $tour_destino = isset($_POST['lugar_tour']) && trim($_POST['lugar_tour']) != ''
-            ? mysqli_real_escape_string($conection, $_POST['lugar_tour'])
-            : '';
+            $tour_destino = '';
+            if (isset($_POST['lugar_tour']) && is_array($_POST['lugar_tour'])) {
+                $ids_lugares = array_map('intval', $_POST['lugar_tour']);
+                $tour_destino = mysqli_real_escape_string($conection, implode(',', $ids_lugares));
+            }
+
 
             $total_enviado    = floatval($_POST['total']);
             $metodo_pago      = mysqli_real_escape_string($conection, $_POST['metodo_pago']);
@@ -5066,17 +5077,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
 
             // Verificar disponibilidad de la habitación
-            $ocupada = mysqli_query($conection, "
-            SELECT 1 FROM reservas_detalle d
-            INNER JOIN reservas r ON r.idreserva = d.idreserva
-            WHERE d.id_habitacion = $habitacion
-            AND r.estado NOT IN ('cancelada', 'checkout')
-            AND ('$fecha_entrada' < r.fecha_salida AND '$fecha_salida' > r.fecha_entrada)
-            LIMIT 1
-        ");
-            if (mysqli_num_rows($ocupada) > 0) {
-                throw new Exception('La habitación seleccionada ya está reservada en ese rango de fechas');
+            $reservaConflicto = mysqli_query($conection, "
+                SELECT r.idreserva 
+                FROM reservas_detalle d
+                INNER JOIN reservas r ON r.idreserva = d.idreserva
+                WHERE d.id_habitacion = $habitacion
+                AND r.estado NOT IN ('cancelada', 'checkout')
+                AND ('$fecha_entrada' < r.fecha_salida AND '$fecha_salida' > r.fecha_entrada)
+                LIMIT 1
+            ");
+
+            if ($reservaConflicto && mysqli_num_rows($reservaConflicto) > 0) {
+                $row = mysqli_fetch_assoc($reservaConflicto);
+                $id_reserva_conflicto = intval($row['idreserva']);
+
+                // Consultamos si es una reserva pendiente
+                $estado = mysqli_fetch_assoc(mysqli_query($conection, "SELECT estado FROM reservas WHERE idreserva = $id_reserva_conflicto LIMIT 1"))['estado'];
+
+                if ($estado == 'pendiente') {
+                    // Cancelar automáticamente la reserva pendiente
+                    mysqli_query($conection, "
+                    UPDATE reservas 
+                    SET estado = 'cancelada', observaciones = CONCAT(observaciones, ' | Cancelada automáticamente por check-in directo el " . date('Y-m-d H:i') . "') 
+                    WHERE idreserva = $id_reserva_conflicto
+                        ");
+                } else {
+                    throw new Exception('La habitación seleccionada ya está reservada en ese rango de fechas');
+                }
             }
+
 
             // Insertar reserva
             $sql = "INSERT INTO reservas (
@@ -5120,7 +5149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             // === Factura ===
             $fecha = date('Y-m-d H:i:s');
             $sql_factura = "INSERT INTO factura (fecha, usuario, codcliente, totalfactura, tipopago, codigopago)
-                        VALUES ('$fecha', $usuario_id, $cliente, $total_calculado, '$metodo_pago', '$referencia')";
+                VALUES ('$fecha', $usuario_id, $cliente, $total_calculado, '$metodo_pago', '$referencia')";
             if (!mysqli_query($conection, $sql_factura)) {
                 throw new Exception('Error al registrar la factura');
             }
@@ -5131,31 +5160,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $personas = $adultos + $ninos;
             $habitacion_nombre = mysqli_fetch_assoc(mysqli_query($conection, "SELECT numero FROM habitaciones WHERE idhabitacion = $habitacion LIMIT 1"))['numero'];
 
+            // 🔽 Obtener nombres de lugares de tour si aplica
+            $nombres_lugares_str = '';
+            if ($incluye_tour && $tour_destino != '') {
+                $nombres_lugares = [];
+                $ids_lugares = explode(',', $tour_destino);
+                foreach ($ids_lugares as $id) {
+                    $id = intval(trim($id));
+                    if ($id > 0) {
+                        $res = mysqli_query($conection, "SELECT nombre FROM lugares_tour WHERE id = $id LIMIT 1");
+                        if ($res && mysqli_num_rows($res)) {
+                            $nombres_lugares[] = mysqli_fetch_assoc($res)['nombre'];
+                        }
+                    }
+                }
+                $nombres_lugares_str = implode(', ', $nombres_lugares); // Ej: "Casa del Árbol, Manos de Dios"
+            }
+
             if ($adultos > 0) {
                 mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
-                VALUES ($idfactura, 0, 'Hospedaje Adultos - Hab. $habitacion_nombre', $adultos, $precio_adulto * $noches, 'hospedaje')");
+        VALUES ($idfactura, 0, 'Hospedaje Adultos - Hab. $habitacion_nombre', $adultos, " . ($precio_adulto * $noches) . ", 'hospedaje')");
             }
 
             if ($ninos > 0) {
                 mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
-                VALUES ($idfactura, 0, 'Hospedaje Niños - Hab. $habitacion_nombre', $ninos, $precio_nino * $noches, 'hospedaje')");
+        VALUES ($idfactura, 0, 'Hospedaje Niños - Hab. $habitacion_nombre', $ninos, " . ($precio_nino * $noches) . ", 'hospedaje')");
             }
 
             if ($incluye_desayuno) {
                 mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
-                VALUES ($idfactura, 0, 'Desayuno - Hab. $habitacion_nombre', $personas, $valor_desayuno * $noches, 'desayuno')");
+        VALUES ($idfactura, 0, 'Desayuno - Hab. $habitacion_nombre', $personas, " . ($valor_desayuno * $noches) . ", 'desayuno')");
             }
 
             if ($incluye_tour) {
                 mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
-                VALUES ($idfactura, 0, 'Tour: $tour_destino - Hab. $habitacion_nombre', $personas, $valor_tour * $noches, 'tour')");
+        VALUES ($idfactura, 0, 'Tour: $nombres_lugares_str - Hab. $habitacion_nombre', $personas, " . ($valor_tour * $noches) . ", 'tour')");
             }
-
 
             if ($chk_garaje && $valor_garaje > 0) {
                 mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
-                VALUES ($idfactura, 0, 'Garaje - Hab. $habitacion_nombre', 1, $valor_garaje * $noches, 'garaje')");
+        VALUES ($idfactura, 0, 'Garaje - Hab. $habitacion_nombre', 1, " . ($valor_garaje * $noches) . ", 'garaje')");
             }
+
 
             mysqli_commit($conection);
 

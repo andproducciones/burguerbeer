@@ -2209,104 +2209,67 @@ function prepararDatosParaPDF() {
 
 
 function addHabitacion() {
-    const entrada = document.getElementById('fecha_entrada').value;
-    const salida = document.getElementById('fecha_salida').value;
-
-    if (!entrada || !salida) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Fechas requeridas',
-            text: 'Selecciona primero la fecha de entrada y salida antes de añadir habitaciones.'
-        });
-        return;
-    }
-
-    if (new Date(salida) <= new Date(entrada)) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Fechas inválidas',
-            text: 'La fecha de salida debe ser posterior a la de entrada.'
-        });
-        return;
-    }
-
     const container = document.getElementById('habitacionesContainer');
     const original = container.querySelector('.habitacion-row');
     const clone = original.cloneNode(true);
 
-    // Limpiar habitación seleccionada
-    const habitacionSelect = clone.querySelector('.id_habitacion');
-    habitacionSelect.value = '';
-    habitacionSelect.onchange = recalcularTotalReserva;
+    // Limpiar valores
+    clone.querySelectorAll('select, input[type="number"], input[type="text"]').forEach(el => el.value = '');
+    clone.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
+    clone.querySelector('.precio_desayuno').disabled = true;
+    clone.querySelector('.precio_tour').disabled = true;
+    clone.querySelector('.input_garaje').disabled = true;
 
-    // Limpiar tarifas
-    const tarifaAdulto = clone.querySelector('.select_tarifa');
-    const tarifaNino = clone.querySelector('.select_tarifa_nino');
-    if (tarifaAdulto) {
-        tarifaAdulto.value = '';
-        tarifaAdulto.onchange = recalcularTotalReserva;
-    }
-    if (tarifaNino) {
-        tarifaNino.value = '';
-        tarifaNino.onchange = recalcularTotalReserva;
-    }
+    // Reiniciar radios a valores por defecto
+    clone.querySelectorAll('.grupo_adultos input').forEach((el, i) => el.checked = (i === 0));
+    clone.querySelectorAll('.grupo_ninos input').forEach((el, i) => el.checked = (i === 0));
 
-    // Resetear adultos y niños
-    clone.querySelector('.input_adultos').value = 1;
-    clone.querySelector('.input_adultos').onchange = recalcularTotalReserva;
-    clone.querySelector('.input_ninos').value = 0;
-    clone.querySelector('.input_ninos').onchange = recalcularTotalReserva;
+    // Regenerar nombres únicos
+    const index = container.children.length;
+    regenerarRadios(clone, index);
 
-    // Resetear desayuno
-    const desayunoChk = clone.querySelector('.chk_desayuno');
-    const desayunoSel = clone.querySelector('.precio_desayuno');
-    desayunoChk.checked = false;
-    desayunoChk.onchange = () => {
-        togglePrecio(desayunoChk, 'precio_desayuno');
-        recalcularTotalReserva();
-    };
-    desayunoSel.disabled = true;
-    desayunoSel.value = '';
-    desayunoSel.onchange = recalcularTotalReserva;
+    // Asignar data-index (necesario para nombre de lugar_tour[index][])
+    clone.dataset.index = index;
 
-    // Resetear tour
-    const tourChk = clone.querySelector('.chk_tour');
-    const tourSel = clone.querySelector('.precio_tour');
-    const lugarTour = clone.querySelector('.select_lugar_tour');
-    tourChk.checked = false;
-    tourChk.onchange = () => {
-        togglePrecio(tourChk, 'precio_tour');
-        togglePrecio(tourChk, 'select_lugar_tour');
-        recalcularTotalReserva();
-    };
-    tourSel.disabled = true;
-    tourSel.value = '';
-    tourSel.onchange = recalcularTotalReserva;
-
-    lugarTour.disabled = true;
-    lugarTour.value = '';
-
-    // Cargar habitaciones disponibles desde PHP
-    fetch('ajax.php', {
-        method: 'POST',
-        body: new URLSearchParams({
-            action: 'habitacionesDisponibles',
-            fecha_entrada: entrada,
-            fecha_salida: salida
-        })
-    })
-    .then(r => r.json())
-    .then(data => {
-        const select = clone.querySelector('.id_habitacion');
-        select.innerHTML = '<option value="">Seleccione</option>';
-        data.forEach(h => {
-            select.innerHTML += `<option value="${h.idhabitacion}">Hab. ${h.numero}</option>`;
-        });
-    });
+    // Asegurarse que el bloque de lugar_tour esté limpio (por si lo clona lleno)
+    const lugarContainer = clone.querySelector('.bloque_lugar_tour');
+    if (lugarContainer) lugarContainer.innerHTML = '';
 
     container.appendChild(clone);
+
+    // Actualizar habitaciones disponibles para evitar duplicados
+    actualizarHabitacionesDisponibles();
+
+    // Recalcular total
     recalcularTotalReserva();
 }
+
+
+
+function regenerarRadios(row, index) {
+    // Adultos
+    const grupoAdultos = row.querySelectorAll('.grupo_adultos input[type="radio"]');
+    grupoAdultos.forEach((radio, i) => {
+        const oldId = radio.id;
+        const nuevoId = `adulto_${index}_${i + 1}`;
+        radio.name = `adultos[${index}]`;
+        radio.id = nuevoId;
+        const label = row.querySelector(`label[for="${oldId}"]`);
+        if (label) label.setAttribute('for', nuevoId);
+    });
+
+    // Niños
+    const grupoNinos = row.querySelectorAll('.grupo_ninos input[type="radio"]');
+    grupoNinos.forEach((radio, i) => {
+        const oldId = radio.id;
+        const nuevoId = `nino_${index}_${i}`;
+        radio.name = `ninos[${index}]`;
+        radio.id = nuevoId;
+        const label = row.querySelector(`label[for="${oldId}"]`);
+        if (label) label.setAttribute('for', nuevoId);
+    });
+}
+
 
 function recalcularTotalReserva() {
     const noches = calcularNoches();
@@ -2314,8 +2277,11 @@ function recalcularTotalReserva() {
 
     let total = 0;
     const habitacionesUsadas = [];
+    const filas = document.querySelectorAll('.habitacion-row');
 
-    document.querySelectorAll('.habitacion-row').forEach((row) => {
+    let errorDetectado = false;
+
+    filas.forEach((row, index) => {
         const selectHabitacion = row.querySelector('.id_habitacion');
         const idHab = selectHabitacion?.value;
 
@@ -2325,38 +2291,56 @@ function recalcularTotalReserva() {
                 Swal.fire({
                     icon: 'error',
                     title: 'Habitación duplicada',
-                    text: 'No puedes seleccionar la misma habitación más de una vez.'
+                    text: `La habitación ${idHab} ya ha sido seleccionada.`
                 });
                 selectHabitacion.value = '';
+                errorDetectado = true;
                 return;
             }
             habitacionesUsadas.push(idHab);
         }
 
-        const adultos = parseInt(row.querySelector('.input_adultos')?.value) || 0;
-        const ninos = parseInt(row.querySelector('.input_ninos')?.value) || 0;
+        // Adultos
+        const radiosAdulto = row.querySelectorAll(`input[name="adultos[${index}]"]`);
+        let adultos = 0;
+        radiosAdulto.forEach(r => { if (r.checked) adultos = parseInt(r.value); });
 
+        if (adultos <= 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Adultos no especificados',
+                text: `Debes indicar al menos 1 adulto en la habitación #${index + 1}.`
+            });
+            errorDetectado = true;
+            return;
+        }
+
+        // Niños
+        const radiosNino = row.querySelectorAll(`input[name="ninos[${index}]"]`);
+        let ninos = 0;
+        radiosNino.forEach(r => { if (r.checked) ninos = parseInt(r.value); });
+
+        // Tarifa
         const tarifaSelect = row.querySelector('.select_tarifa');
-        const precioAdulto = parseFloat(tarifaSelect?.selectedOptions[0]?.dataset.precio || 0);
-
-        // Tarifa niño = 75% del adulto
+        const selectedTarifa = tarifaSelect?.selectedOptions[0];
+        const precioAdulto = selectedTarifa ? parseFloat(selectedTarifa.dataset.precio || 0) : 0;
         const precioNino = parseFloat((precioAdulto * 0.75).toFixed(2));
 
+        // Guardar tarifa niño en input hidden
         const tarifaNinoField = row.querySelector('.tarifa_nino_aplicada');
         if (tarifaNinoField) tarifaNinoField.value = precioNino.toFixed(2);
 
         // Extras
         const precioDesayuno = row.querySelector('.chk_desayuno')?.checked
-            ? parseFloat(row.querySelector('.precio_desayuno')?.selectedOptions[0]?.dataset?.precio || 0)
+            ? parseFloat(row.querySelector('.precio_desayuno')?.value || 0)
             : 0;
 
         const precioTour = row.querySelector('.chk_tour')?.checked
-            ? parseFloat(row.querySelector('.precio_tour')?.selectedOptions[0]?.dataset?.precio || 0)
+            ? parseFloat(row.querySelector('.precio_tour')?.value || 0)
             : 0;
 
-        // Garaje (valor ya viene final desde el form, no se multiplica)
         const precioGaraje = row.querySelector('.chk_garaje')?.checked
-            ? parseFloat(row.querySelector('.input_garaje')?.value || 0)
+            ? parseFloat(row.querySelector('.input_garaje')?.value || 0) * noches
             : 0;
 
         // Subtotales
@@ -2366,29 +2350,50 @@ function recalcularTotalReserva() {
         total += subtotalAdulto + subtotalNino + precioGaraje;
     });
 
-    document.getElementById('total').value = total.toFixed(2);
+    // Mostrar total solo si no hubo errores
+    if (!errorDetectado) {
+        const totalField = document.getElementById('total');
+        if (totalField) totalField.value = total.toFixed(2);
+    }
 }
-
 
 
 
 function removeHabitacion(btn) {
     const container = document.getElementById('habitacionesContainer');
+
     if (container.children.length > 1) {
+        // Eliminar la fila actual
         btn.parentElement.remove();
+
+        // Reasignar índices (radios y nombres) correctamente
+        const filas = container.querySelectorAll('.habitacion-row');
+        filas.forEach((row, index) => {
+            regenerarRadios(row, index);
+        });
+
+        // Volver a calcular total y actualizar opciones de habitación
         recalcularTotalReserva();
+        actualizarHabitacionesDisponibles();
+    } else {
+        Swal.fire("⚠️ Mínimo requerido", "Debe haber al menos una habitación en la reserva.", "warning");
     }
 }
+
 
 function calcularNoches() {
     const f1 = document.getElementById('fecha_entrada').value;
     const f2 = document.getElementById('fecha_salida').value;
-    const d1 = new Date(f1);
-    const d2 = new Date(f2);
+
+    if (!f1 || !f2) return 0;
+
+    const d1 = new Date(f1 + 'T00:00:00');
+    const d2 = new Date(f2 + 'T00:00:00');
+
     const diff = (d2 - d1) / (1000 * 60 * 60 * 24);
+
     return (isNaN(diff) || diff <= 0) ? 0 : diff;
 }
-
 
 
 
@@ -2396,34 +2401,60 @@ function calcularNoches() {
 function togglePrecio(checkbox, clase) {
     const row = checkbox.closest('.habitacion-row');
     const select = row.querySelector(`.${clase}`);
-
     if (!select) return;
+
+    const isTour = clase === 'precio_tour';
+    const isGaraje = clase === 'input_garaje';
 
     if (checkbox.checked) {
         select.disabled = false;
 
-        // Si es tour, activar también el lugar_tour
-        if (clase === 'precio_tour') {
-            const lugar = row.querySelector('.lugar_tour');
-            if (lugar) lugar.disabled = false;
+        if (isTour) {
+            // Generar select de lugar de tour por noche
+            const lugarContainer = row.querySelector('.bloque_lugar_tour');
+            const noches = calcularNoches();
+            lugarContainer.innerHTML = '';
+
+            if (noches <= 0) {
+                lugarContainer.innerHTML = '<p style="color:red;">⚠️ Seleccione fechas válidas para tour.</p>';
+                return;
+            }
+
+            const index = row.dataset.index || 0;
+
+            for (let i = 1; i <= noches; i++) {
+                const selectLugar = document.createElement('select');
+                selectLugar.name = `lugar_tour[${index}][]`;
+                selectLugar.classList.add('lugar_tour');
+                selectLugar.required = true;
+
+                const optionDefault = document.createElement('option');
+                optionDefault.value = '';
+                optionDefault.textContent = `Lugar para noche ${i}`;
+                selectLugar.appendChild(optionDefault);
+
+                window.lugaresTourData.forEach(t => {
+                    const option = document.createElement('option');
+                    option.value = t.id;
+                    option.textContent = t.nombre;
+                    selectLugar.appendChild(option);
+                });
+
+                lugarContainer.appendChild(selectLugar);
+            }
         }
 
-        // Si es garaje y estaba en 0, poner 1 como default
-        if (clase === 'input_garaje' && select.value === '0') {
-            select.value = '1';
+        if (isGaraje && (!select.value || parseFloat(select.value) <= 0)) {
+            select.value = '1'; // Default de garaje
         }
 
     } else {
         select.disabled = true;
-        select.value = (clase === 'input_garaje') ? '0' : '';
+        select.value = isGaraje ? '0' : '';
 
-        // Desactivar lugar de tour también
-        if (clase === 'precio_tour') {
-            const lugar = row.querySelector('.lugar_tour');
-            if (lugar) {
-                lugar.disabled = true;
-                lugar.selectedIndex = 0;
-            }
+        if (isTour) {
+            const lugarContainer = row.querySelector('.bloque_lugar_tour');
+            if (lugarContainer) lugarContainer.innerHTML = '';
         }
     }
 
@@ -2432,6 +2463,7 @@ function togglePrecio(checkbox, clase) {
 
 
 function actualizarHabitacionesDisponibles() {
+
     const entrada = document.getElementById('fecha_entrada').value;
     const salida = document.getElementById('fecha_salida').value;
 
@@ -2446,22 +2478,36 @@ function actualizarHabitacionesDisponibles() {
         })
     })
     .then(res => res.json())
-    .then(data => {
-        document.querySelectorAll('.id_habitacion').forEach(select => {
-            const currentValue = select.value;
+    .then(disponibles => {
+        // Obtener valores ya seleccionados en los selects
+        const selects = document.querySelectorAll('.id_habitacion');
+        const habitacionesSeleccionadas = Array.from(selects).map(s => s.value).filter(v => v);
+
+        selects.forEach(select => {
+            const seleccionActual = select.value;
+
+            // Filtrar habitaciones disponibles, excluyendo las ya seleccionadas en otros selects
+            const opcionesValidas = disponibles.filter(h => 
+                h.idhabitacion == seleccionActual || !habitacionesSeleccionadas.includes(h.idhabitacion.toString())
+            );
+
+            // Reconstruir options
+            let opciones = '<option value="">Seleccione Habitación</option>';
             let disponible = false;
 
-            select.innerHTML = '<option value="">Seleccione</option>';
-            data.forEach(h => {
-                if (h.idhabitacion == currentValue) disponible = true;
-                select.innerHTML += `<option value="${h.idhabitacion}" ${h.idhabitacion == currentValue ? 'selected' : ''}>Hab. ${h.numero}</option>`;
+            opcionesValidas.forEach(h => {
+                if (h.idhabitacion == seleccionActual) disponible = true;
+                opciones += `<option value="${h.idhabitacion}" ${h.idhabitacion == seleccionActual ? 'selected' : ''}>Hab. ${h.numero}</option>`;
             });
 
-            if (!disponible && currentValue) {
+            select.innerHTML = opciones;
+
+            // Si la habitación seleccionada ya no está disponible
+            if (!disponible && seleccionActual) {
                 Swal.fire({
                     icon: 'info',
                     title: 'Habitación no disponible',
-                    text: 'Una de las habitaciones ya no está disponible en el rango de fechas seleccionado.'
+                    text: 'Una de las habitaciones seleccionadas ya no está disponible en el rango de fechas.'
                 });
                 select.value = '';
             }
@@ -2496,11 +2542,10 @@ function iniciarEventosReserva() {
 }
 
 
-
 function sendDataReserva(modo = 'nueva') {
     const form = document.getElementById('formReserva');
     if (!form) {
-        Swal.fire('Error', 'Formulario no encontrado', 'error');
+        Swal.fire('Error', 'Formulario no encontrado.', 'error');
         return;
     }
 
@@ -2521,13 +2566,12 @@ function sendDataReserva(modo = 'nueva') {
     let habitacionesValidas = true;
     const habitacionesUsadas = [];
 
-    habitaciones.forEach(row => {
+    habitaciones.forEach((row, index) => {
         const select = row.querySelector('.id_habitacion');
         const idHab = select?.value;
 
-        if (!idHab) {
-            habitacionesValidas = false;
-        } else {
+        if (!idHab) habitacionesValidas = false;
+        else {
             if (habitacionesUsadas.includes(idHab)) {
                 habitacionesValidas = false;
                 Swal.fire('Error', 'Has seleccionado la misma habitación más de una vez.', 'error');
@@ -2535,13 +2579,77 @@ function sendDataReserva(modo = 'nueva') {
             }
             habitacionesUsadas.push(idHab);
         }
+
+        // ✅ Validar adultos
+        const adultosRadios = row.querySelectorAll(`input[name="adultos[${index}]"]`);
+        let adultosSeleccionado = false;
+        adultosRadios.forEach(r => {
+            if (r.checked) adultosSeleccionado = true;
+        });
+
+        if (!adultosSeleccionado) {
+            habitacionesValidas = false;
+            Swal.fire('Error', `Selecciona la cantidad de adultos para la habitación #${index + 1}.`, 'error');
+            return;
+        }
+
+        // ✅ Validar niños
+        const ninosRadios = row.querySelectorAll(`input[name="ninos[${index}]"]`);
+        let ninosSeleccionado = false;
+        ninosRadios.forEach(r => {
+            if (r.checked) ninosSeleccionado = true;
+        });
+
+        if (!ninosSeleccionado) {
+            habitacionesValidas = false;
+            Swal.fire('Error', `Selecciona la cantidad de niños (aunque sea 0) para la habitación #${index + 1}.`, 'error');
+            return;
+        }
+
+        // ✅ Validar tour
+        const chkTour = row.querySelector('.chk_tour');
+        const precioTour = row.querySelector('.precio_tour');
+        if (chkTour?.checked) {
+            if (!precioTour?.value || parseFloat(precioTour.value) <= 0) {
+                habitacionesValidas = false;
+                Swal.fire('Error', `Selecciona un precio válido para el tour en la habitación #${index + 1}.`, 'error');
+                return;
+            }
+
+            const lugarTourSelects = row.querySelectorAll('.bloque_lugar_tour select');
+            if (lugarTourSelects.length === 0) {
+                habitacionesValidas = false;
+                Swal.fire('Error', `No se han generado los lugares del tour en la habitación #${index + 1}.`, 'error');
+                return;
+            }
+
+            let lugaresValidos = true;
+            lugarTourSelects.forEach((s, i) => {
+                if (!s.value) {
+                    lugaresValidos = false;
+                    Swal.fire('Error', `Selecciona el lugar del tour para la noche ${i + 1} en la habitación #${index + 1}.`, 'error');
+                }
+            });
+
+            if (!lugaresValidos) {
+                habitacionesValidas = false;
+                return;
+            }
+        }
+
+        // ✅ Validar garaje
+        const chkGaraje = row.querySelector('.chk_garaje');
+        const inputGaraje = row.querySelector('.input_garaje');
+        if (chkGaraje?.checked && (!inputGaraje?.value || parseFloat(inputGaraje.value) <= 0)) {
+            habitacionesValidas = false;
+            Swal.fire('Error', `Debes seleccionar un valor válido para el garaje en la habitación #${index + 1}.`, 'error');
+            return;
+        }
     });
 
-    if (!habitacionesValidas) {
-        Swal.fire('Error', 'Hay habitaciones no seleccionadas o duplicadas.', 'error');
-        return;
-    }
+    if (!habitacionesValidas) return;
 
+    // ✅ Validar total y abono
     const total = parseFloat(document.getElementById('total')?.value || 0);
     const abono = parseFloat(document.getElementById('abono')?.value || 0);
 
@@ -2555,17 +2663,16 @@ function sendDataReserva(modo = 'nueva') {
         return;
     }
 
+    // ✅ Enviar
     const data = new FormData(form);
     data.set('action', (modo === 'editar') ? 'editarReserva' : 'guardarReserva');
 
-    // Mostrar modal de "Procesando..."
     Swal.fire({
         title: 'Procesando...',
-        text: 'Por favor espera mientras se guarda la reserva.',
+        html: 'Por favor espera mientras se guarda la reserva.',
         allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
+        allowEscapeKey: false,
+        didOpen: () => Swal.showLoading()
     });
 
     fetch('ajax.php', {
@@ -2574,13 +2681,12 @@ function sendDataReserva(modo = 'nueva') {
     })
     .then(res => res.text())
     .then(response => {
-        Swal.close(); // Cierra el modal de "Procesando"
-        console.log(response);
+        Swal.close();
         if (response.trim() === 'ok') {
             Swal.fire({
                 icon: 'success',
                 title: 'Éxito',
-                text: (modo === 'editar') ? 'Reserva actualizada correctamente' : 'Reserva guardada correctamente'
+                text: (modo === 'editar') ? 'Reserva actualizada correctamente.' : 'Reserva guardada correctamente.'
             }).then(() => {
                 closeModal('modalReserva');
                 location.reload();
@@ -2592,9 +2698,11 @@ function sendDataReserva(modo = 'nueva') {
     .catch(err => {
         Swal.close();
         console.error(err);
-        Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+        Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
     });
 }
+
+
 
 
 $(document).on('click', '.anadirForm', function () {
@@ -2738,8 +2846,6 @@ function sendCancelarReserva() {
         alert('Error al cancelar la reserva');
     });
 }
-
-
 
 
 function abrirFormularioCliente() {
@@ -2946,14 +3052,4 @@ function mostrarInputOtro(idSelect) {
     }
 }
 
-function seleccionarNinos(valor) {
-    document.getElementById('ninos').value = valor;
-    recalcularTotalCheckin();
 
-    // Quitar clase "selected" de todos
-    const botones = document.querySelectorAll('#selector_ninos .btn-numero');
-    botones.forEach(btn => btn.classList.remove('selected'));
-
-    // Marcar el seleccionado
-    botones[valor].classList.add('selected');
-}

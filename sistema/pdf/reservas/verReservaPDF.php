@@ -46,14 +46,14 @@ $reserva = mysqli_fetch_assoc($query);
 // =================== DETALLE HABITACIONES ===================
 $query_det = mysqli_query($conection, "
     SELECT h.numero, rd.adultos, rd.ninos,
-           rd.incluye_desayuno, rd.incluye_tour,
-           rd.precio_unitario, rd.precio_nino, rd.precio_desayuno, rd.precio_tour, rd.subtotal,
-           rd.garaje,
-           lt.nombre AS lugar_tour
-    FROM reservas_detalle rd
-    INNER JOIN habitaciones h ON h.idhabitacion = rd.id_habitacion
-    LEFT JOIN lugares_tour lt ON lt.id = rd.lugar_tour
-    WHERE rd.idreserva = $id
+       rd.incluye_desayuno, rd.incluye_tour,
+       rd.precio_unitario, rd.precio_nino, rd.precio_desayuno, rd.precio_tour, rd.subtotal,
+       rd.garaje,
+       rd.lugar_tour
+FROM reservas_detalle rd
+INNER JOIN habitaciones h ON h.idhabitacion = rd.id_habitacion
+WHERE rd.idreserva = $id
+
 ");
 
 $habitaciones = "";
@@ -81,15 +81,16 @@ if ($query_det && mysqli_num_rows($query_det) > 0) {
     }
 
     // Encabezado de la tabla
+    // =================== TABLA HABITACIONES CON MÚLTIPLES LUGARES DE TOUR ===================
     $habitaciones .= "
-    <table class='detalle'>
-        <thead>
-            <tr>
-                <th>Hab</th>
-                <th>Adultos</th>
-                <th>Niños</th>
-                <th>Tarifa Adulto</th>
-                <th>Tarifa Niño</th>";
+<table class='detalle'>
+    <thead>
+        <tr>
+            <th>Hab</th>
+            <th>Adultos</th>
+            <th>Niños</th>
+            <th>Tarifa Adulto</th>
+            <th>Tarifa Niño</th>";
     if ($tiene_desayuno) {
         $habitaciones .= "<th>Desayuno</th>";
     }
@@ -100,24 +101,43 @@ if ($query_det && mysqli_num_rows($query_det) > 0) {
         $habitaciones .= "<th>Garaje</th>";
     }
     $habitaciones .= "<th>Subtotal</th>
-            </tr>
-        </thead>
-        <tbody>";
+        </tr>
+    </thead>
+    <tbody>";
 
-    // Cuerpo de la tabla
+    $cache_lugares = [];
+
     foreach ($detalles as $row) {
         $total_personas += $row['adultos'] + $row['ninos'];
         $desayuno   = ($row['incluye_desayuno']) ? 'Sí ($' . number_format($row['precio_desayuno'], 2) . ')' : 'No';
         $tour       = ($row['incluye_tour']) ? 'Sí ($' . number_format($row['precio_tour'], 2) . ')' : 'No';
-        $lugar_tour = $row['lugar_tour'] ?? '-';
+
+        // ====== PROCESAR MÚLTIPLES LUGARES DE TOUR ======
+        $lugar_tour_ids = explode(',', $row['lugar_tour'] ?? '');
+        $nombres_lugares = [];
+
+        foreach ($lugar_tour_ids as $id_lugar) {
+            $id_lugar = intval(trim($id_lugar));
+            if ($id_lugar > 0) {
+                if (!isset($cache_lugares[$id_lugar])) {
+                    $resLugar = mysqli_query($conection, "SELECT nombre FROM lugares_tour WHERE id = $id_lugar LIMIT 1");
+                    $cache_lugares[$id_lugar] = ($resLugar && mysqli_num_rows($resLugar))
+                        ? mysqli_fetch_assoc($resLugar)['nombre']
+                        : 'Desconocido';
+                }
+                $nombres_lugares[] = $cache_lugares[$id_lugar];
+            }
+        }
+
+        $lugar_tour = count($nombres_lugares) > 0 ? implode(', ', $nombres_lugares) : '-';
         $garaje_txt = ($row['garaje'] > 0) ? 'Sí ($' . number_format($row['garaje'], 2) . ')' : 'No';
 
         $habitaciones .= "<tr>
-            <td>{$row['numero']}</td>
-            <td>{$row['adultos']}</td>
-            <td>{$row['ninos']}</td>
-            <td>$" . number_format($row['precio_unitario'], 2) . "</td>
-            <td>$" . number_format($row['precio_nino'], 2) . "</td>";
+        <td>{$row['numero']}</td>
+        <td>{$row['adultos']}</td>
+        <td>{$row['ninos']}</td>
+        <td>$" . number_format($row['precio_unitario'], 2) . "</td>
+        <td>$" . number_format($row['precio_nino'], 2) . "</td>";
         if ($tiene_desayuno) {
             $habitaciones .= "<td>$desayuno</td>";
         }
@@ -128,10 +148,11 @@ if ($query_det && mysqli_num_rows($query_det) > 0) {
             $habitaciones .= "<td>$garaje_txt</td>";
         }
         $habitaciones .= "<td>$" . number_format($row['subtotal'], 2) . "</td>
-        </tr>";
+    </tr>";
     }
 
     $habitaciones .= "</tbody></table>";
+
 } else {
     $habitaciones = "<p>No hay habitaciones asociadas.</p>";
 }

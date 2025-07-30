@@ -1,6 +1,6 @@
 <?php
 session_start();
-//date_default_timezone_set('America/Guayaquil'); // o tu zona real
+date_default_timezone_set('America/Guayaquil'); // o tu zona real
 
 
 include '../conexion.php';
@@ -683,7 +683,6 @@ while ($hab = mysqli_fetch_assoc($query)):
     $boton = '<button class="btn-habitacion" onclick="anadirForm(\'formCheckinDirecto\','.$hab['idhabitacion'].')">Check-In</button>';
     $esMediodiaPasado = (int)date('H') >= 12;
     $alerta_checkout = ($hab['salida_hoy'] && $esMediodiaPasado);
-
 
     $mostrarBotonFaltante = false;
     $faltante = 0;

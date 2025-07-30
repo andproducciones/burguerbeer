@@ -1258,71 +1258,80 @@ function imprimirTicketsTourYGaraje($idreserva)
 {
     include "../conexion.php";
 
-    $reservaQ = mysqli_query($conection, "SELECT fecha_entrada, fecha_salida FROM reservas WHERE idreserva = $idreserva LIMIT 1");
+    $reservaQ = mysqli_query($conection, "SELECT fecha_entrada FROM reservas WHERE idreserva = $idreserva LIMIT 1");
     if (!$reservaQ || mysqli_num_rows($reservaQ) == 0) {
         return;
     }
 
-    $reserva = mysqli_fetch_assoc($reservaQ);
-    $entrada = $reserva['fecha_entrada'];
-    $salida  = $reserva['fecha_salida'];
-    $dias = max(1, (strtotime($salida) - strtotime($entrada)) / 86400);
+    $fechaEntrada = mysqli_fetch_assoc($reservaQ)['fecha_entrada'];
 
     $detalle = mysqli_query($conection, "
         SELECT h.numero AS habitacion, d.adultos, d.ninos, d.incluye_tour, 
-               d.lugar_tour, lt.nombre AS nombre_tour, d.garaje
+               d.lugar_tour, lt.nombre AS nombre_tour, d.garaje, d.subtotal,
+               d.incluye_desayuno, d.incluye_tour, r.fecha_entrada, r.fecha_salida,
+               d.id_habitacion
         FROM reservas_detalle d
         INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
+        INNER JOIN reservas r ON r.idreserva = d.idreserva
         LEFT JOIN lugares_tour lt ON lt.id = d.lugar_tour
         WHERE d.idreserva = $idreserva
+        ORDER BY d.id_habitacion ASC
     ");
+
+    if (!$detalle || mysqli_num_rows($detalle) === 0) {
+        return;
+    }
+
+    $impresosGaraje = []; // para evitar imprimir garaje más de una vez por habitación
 
     while ($row = mysqli_fetch_assoc($detalle)) {
         $habitacion = $row['habitacion'];
-        $personas = $row['adultos'] + $row['ninos'];
-        $lugar = $row['nombre_tour'] ?? 'Destino';
-        $incluyeTour = $row['incluye_tour'];
-        $incluyeGaraje = floatval($row['garaje']) > 0;
+        $personas   = intval($row['adultos']) + intval($row['ninos']);
+        $lugar      = $row['nombre_tour'] ?? 'Destino';
+        $fecha      = $row['fecha_entrada']; // por compatibilidad con registros por noche
+        $id_hab     = $row['id_habitacion'];
 
-        for ($i = 0; $i < $dias; $i++) {
-            $fecha = date('Y-m-d', strtotime("+$i days", strtotime($entrada)));
+        // === TOUR (una fila por noche con tour) ===
+        if (intval($row['incluye_tour'])) {
+            $hash = strtoupper(substr(sha1("TOUR$habitacion$fecha$lugar"), 0, 10));
 
-            // === TOUR ===
-            if ($incluyeTour) {
-                $hash = strtoupper(substr(sha1("TOUR$habitacion$fecha$lugar"), 0, 10));
-
-                $printer = new Printer(new WindowsPrintConnector("comandas"));
-                try {
-                    $printer->setJustification(Printer::JUSTIFY_CENTER);
-                    $printer->setEmphasis(true);
-                    $printer->text("TICKET DE TOUR\n");
-                    $printer->setEmphasis(false);
-                    $printer->setJustification(Printer::JUSTIFY_LEFT);
-                    $printer->text("Habitación: $habitacion\n");
-                    $printer->text("Fecha:      $fecha\n");
-                    $printer->text("Destino:    $lugar\n");
-                    $printer->text("Personas:   $personas\n");
-                    $printer->text("Código:     #$hash\n\n");
-                    $printer->text("------------------------------------------------\n");
-                    $printer->setJustification(Printer::JUSTIFY_CENTER);
-                    $printer->text("Términos y Condiciones\n");
-                    $printer->setJustification(Printer::JUSTIFY_LEFT);
-                    $printer->text("Este ticket es válido solo para la fecha impresa\n");
-                    $printer->text("Grupo Cañalimeña no se responsabiliza por\n");
-                    $printer->text("retrasos cancelaciones ni daños.\n");
-                    $printer->text("Llegar 15 minutos antes de la salida del tour.\n");
-                    $printer->setJustification(Printer::JUSTIFY_CENTER);
-                    $printer->text("------------------------------------------------\n");
-                    $printer->text("GRUPO CAÑALIMEÑA\n");
-                    $printer->cut();
-                } finally {
-                    $printer->close();
-                }
+            $printer = new Printer(new WindowsPrintConnector("comandas"));
+            try {
+                $printer->setJustification(Printer::JUSTIFY_CENTER);
+                $printer->setEmphasis(true);
+                $printer->text("TICKET DE TOUR\n");
+                $printer->setEmphasis(false);
+                $printer->setJustification(Printer::JUSTIFY_LEFT);
+                $printer->text("Habitación: $habitacion\n");
+                $printer->text("Fecha:      $fecha\n");
+                $printer->text("Destino:    $lugar\n");
+                $printer->text("Personas:   $personas\n");
+                $printer->text("Código:     #$hash\n\n");
+                $printer->text("------------------------------------------------\n");
+                $printer->setJustification(Printer::JUSTIFY_CENTER);
+                $printer->text("Términos y Condiciones\n");
+                $printer->setJustification(Printer::JUSTIFY_LEFT);
+                $printer->text("Este ticket es válido solo para la fecha impresa\n");
+                $printer->text("Grupo Cañalimeña no se responsabiliza por\n");
+                $printer->text("retrasos cancelaciones ni daños.\n");
+                $printer->text("Llegar 15 minutos antes de la salida del tour.\n");
+                $printer->setJustification(Printer::JUSTIFY_CENTER);
+                $printer->text("------------------------------------------------\n");
+                $printer->text("GRUPO CAÑALIMEÑA\n");
+                $printer->cut();
+            } finally {
+                $printer->close();
             }
+        }
 
-            // === GARAJE ===
-            if ($incluyeGaraje) {
-                $hash = strtoupper(substr(sha1("GARAJE$habitacion$fecha"), 0, 10));
+        // === GARAJE (una vez por habitación) ===
+        if (floatval($row['garaje']) > 0 && !in_array($id_hab, $impresosGaraje)) {
+            $impresosGaraje[] = $id_hab;
+
+            $diasGaraje = max(1, (strtotime($row['fecha_salida']) - strtotime($row['fecha_entrada'])) / 86400);
+            for ($d = 0; $d < $diasGaraje; $d++) {
+                $fechaGaraje = date('Y-m-d', strtotime("+$d days", strtotime($row['fecha_entrada'])));
+                $hash = strtoupper(substr(sha1("GARAJE$habitacion$fechaGaraje"), 0, 10));
 
                 $printer = new Printer(new WindowsPrintConnector("comandas"));
                 try {
@@ -1332,13 +1341,12 @@ function imprimirTicketsTourYGaraje($idreserva)
                     $printer->setEmphasis(false);
                     $printer->setJustification(Printer::JUSTIFY_LEFT);
                     $printer->text("Habitación:     $habitacion\n");
-                    $printer->text("Fecha:          $fecha\n");
+                    $printer->text("Fecha:          $fechaGaraje\n");
                     $printer->text("Código:         #$hash\n");
                     $printer->text("Horario:        18h00 - 09h00\n");
                     $printer->text("Un (1) vehículo por habitación\n");
                     $printer->text("------------------------------------------------\n");
                     $printer->text("Términos y Condiciones\n");
-                    $printer->setJustification(Printer::JUSTIFY_LEFT);
                     $printer->text("Solo se permite un vehículo por habitación.\n");
                     $printer->text("Pérdida del ticket implica recargo de $5.00.\n");
                     $printer->text("Parqueo habilitado de 18h00 a 09h00.\n");
@@ -1355,6 +1363,7 @@ function imprimirTicketsTourYGaraje($idreserva)
         }
     }
 }
+
 
 function imprimirTicketsTourHoy()
 {
