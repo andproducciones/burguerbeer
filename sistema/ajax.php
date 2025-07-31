@@ -808,20 +808,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 <option value="yahoo">yahoo</option>
                 <option value="hotmail">hotmail</option>
                 <option value="outlook">outlook</option>
+                <option value="live">live</option>
+                <option value="icloud">icloud</option>
                 <option value="otro">Otro</option>
             </select>
             <input type="text" name="correo_dominio_otro" id="correo_dominio_otro" placeholder="Dominio" style="display:none;flex:1;">
             <select name="correo_extension" id="correo_extension" onchange="mostrarInputOtro(\'correo_extension\')" required>
-                <option value=".com">.com</option>
+               <option value=".com">.com</option>
                 <option value=".es">.es</option>
                 <option value=".ec">.ec</option>
+                <option value=".net">.net</option>
+                <option value=".org">.org</option>
+                <option value=".edu">.edu</option>
+                <option value=".gov">.gov</option>
+                <option value=".co">.co</option>
                 <option value="otro">Otro</option>
+
             </select>
             <input type="text" name="correo_extension_otro" id="correo_extension_otro" placeholder=".xxx" style="display:none;flex:1;">
         </div>
 
         <label for="ciudad">Ciudad *</label>
-        <select name="ciudad" id="ciudad" onchange="mostrarInputOtro(\'ciudad\')" required>
+        <select name="ciudad" id="ciudad" onchange="mostrarInputOtro(\'ciudad\')" required style="width:100% !important;">
             <option value="">Seleccione ciudad</option>
             <option value="Quito">Quito</option>
             <option value="Guayaquil">Guayaquil</option>
@@ -5467,7 +5475,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 
     if ($_POST['action'] == 'filtroReservasPorFecha') {
-
+        include '../conexion.php';
 
         $desde = !empty($_POST['desde']) ? mysqli_real_escape_string($conection, $_POST['desde']) : '';
         $hasta = !empty($_POST['hasta']) ? mysqli_real_escape_string($conection, $_POST['hasta']) : '';
@@ -5475,7 +5483,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         $where = "1"; // siempre verdadero
 
-        // Filtro de fechas
         if (!empty($desde) && !empty($hasta)) {
             if ($desde === $hasta) {
                 $where .= " AND r.fecha_entrada = '$desde'";
@@ -5484,50 +5491,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
 
-        // Filtro de estado (solo si no es "todos")
         if (!empty($estado) && $estado !== 'todos') {
             $where .= " AND r.estado = '$estado'";
         }
 
         $query = mysqli_query($conection, "
-                SELECT 
-                    r.fecha_creacion,
-                    r.idreserva,
-                    CONCAT(c.nombre, ' ', c.p_apellido) AS cliente,
-                    r.fecha_entrada,
-                    r.fecha_salida,
-                    r.total,
-                    r.abono,
-                    r.estado,
-                    r.estado_pago,
-                    GROUP_CONCAT(h.numero ORDER BY h.numero SEPARATOR ', ') AS habitaciones,
-                    SUM(rd.adultos) AS adultos,
-                    SUM(rd.ninos) AS ninos,
-                    SUM(rd.incluye_desayuno) AS desayuno,
-                    SUM(rd.incluye_tour) AS tour,
-                    r.total - r.abono AS saldo
-                FROM reservas r
-                INNER JOIN clientes c ON r.id_cliente = c.usuario
-                INNER JOIN reservas_detalle rd ON rd.idreserva = r.idreserva
-                INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
-                WHERE $where
-                GROUP BY r.idreserva
-                ORDER BY r.fecha_entrada ASC
-                ");
+        SELECT 
+            r.fecha_creacion,
+            r.idreserva,
+            CONCAT(c.nombre, ' ', c.p_apellido) AS cliente,
+            r.fecha_entrada,
+            r.fecha_salida,
+            r.total,
+            IFNULL(p.abono, 0) AS abono,
+            r.estado,
+            r.estado_pago,
+            h.habitaciones,
+            d.adultos,
+            d.ninos,
+            d.desayuno,
+            d.tour,
+            r.total - IFNULL(p.abono, 0) AS saldo,
+            r.mail,
+            r.tipo_mail,
+            IF(d.garaje > 0.00, 'Sí', 'No') AS garaje
+        FROM reservas r
+        INNER JOIN clientes c ON r.id_cliente = c.usuario
+
+        LEFT JOIN (
+            SELECT idreserva, GROUP_CONCAT(h.numero ORDER BY h.numero SEPARATOR ', ') AS habitaciones
+            FROM reservas_detalle rd
+            INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+            GROUP BY idreserva
+        ) h ON r.idreserva = h.idreserva
+
+        LEFT JOIN (
+            SELECT idreserva, 
+                   SUM(adultos) AS adultos, 
+                   SUM(ninos) AS ninos,
+                   SUM(incluye_desayuno) AS desayuno, 
+                   SUM(incluye_tour) AS tour,
+                   SUM(garaje) AS garaje
+            FROM reservas_detalle
+            GROUP BY idreserva
+        ) d ON r.idreserva = d.idreserva
+
+        LEFT JOIN (
+            SELECT idreserva, SUM(monto) AS abono
+            FROM reservas_pagos
+            GROUP BY idreserva
+        ) p ON r.idreserva = p.idreserva
+
+        WHERE $where
+        ORDER BY r.fecha_entrada DESC
+    ");
 
         if ($query && mysqli_num_rows($query) > 0) {
             while ($data = mysqli_fetch_assoc($query)) {
                 ?>
 <tr>
-    <td><?= date('d-m-Y', strtotime($data["fecha_creacion"])) ?>
-    </td>
+    <td><?= $data["idreserva"]; ?></td>
     <td><?= htmlspecialchars($data["cliente"]) ?>
     </td>
     <td><?= htmlspecialchars($data["habitaciones"]) ?>
     </td>
-    <td><?= date('d-m-Y', strtotime($data["fecha_entrada"])) ?>
+    <td><?= date('d-m', strtotime($data["fecha_entrada"])) ?>
     </td>
-    <td><?= date('d-m-Y', strtotime($data["fecha_salida"])) ?>
+    <td><?= date('d-m', strtotime($data["fecha_salida"])) ?>
     </td>
     <td><?= intval($data["adultos"]) ?></td>
     <td><?= intval($data["ninos"]) ?></td>
@@ -5535,6 +5565,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     </td>
     <td><?= ($data["tour"] > 0) ? 'Sí' : 'No' ?>
     </td>
+    <td><?= $data["garaje"] ?></td>
     <td>$<?= number_format($data["total"], 2) ?>
     </td>
     <td>$<?= number_format($data["abono"], 2) ?>
@@ -5547,21 +5578,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <td><span
             class="estado <?= $data["estado_pago"] ?>"><?= ucfirst($data["estado_pago"]) ?></span>
     </td>
+    <td><?= htmlspecialchars($data["mail"]) ?>
+    </td>
+    <td><?= htmlspecialchars($data["tipo_mail"]) ?>
+    </td>
     <td align="center">
         <a class="btn" style="background: blue;"
             href="pdf/reservas/verReservaPDF.php?id=<?= $data['idreserva']; ?>"
-            target="_blank" title="Ver reserva PDF">
-            <i class="fas fa-file-pdf"></i>
-        </a>
+            target="_blank" title="Ver reserva PDF"><i class="fas fa-file-pdf"></i></a>
         <?php if ($data['estado'] == 'pendiente' || $data['estado'] == 'confirmada') { ?>
         <button class="btn btn_editar anadirForm"
             co="<?= $data["idreserva"]; ?>"
             ac="formEditarReserva" title="Editar reserva">
             <i class="fas fa-pen"></i>
         </button>
-        <button class="btn anadirForm" ac="formCancelarReserva"
+        <button class="btn anadirForm btn_cancelar" ac="formCancelarReserva"
             co="<?= $data["idreserva"]; ?>">
-            <i class="fa-solid fa-ban"></i>
+            <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+        </button>
+        <button class="btn btn_abono btn_ver"
+            data-id="<?= $data["idreserva"]; ?>"
+            data-cliente="<?= htmlspecialchars($data["cliente"]); ?>"
+            data-total="<?= number_format($data["total"], 2); ?>"
+            data-abono="<?= number_format($data["abono"], 2); ?>"
+            data-saldo="<?= number_format($data["saldo"], 2); ?>">
+            <i class="fas fa-dollar-sign"></i>
         </button>
         <?php } ?>
     </td>
@@ -5569,7 +5610,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 <?php
             }
         } else {
-            echo "<tr><td colspan='15' align='center'>No se encontraron reservas en ese rango o estado.</td></tr>";
+            echo "<tr><td colspan='18' align='center'>No se encontraron reservas en ese rango o estado.</td></tr>";
         }
 
         exit;

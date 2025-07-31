@@ -80,20 +80,23 @@ include '../conexion.php';
 		<table id="myTable">
 			<thead>
 				<tr>
-					<th>Fecha</th>
+					<th>ID</th>
 					<th>Cliente</th>
 					<th>Hab.</th>
 					<th>Entrada</th>
 					<th>Salida</th>
-					<th>A</th>
-					<th>N</th>
-					<th>D</th>
-					<th>T</th>
+					<th>Adultos</th>
+					<th>Niños</th>
+					<th>Desayuno</th>
+					<th>Tour</th>
+					<th>Garaje</th>
 					<th>Total</th>
 					<th>Abono</th>
 					<th>Saldo</th>
 					<th>Estado</th>
 					<th>Pago</th>
+					<th>Mail</th>
+					<th>Tipo Mail</th>
 					<th>Acciones</th>
 				</tr>
 			</thead>
@@ -115,7 +118,10 @@ $query = mysqli_query($conection, "
         d.ninos,
         d.desayuno,
         d.tour,
-        r.total - IFNULL(p.abono, 0) AS saldo
+        r.total - IFNULL(p.abono, 0) AS saldo,
+        r.mail,
+        r.tipo_mail,
+        IF(d.garaje > 0.00, 'Sí', 'No') AS garaje
     FROM reservas r
     INNER JOIN clientes c ON r.id_cliente = c.usuario
 
@@ -127,8 +133,12 @@ $query = mysqli_query($conection, "
     ) h ON r.idreserva = h.idreserva
 
     LEFT JOIN (
-        SELECT idreserva, SUM(adultos) AS adultos, SUM(ninos) AS ninos,
-               SUM(incluye_desayuno) AS desayuno, SUM(incluye_tour) AS tour
+        SELECT idreserva, 
+               SUM(adultos) AS adultos, 
+               SUM(ninos) AS ninos,
+               SUM(incluye_desayuno) AS desayuno, 
+               SUM(incluye_tour) AS tour,
+               SUM(garaje) AS garaje
         FROM reservas_detalle
         GROUP BY idreserva
     ) d ON r.idreserva = d.idreserva
@@ -146,19 +156,20 @@ $query = mysqli_query($conection, "
 
 
 
+
 if ($query && mysqli_num_rows($query) > 0) {
     while ($data = mysqli_fetch_assoc($query)) {
         ?>
 				<tr>
-					<td><?= date('d-m-Y', strtotime($data["fecha_creacion"])) ?>
+					<td><?= $data["idreserva"]; ?>
 					</td>
 					<td><?= htmlspecialchars($data["cliente"]) ?>
 					</td>
 					<td><?= htmlspecialchars($data["habitaciones"]) ?>
 					</td>
-					<td><?= date('d-m-Y', strtotime($data["fecha_entrada"])) ?>
+					<td><?= date('d-m', strtotime($data["fecha_entrada"])) ?>
 					</td>
-					<td><?= date('d-m-Y', strtotime($data["fecha_salida"])) ?>
+					<td><?= date('d-m', strtotime($data["fecha_salida"])) ?>
 					</td>
 					<td><?= intval($data["adultos"]) ?>
 					</td>
@@ -168,18 +179,28 @@ if ($query && mysqli_num_rows($query) > 0) {
 					</td>
 					<td><?= ($data["tour"] > 0) ? 'Sí' : 'No' ?>
 					</td>
+					<td><?= ($data["garaje"] > 0) ? 'Sí' : 'No' ?>
+					</td>
 					<td>$<?= number_format($data["total"], 2) ?>
 					</td>
 					<td>$<?= number_format($data["abono"], 2) ?>
 					</td>
+
 					<td>$<?= number_format($data["saldo"], 2) ?>
 					</td>
+
+
 					<td><span
 							class="estado <?= $data["estado"] ?>"><?= ucfirst($data["estado"]) ?></span>
 					</td>
 					<td><span
 							class="estado <?= $data["estado_pago"] ?>"><?= ucfirst($data["estado_pago"]) ?></span>
 					</td>
+					<td><?= htmlspecialchars($data["mail"]) ?>
+					</td>
+					<td><?= htmlspecialchars($data["tipo_mail"]) ?>
+					</td>
+
 					<td align="center">
 						<a class="btn" style="background: blue;"
 							href="pdf/reservas/verReservaPDF.php?id=<?= $data['idreserva']; ?>"
@@ -257,10 +278,51 @@ if ($query && mysqli_num_rows($query) > 0) {
 
 				tabla.DataTable({
 					pageLength: 10,
+					dom: 'Bfrtip',
+					buttons: [{
+							extend: 'excelHtml5',
+							title: function() {
+								const desde = document.getElementById("fecha_inicio")
+									.value;
+								const hasta = document.getElementById("fecha_fin").value;
+								if (desde && hasta) {
+									return `Reservas del ${desde} al ${hasta}`;
+								}
+								return "Reservas";
+							},
+							exportOptions: {
+								columns: ':not(:last-child)'
+							}
+						},
+						{
+							extend: 'pdfHtml5',
+							title: function() {
+								const desde = document.getElementById("fecha_inicio")
+									.value;
+								const hasta = document.getElementById("fecha_fin").value;
+								if (desde && hasta) {
+									return `Reservas del ${desde} al ${hasta}`;
+								}
+								return "Reservas";
+							},
+							orientation: 'landscape',
+							pageSize: 'A4',
+							exportOptions: {
+								columns: ':not(:last-child)'
+							},
+							customize: function(doc) {
+								doc.defaultStyle.fontSize = 8;
+								doc.styles.tableHeader.fontSize = 10;
+							}
+						}
+					],
 					language: {
-						url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+						url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
 					}
 				});
+
+
+
 				return;
 			}
 
@@ -316,10 +378,52 @@ if ($query && mysqli_num_rows($query) > 0) {
 					if (hayResultados) {
 						tabla.DataTable({
 							pageLength: 10,
+							dom: 'Bfrtip',
+							buttons: [{
+									extend: 'excelHtml5',
+									title: function() {
+										const desde = document.getElementById(
+											"fecha_inicio").value;
+										const hasta = document.getElementById(
+											"fecha_fin").value;
+										if (desde && hasta) {
+											return `Reservas del ${desde} al ${hasta}`;
+										}
+										return "Reservas";
+									},
+									exportOptions: {
+										columns: ':not(:last-child)' // Excluir acciones
+									}
+								},
+								{
+									extend: 'pdfHtml5',
+									title: function() {
+										const desde = document.getElementById(
+											"fecha_inicio").value;
+										const hasta = document.getElementById(
+											"fecha_fin").value;
+										if (desde && hasta) {
+											return `Reservas del ${desde} al ${hasta}`;
+										}
+										return "Reservas";
+									},
+									orientation: 'landscape',
+									pageSize: 'A4',
+									exportOptions: {
+										columns: ':not(:last-child)'
+									},
+									customize: function(doc) {
+										doc.defaultStyle.fontSize = 8;
+										doc.styles.tableHeader.fontSize = 10;
+									}
+								}
+							],
 							language: {
-								url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+								url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
 							}
 						});
+
+
 					}
 				})
 				.catch(err => {
@@ -335,15 +439,51 @@ if ($query && mysqli_num_rows($query) > 0) {
 			document.getElementById("estado_reserva").value = "todos";
 
 			if ($.fn.DataTable.isDataTable("#myTable")) {
-				$('#myTable').DataTable().clear().destroy();
+				tabla.DataTable().clear().destroy();
 			}
 
 			tbody.innerHTML = contenidoOriginal;
 
-			$('#myTable').DataTable({
+			tabla.DataTable({
 				pageLength: 10,
+				dom: 'Bfrtip',
+				buttons: [{
+						extend: 'excelHtml5',
+						title: function() {
+							const desde = document.getElementById("fecha_inicio").value;
+							const hasta = document.getElementById("fecha_fin").value;
+							if (desde && hasta) {
+								return `Reservas del ${desde} al ${hasta}`;
+							}
+							return "Reservas";
+						},
+						exportOptions: {
+							columns: ':not(:last-child)'
+						}
+					},
+					{
+						extend: 'pdfHtml5',
+						title: function() {
+							const desde = document.getElementById("fecha_inicio").value;
+							const hasta = document.getElementById("fecha_fin").value;
+							if (desde && hasta) {
+								return `Reservas del ${desde} al ${hasta}`;
+							}
+							return "Reservas";
+						},
+						orientation: 'landscape',
+						pageSize: 'A4',
+						exportOptions: {
+							columns: ':not(:last-child)'
+						},
+						customize: function(doc) {
+							doc.defaultStyle.fontSize = 8;
+							doc.styles.tableHeader.fontSize = 10;
+						}
+					}
+				],
 				language: {
-					url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+					url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
 				}
 			});
 

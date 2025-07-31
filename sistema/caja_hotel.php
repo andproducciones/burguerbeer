@@ -187,26 +187,34 @@ $desayunosQuery = mysqli_query($conection, "
 
 // TICKETS DE TOUR HOY
 $toursQuery = mysqli_query($conection, "
-  SELECT h.numero AS habitacion, SUM(rd.adultos + rd.ninos) AS total_personas
+  SELECT 
+    h.numero AS habitacion, 
+    rd.lugar_tour,
+    SUM(rd.adultos + rd.ninos) AS total_personas
   FROM reservas_detalle rd
   INNER JOIN reservas r ON rd.idreserva = r.idreserva
   INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
   WHERE rd.incluye_tour = 1
-    AND r.estado = 'checkin'
-    AND CURDATE() BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
-  GROUP BY h.numero
+    AND (
+      (r.estado = 'checkin' AND CURDATE() BETWEEN r.fecha_entrada AND r.fecha_salida)
+      OR (r.estado = 'confirmada' AND r.fecha_entrada = CURDATE())
+    )
+  GROUP BY h.numero, rd.lugar_tour
 ");
 
-// GARAGE HOY
+
 $garajeQuery = mysqli_query($conection, "
   SELECT h.numero AS habitacion, rd.garaje
   FROM reservas_detalle rd
   INNER JOIN reservas r ON rd.idreserva = r.idreserva
   INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
   WHERE rd.garaje > 0
-    AND r.estado = 'checkin'
-    AND CURDATE() BETWEEN r.fecha_entrada AND r.fecha_salida
+    AND (
+        (r.estado = 'checkin' AND CURDATE() >= r.fecha_entrada AND CURDATE() < r.fecha_salida)
+        OR (r.estado = 'confirmada' AND r.fecha_entrada = CURDATE())
+    )
 ");
+
 
 
 
@@ -269,7 +277,7 @@ verificarSesionPOS();?>
       font-family: sans-serif;
       background: #f0f2f5;
       overflow: hidden;
-      font-size: 13px;
+      font-size: 12px;
     }
 
     #calendar {
@@ -290,7 +298,7 @@ verificarSesionPOS();?>
 
     /* Bloque de habitaciones (70%) */
     .panel-habitaciones {
-      flex: 6;
+      flex: 5;
       display: flex;
       flex-direction: column;
       overflow-y: auto;
@@ -301,7 +309,7 @@ verificarSesionPOS();?>
 
     /* Bloque lateral derecho (30%) */
     .panel-secundario {
-      flex: 4;
+      flex: 5;
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -645,6 +653,10 @@ verificarSesionPOS();?>
       <div class="toolbar">
         <h2>Habitaciones</h2>
         <div style="display:flex; gap:10px;">
+          <button class="btn-refresh" onclick="location.href='index.php'">
+            <i class="fas fa-home"></i> Home
+          </button>
+
           <button class="btn-refresh" onclick="location.reload()">🔄 Actualizar</button>
           <button class="btn-refresh" style="background:#28a745;" onclick="anadirForm('formReserva')">➕ Añadir
             Reserva</button>
@@ -808,11 +820,28 @@ while ($hab = mysqli_fetch_assoc($query)):
         <br>
         <?php if ($toursQuery && mysqli_num_rows($toursQuery) > 0): ?>
         <ul style="margin-left:20px;">
-          <?php while ($row = mysqli_fetch_assoc($toursQuery)): ?>
-          <li><strong>Hab.
-              <?= $row['habitacion'] ?>:</strong>
-            <?= $row['total_personas'] ?>
-            persona(s)
+          <?php while ($row = mysqli_fetch_assoc($toursQuery)):
+              $habitacion = $row['habitacion'];
+              $personas = $row['total_personas'];
+              $ids_lugares = explode(',', $row['lugar_tour']);
+              $nombres_lugares = [];
+
+              foreach ($ids_lugares as $id_lugar) {
+                  $id_lugar = intval(trim($id_lugar));
+                  if ($id_lugar > 0) {
+                      $res = mysqli_query($conection, "SELECT nombre FROM lugares_tour WHERE id = $id_lugar LIMIT 1");
+                      if ($res && mysqli_num_rows($res)) {
+                          $nombres_lugares[] = mysqli_fetch_assoc($res)['nombre'];
+                      }
+                  }
+              }
+
+              $lugaresTexto = count($nombres_lugares) > 0 ? implode(', ', $nombres_lugares) : 'No definido';
+              ?>
+          <li>
+            <strong>Hab. <?= $habitacion ?>:</strong>
+            <?= $personas ?> persona(s) –
+            <?= $lugaresTexto ?>
           </li>
           <?php endwhile; ?>
         </ul>
@@ -821,6 +850,7 @@ while ($hab = mysqli_fetch_assoc($query)):
         <?php endif; ?>
         <div id="resultado_tours_fecha"></div>
       </div>
+
 
       <!-- 🚗 Garaje Programado -->
       <div id="bloqueGaraje" class="bloque-servicio">
@@ -856,7 +886,7 @@ while ($hab = mysqli_fetch_assoc($query)):
           id="tablaFuturas">
           <thead style="background:#eee;">
             <tr>
-
+              <th>ID</th>
               <th>Cliente</th>
               <th>IN</th>
               <th>OUT</th>
@@ -868,13 +898,17 @@ while ($hab = mysqli_fetch_assoc($query)):
           <tbody>
             <?php
 
-            $reservas_array = [];
+                      $reservas_array = [];
 while ($r = mysqli_fetch_assoc($reservasProximas)) {
     $reservas_array[] = $r;
 }
 ?>
             <?php foreach ($reservas_array as $r): ?>
             <tr>
+
+              <td>
+                <?= htmlspecialchars($r['idreserva']) ?>
+              </td>
               <td>
                 <?= htmlspecialchars($r['cliente']) ?>
               </td>
@@ -887,14 +921,15 @@ while ($r = mysqli_fetch_assoc($reservasProximas)) {
               </td>
               <td>
                 <button class="btn btn_editar"
-                  onclick="window.open('pdf/reservas/verReservaPDF.php?id=<?= $r['idreserva'] ?>', '_blank')">Ver</button>
+                  onclick="window.open('pdf/reservas/verReservaPDF.php?id=<?= $r['idreserva'] ?>', '_blank')"><i
+                    class="fas fa-eye"></i></button>
                 <button class="btn btn_abono btn_ver"
                   data-id="<?= $r["idreserva"]; ?>"
                   data-cliente="<?= htmlspecialchars($r["cliente"]); ?>"
                   data-total="<?= number_format($r["total"], 2); ?>"
                   data-abono="<?= number_format($r["abono"], 2); ?>"
                   data-saldo="<?= number_format($r["saldo"], 2); ?>">
-                  Abonar
+                  <i class="fas fa-file-invoice-dollar"></i>
                 </button>
               </td>
             </tr>

@@ -975,13 +975,12 @@ function enviarComprobanteReserva($idreserva)
     require_once __DIR__ . '/email.php';
     require_once __DIR__ . '/../pdf/vendor/autoload.php';
 
-
     $id = intval($idreserva);
     if ($id <= 0) {
         return "ID de reserva inválido";
     }
 
-    // CONSULTA
+    // CONSULTA PRINCIPAL
     $query = mysqli_query($conection, "
         SELECT r.*, CONCAT(c.nombre, ' ', c.p_apellido) AS cliente, c.usuario, c.telefono, c.correo_c
         FROM reservas r
@@ -991,17 +990,22 @@ function enviarComprobanteReserva($idreserva)
     if (!$query || mysqli_num_rows($query) == 0) {
         return "Reserva no encontrada";
     }
-    $reserva = mysqli_fetch_assoc($query);
 
-    // VALIDAR ESTADO
-    $estadoValido = in_array(strtolower($reserva['estado']), ['confirmada', 'checkin', 'checkout']);
-    if (!$estadoValido) {
+    $reserva = mysqli_fetch_assoc($query);
+    $estado = strtolower($reserva['estado']);
+
+    // 🔴 NO ENVIAR SI ESTÁ EN CHECKOUT U OTROS
+    if (!in_array($estado, ['confirmada', 'checkin'])) {
         return true;
     }
 
-    // GENERAR PDF
+    // ✅ DEFINIR TIPO DE MAIL
+    $tipo_mail = ($estado === 'checkin') ? 'estadia' : 'reserva';
+    $titulo = ($estado === 'checkin') ? 'Comprobante de estadía' : 'Comprobante de reserva';
+
+    // === GENERAR PDF ===
     $_GET['modoCorreo'] = true;
-    $_GET['id'] = $id; // ← Esto es lo que necesitas
+    $_GET['id'] = $id;
 
     ob_start();
     include __DIR__ . '/../pdf/reservas/verReservaPDF.php';
@@ -1018,10 +1022,9 @@ function enviarComprobanteReserva($idreserva)
     $archivo_temp = __DIR__ . "/comprobante_temp_{$id}.pdf";
     file_put_contents($archivo_temp, $dompdf->output());
 
-    // ENVIAR CORREO
+    // === ENVIAR CORREO ===
     $nombreCliente = $reserva['cliente'];
     $correoCliente = $reserva['correo_c'];
-    $titulo = in_array(strtolower($reserva['estado']), ['checkin', 'checkout', 'finalizada']) ? 'Comprobante de estadía' : 'Comprobante de reserva';
 
     $logoCID = 'logoGrupo';
     $plantillaHTML = file_get_contents(__DIR__ . '/plantillas/plantilla_comprobante.php');
@@ -1040,12 +1043,28 @@ function enviarComprobanteReserva($idreserva)
     unlink($archivo_temp);
 
     if ($enviado) {
-        return true;
+        // ✅ ACTUALIZAR ENVÍO EXITOSO
+        mysqli_query($conection, "
+            UPDATE reservas 
+            SET mail = NOW(), tipo_mail = '$tipo_mail' 
+            WHERE idreserva = $id
+        ");
+        //return true;
     } else {
         $error = $GLOBALS['lastPHPMailerError'] ?? 'Sin detalle técnico';
-        return "Error al enviar correo a $correoCliente – Detalle: $error";
+
+        // ❌ REGISTRAR INTENTO FALLIDO
+        mysqli_query($conection, "
+            UPDATE reservas 
+            SET mail = NOW(), tipo_mail = 'fallo - $error' 
+            WHERE idreserva = $id
+        ");
+
+        //return "Error al enviar correo a $correoCliente – Detalle: $error";
     }
 }
+
+
 function imprimirComprobanteEstadia($idreserva)
 {
     include "../conexion.php";
