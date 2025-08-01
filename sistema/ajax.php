@@ -4794,25 +4794,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 
 
-    <label><input type="checkbox" class="chk_garaje" name="chk_garaje"
-            onchange="togglePrecioCheckin(this, 'garaje_valor')">
-        Garaje</label>
+    <label><input type="checkbox" class="chk_garaje" name="chk_garaje" id="chk_garaje"
+            onchange="togglePrecioCheckin(this, 'garaje_valor')"> Garaje</label>
     <select name="garaje_valor" id="garaje_valor" class="garaje_valor" style="width: 100% !important;" disabled
         onchange="recalcularTotalCheckin();">
         <option value="">Seleccione</option>
         <?php for ($i = 2; $i <= 6; $i += 0.5): ?>
-        <option value="<?= number_format($i, 2) ?>">
+        <option value="<?= number_format($i, 2) ?>">$
             <?= number_format($i, 2) ?>
         </option>
         <?php endfor; ?>
     </select>
 
-
-
     <div class="form_group">
         <label for="total">Total ($):</label>
         <input type="number" step="0.01" name="total" id="total" readonly>
     </div>
+
 
     <div class="form_group">
         <label for="metodo_pago">Método de Pago:</label>
@@ -4839,10 +4837,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         const select = document.getElementById(id);
         if (!select) return;
 
-        select.disabled = !checkbox.checked;
-        if (!checkbox.checked) select.value = '';
+        if (checkbox.checked) {
+            select.disabled = false;
+
+            // Si no hay valor aún, selecciona el primero válido
+            if (!select.value && select.options.length > 1) {
+                select.selectedIndex = 1;
+                console.log('Seleccionando automáticamente:', select.value);
+            }
+        } else {
+            select.value = '';
+            select.disabled = true;
+        }
+
         recalcularTotalCheckin();
     }
+
 
     function recalcularTotalCheckin() {
         const adultos = parseInt(document.querySelector('input[name="adultos"]:checked')?.value || 0);
@@ -4853,25 +4863,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         const tarifaAdulto = parseFloat(tarifaSelect?.selectedOptions[0]?.dataset.precio || 0);
         const tarifaNino = tarifaAdulto * 0.75;
 
-        const tarifaNinoInput = document.getElementById('tarifa_nino');
-        if (tarifaNinoInput) tarifaNinoInput.value = tarifaNino.toFixed(2);
-
         const precioDesayuno = parseFloat(document.getElementById('precio_desayuno')?.value || 0);
         const precioTour = parseFloat(document.getElementById('precio_tour')?.value || 0);
         const chkDesayuno = document.getElementById('chk_desayuno')?.checked;
         const chkTour = document.getElementById('chk_tour')?.checked;
         const chkGaraje = document.getElementById('chk_garaje')?.checked;
-        const garajeValor = parseFloat(document.getElementById('garaje_valor')?.value || 0);
+
+        // 👇 Verificamos y parseamos valor de garaje
+
+
+        let garajeValor = 0;
+        const garajeSelect = document.getElementById('garaje_valor');
+        //console.log('garajeSelect:', garajeSelect);
+        //console.log('garajeSelect.value:', garajeSelect?.value);
+
+
+        if (chkGaraje && garajeSelect && !garajeSelect.disabled) {
+            const raw = String(garajeSelect.value || '0').replace(',', '.');
+            garajeValor = isNaN(parseFloat(raw)) ? 0 : parseFloat(raw);
+            console.log('garajeValor:', garajeValor); // ← Aquí estaba el error
+        }
+
+
+
 
         const totalAdultos = adultos * (tarifaAdulto + (chkDesayuno ? precioDesayuno : 0) + (chkTour ? precioTour :
             0)) * noches;
         const totalNinos = ninos * (tarifaNino + (chkDesayuno ? precioDesayuno : 0) + (chkTour ? precioTour : 0)) *
             noches;
-        const totalGaraje = chkGaraje ? garajeValor * noches : 0;
+        const totalGaraje = garajeValor * noches;
+
         const total = totalAdultos + totalNinos + totalGaraje;
 
-        document.getElementById('total').value = total.toFixed(2);
+
+        const inputTotal = document.getElementById('total');
+        if (inputTotal) {
+            inputTotal.value = total.toFixed(2);
+        }
+
+        // Opcional para depurar
+        console.log(`TotalAdultos: ${totalAdultos}, TotalNiños: ${totalNinos}, Garaje: ${totalGaraje}`);
     }
+
 
     function sendDataCheckin() {
         const total = parseFloat(document.getElementById('total')?.value || 0);

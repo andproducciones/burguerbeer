@@ -17,128 +17,146 @@ if ($_SESSION['rol'] != 1 && $_SESSION['rol'] != 2) {
 $hoy = date('Y-m-d');
 
 $query = mysqli_query($conection, "
-    SELECT 
-        h.idhabitacion, 
-        h.numero, 
-        h.estado,
-        
-        -- Reserva confirmada para hoy
-        (SELECT r.idreserva 
-         FROM reservas r
-         INNER JOIN reservas_detalle rd ON r.idreserva = rd.idreserva
-         WHERE r.fecha_entrada = '$hoy' AND r.estado = 'confirmada' 
-           AND rd.id_habitacion = h.idhabitacion 
-         LIMIT 1) AS reservada_hoy,
+WITH reservas_activas AS (
+  SELECT 
+    r.idreserva,
+    r.estado,
+    r.total,
+    rd.id_habitacion,
+    r.id_cliente,
+    ROW_NUMBER() OVER (
+      PARTITION BY rd.id_habitacion
+      ORDER BY 
+        CASE r.estado 
+          WHEN 'checkin' THEN 1 
+          WHEN 'confirmada' THEN 2 
+          ELSE 3 
+        END,
+        r.fecha_entrada ASC
+    ) AS prioridad
+  FROM reservas r
+  INNER JOIN reservas_detalle rd ON r.idreserva = rd.idreserva
+  WHERE CURDATE() BETWEEN r.fecha_entrada AND r.fecha_salida
+    AND r.estado IN ('checkin', 'confirmada')
+)
 
-        -- Ocupada actualmente (checkin activo y salida no vencida)
-        (SELECT r2.idreserva 
-         FROM reservas r2
-         INNER JOIN reservas_detalle rd2 ON r2.idreserva = rd2.idreserva
-         WHERE r2.fecha_entrada <= '$hoy' 
-           AND rd2.id_habitacion = h.idhabitacion 
-           AND r2.estado = 'checkin'
-           AND (
-               r2.fecha_salida > '$hoy' OR 
-               (r2.fecha_salida = '$hoy' AND CURTIME() < '12:00:00')
-           )
-         LIMIT 1) AS ocupada,
+SELECT 
+  h.idhabitacion, 
+  h.numero, 
+  h.estado AS estado_habitacion,
 
-        -- Salida programada para hoy
-        (SELECT r3.idreserva 
-         FROM reservas r3
-         INNER JOIN reservas_detalle rd3 ON r3.idreserva = rd3.idreserva
-         WHERE r3.fecha_salida = '$hoy' AND rd3.id_habitacion = h.idhabitacion 
-           AND r3.estado = 'checkin' 
-         LIMIT 1) AS salida_hoy,
+  ra.idreserva AS reserva_activa,
+  ra.estado AS estado_reserva,
+  ra.total AS total_salida,
 
-        -- ID de la reserva activa para esta habitación
-        (SELECT r.idreserva
-         FROM reservas r
-         INNER JOIN reservas_detalle rd ON r.idreserva = rd.idreserva
-         WHERE rd.id_habitacion = h.idhabitacion 
-           AND r.estado IN ('confirmada', 'checkin')
-           AND CURDATE() BETWEEN r.fecha_entrada AND r.fecha_salida
-         ORDER BY r.fecha_salida ASC
-         LIMIT 1) AS reserva_activa,
+  -- Abonos de la reserva activa
+  IFNULL((
+    SELECT SUM(p.monto)
+    FROM reservas_pagos p
+    WHERE p.idreserva = ra.idreserva
+  ), 0) AS abono_salida,
 
-        -- Total de la reserva activa
-        (SELECT r.total
-         FROM reservas r
-         WHERE r.idreserva = (
-            SELECT r2.idreserva
-            FROM reservas r2
-            INNER JOIN reservas_detalle rd2 ON r2.idreserva = rd2.idreserva
-            WHERE rd2.id_habitacion = h.idhabitacion
-              AND r2.estado IN ('confirmada', 'checkin')
-              AND CURDATE() BETWEEN r2.fecha_entrada AND r2.fecha_salida
-            ORDER BY r2.fecha_salida ASC
-            LIMIT 1
-         )) AS total_salida,
+  -- Reserva confirmada para hoy (para ícono 🔴 y botón check-in)
+  (
+    SELECT r.idreserva 
+    FROM reservas r
+    INNER JOIN reservas_detalle rd ON r.idreserva = rd.idreserva
+    WHERE r.fecha_entrada = CURDATE() 
+      AND r.estado = 'confirmada' 
+      AND rd.id_habitacion = h.idhabitacion 
+    LIMIT 1
+  ) AS reservada_hoy,
 
-        -- Abonos de la reserva activa
-        (SELECT IFNULL(SUM(p.monto), 0)
-         FROM reservas_pagos p
-         WHERE p.idreserva = (
-            SELECT r2.idreserva
-            FROM reservas r2
-            INNER JOIN reservas_detalle rd2 ON r2.idreserva = rd2.idreserva
-            WHERE rd2.id_habitacion = h.idhabitacion
-              AND r2.estado IN ('confirmada', 'checkin')
-              AND CURDATE() BETWEEN r2.fecha_entrada AND r2.fecha_salida
-            ORDER BY r2.fecha_salida ASC
-            LIMIT 1
-         )) AS abono_salida,
+  -- Ocupada actualmente (checkin activo y salida no vencida)
+  (
+    SELECT r.idreserva 
+    FROM reservas r
+    INNER JOIN reservas_detalle rd ON r.idreserva = rd.idreserva
+    WHERE r.estado = 'checkin'
+      AND rd.id_habitacion = h.idhabitacion
+      AND r.fecha_entrada <= CURDATE()
+      AND (
+        r.fecha_salida > CURDATE() OR 
+        (r.fecha_salida = CURDATE() AND CURTIME() < '12:00:00')
+      )
+    LIMIT 1
+  ) AS ocupada,
 
-        -- ¿Tiene abono registrado hoy?
-        (SELECT COUNT(*) 
-         FROM reservas_pagos p
-         INNER JOIN reservas r ON r.idreserva = p.idreserva
-         INNER JOIN reservas_detalle rd ON r.idreserva = rd.idreserva
-         WHERE r.fecha_entrada = '$hoy' AND r.estado = 'confirmada'
-           AND rd.id_habitacion = h.idhabitacion
-         LIMIT 1) AS abono_registrado,
+  -- Salida programada hoy
+  (
+    SELECT r.idreserva
+    FROM reservas r
+    INNER JOIN reservas_detalle rd ON r.idreserva = rd.idreserva
+    WHERE r.estado = 'checkin'
+      AND r.fecha_salida = CURDATE()
+      AND rd.id_habitacion = h.idhabitacion
+    LIMIT 1
+  ) AS salida_hoy,
 
-        -- ¿Incluye desayuno?
-        (SELECT COUNT(*) 
-         FROM reservas_detalle rd
-         INNER JOIN reservas r ON r.idreserva = rd.idreserva
-         WHERE r.fecha_entrada = '$hoy' 
-           AND rd.id_habitacion = h.idhabitacion 
-           AND rd.incluye_desayuno = 1
-         LIMIT 1) AS incluye_desayuno,
+  -- ¿Tiene abono registrado hoy?
+  (
+    SELECT COUNT(*) 
+    FROM reservas_pagos p
+    INNER JOIN reservas r ON p.idreserva = r.idreserva
+    INNER JOIN reservas_detalle rd ON r.idreserva = rd.idreserva
+    WHERE r.fecha_entrada = CURDATE()
+      AND r.estado = 'confirmada'
+      AND rd.id_habitacion = h.idhabitacion
+    LIMIT 1
+  ) AS abono_registrado,
 
-        -- ¿Incluye tour?
-        (SELECT COUNT(*) 
-         FROM reservas_detalle rd
-         INNER JOIN reservas r ON r.idreserva = rd.idreserva
-         WHERE r.fecha_entrada = '$hoy' 
-           AND rd.id_habitacion = h.idhabitacion 
-           AND rd.incluye_tour = 1
-         LIMIT 1) AS incluye_tour,
+  -- ¿Incluye desayuno?
+  (
+    SELECT COUNT(*) 
+    FROM reservas_detalle rd
+    INNER JOIN reservas r ON r.idreserva = rd.idreserva
+    WHERE r.fecha_entrada = CURDATE()
+      AND rd.id_habitacion = h.idhabitacion 
+      AND rd.incluye_desayuno = 1
+    LIMIT 1
+  ) AS incluye_desayuno,
 
-        -- ¿Incluye limpieza especial?
-        (SELECT COUNT(*) 
-         FROM reservas_detalle rd
-         INNER JOIN reservas r ON r.idreserva = rd.idreserva
-         WHERE r.fecha_entrada = '$hoy' 
-           AND rd.id_habitacion = h.idhabitacion 
-         LIMIT 1) AS incluye_limpieza,
+  -- ¿Incluye tour?
+  (
+    SELECT COUNT(*) 
+    FROM reservas_detalle rd
+    INNER JOIN reservas r ON r.idreserva = rd.idreserva
+    WHERE r.fecha_entrada = CURDATE()
+      AND rd.id_habitacion = h.idhabitacion 
+      AND rd.incluye_tour = 1
+    LIMIT 1
+  ) AS incluye_tour,
 
-        -- Cliente actual (confirmada o checkin)
-        (SELECT CONCAT(c.nombre, ' ', c.p_apellido)
-        FROM reservas r
-        INNER JOIN reservas_detalle rd ON r.idreserva = rd.idreserva
-        INNER JOIN clientes c ON c.usuario = r.id_cliente
-        WHERE r.estado IN ('confirmada', 'checkin')
-          AND CURDATE() BETWEEN r.fecha_entrada AND r.fecha_salida
-          AND rd.id_habitacion = h.idhabitacion
-        ORDER BY r.estado DESC, r.fecha_entrada ASC
-        LIMIT 1) AS cliente_actual
+  -- ¿Incluye limpieza?
+  (
+    SELECT COUNT(*) 
+    FROM reservas_detalle rd
+    INNER JOIN reservas r ON r.idreserva = rd.idreserva
+    WHERE r.fecha_entrada = CURDATE()
+      AND rd.id_habitacion = h.idhabitacion 
+    LIMIT 1
+  ) AS incluye_limpieza,
 
-    FROM habitaciones h
-    WHERE h.habilitada = 1 
-    ORDER BY CAST(h.numero AS UNSIGNED) ASC
+  -- Cliente actual
+  (
+    SELECT CONCAT(c.nombre, ' ', c.p_apellido)
+    FROM reservas r
+    INNER JOIN reservas_detalle rd ON r.idreserva = rd.idreserva
+    INNER JOIN clientes c ON c.usuario = r.id_cliente
+    WHERE r.estado IN ('confirmada', 'checkin')
+      AND CURDATE() BETWEEN r.fecha_entrada AND r.fecha_salida
+      AND rd.id_habitacion = h.idhabitacion
+    ORDER BY r.estado DESC, r.fecha_entrada ASC
+    LIMIT 1
+  ) AS cliente_actual
+
+FROM habitaciones h
+LEFT JOIN reservas_activas ra ON ra.id_habitacion = h.idhabitacion AND ra.prioridad = 1
+WHERE h.habilitada = 1
+ORDER BY CAST(h.numero AS UNSIGNED)
 ");
+
+
 
 
 $reservasProximas = mysqli_query($conection, "
@@ -148,16 +166,8 @@ SELECT
     r.fecha_salida, 
     r.estado,
     r.total,
-    IFNULL((
-        SELECT SUM(p.monto)
-        FROM reservas_pagos p
-        WHERE p.idreserva = r.idreserva
-    ), 0) AS abono,
-    (r.total - IFNULL((
-        SELECT SUM(p.monto)
-        FROM reservas_pagos p
-        WHERE p.idreserva = r.idreserva
-    ), 0)) AS saldo,
+    IFNULL(SUM(p.monto), 0) AS abono,
+    (r.total - IFNULL(SUM(p.monto), 0)) AS saldo,
     CONCAT(c.nombre, ' ', c.p_apellido) AS cliente,
     (
         SELECT GROUP_CONCAT(DISTINCT h.numero ORDER BY h.numero SEPARATOR ', ')
@@ -167,25 +177,29 @@ SELECT
     ) AS habitaciones
 FROM reservas r
 INNER JOIN clientes c ON c.usuario = r.id_cliente
+LEFT JOIN reservas_pagos p ON r.idreserva = p.idreserva
 WHERE r.fecha_entrada >= CURDATE()
   AND r.estado IN ('pendiente','confirmada')
+GROUP BY r.idreserva
 ORDER BY r.fecha_entrada ASC
 ");
 
+
 $desayunosQuery = mysqli_query($conection, "
-    SELECT 
-        h.numero AS habitacion,
-        SUM(rd.adultos + rd.ninos) AS total_desayunos
-    FROM reservas_detalle rd
-    INNER JOIN reservas r ON rd.idreserva = r.idreserva
-    INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
-    WHERE 
-        rd.incluye_desayuno = 1
-        AND r.estado = 'checkin'
-        AND CURDATE() BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
-    GROUP BY h.numero
-    ORDER BY h.numero
+SELECT 
+    h.numero AS habitacion,
+    SUM(rd.adultos + rd.ninos) AS total_desayunos
+FROM reservas_detalle rd
+INNER JOIN reservas r ON rd.idreserva = r.idreserva
+INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+WHERE 
+    rd.incluye_desayuno = 1
+    AND r.estado = 'checkin'
+    AND CURDATE() BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
+GROUP BY h.numero
+ORDER BY h.numero
 ");
+
 
 // TICKETS DE TOUR HOY
 $toursQuery = mysqli_query($conection, "
@@ -702,58 +716,67 @@ while ($hab = mysqli_fetch_assoc($query)):
     $faltante = 0;
     $reserva_id = null;
 
-    if ($hab['salida_hoy']) {
-        $estado = 'salida';
-        $colorClass = 'naranja';
-        $reserva_id = $hab['salida_hoy'];
-        $total = floatval($hab['total_salida']);
-        $abono = floatval($hab['abono_salida']);
-        $faltante = $total - $abono;
-        if ($faltante > 0.01) {
-            $mostrarBotonFaltante = true;
-        }
-        $boton = '
-        <button class="btn-habitacion" onclick="confirmarCheckout(' . $reserva_id . ', ' . $total . ', ' . $abono . ')">Check-Out</button>
-        <button class="btn-habitacion" style="margin-top: 5px;" onclick="window.open(\'pdf/reservas/verReservaPDF.php?id=' . $reserva_id . '\', \'_blank\')">🧾 Ver</button>
-        <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirComprobanteEstadia((' . $reserva_id . ')">🖨️ Contrato</button>
-        <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirComprobanteEstadiaCLiente(' . $reserva_id . ')">🖨️ Nota de Venta</button>
-        <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirTicketsTourYGaraje(' . $reserva_id . ')">🖨️ Tours o Garaje</button>';
-    } elseif ($hab['ocupada']) {
-        $estado = 'ocupada';
-        $colorClass = 'rojo';
-        $reserva_id = $hab['ocupada'];
-        $total = floatval($hab['total_salida']);
-        $abono = floatval($hab['abono_salida']);
-        $faltante = $total - $abono;
-        if ($faltante > 0.01) {
-            $mostrarBotonFaltante = true;
+    $reserva_activa = $hab['reserva_activa'];
+    $estado_reserva = $hab['estado_reserva'];
+    $total = 0;
+    $abono = 0;
+
+    if ($reserva_activa) {
+        $reserva_id = $reserva_activa;
+
+        // Obtener total y abono
+        $res = mysqli_query($conection, "
+            SELECT r.total, IFNULL(SUM(p.monto), 0) AS abono
+            FROM reservas r
+            LEFT JOIN reservas_pagos p ON r.idreserva = p.idreserva
+            WHERE r.idreserva = $reserva_activa
+            GROUP BY r.idreserva
+        ");
+        if ($res && mysqli_num_rows($res)) {
+            $data = mysqli_fetch_assoc($res);
+            $total = floatval($data['total']);
+            $abono = floatval($data['abono']);
+            $faltante = $total - $abono;
         }
 
-        $boton = '
-        <button class="btn-habitacion" style="margin-top: 5px;" onclick="window.open(\'pdf/reservas/verReservaPDF.php?id=' . $reserva_id . '\', \'_blank\')">🧾 Ver</button>
-        <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirComprobanteEstadia(' . $reserva_id . ')">🖨️ Contrato</button>
-        <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirComprobanteEstadiaCLiente(' . $reserva_id . ')">🖨️ Nota de Venta</button>
-        <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirTicketsTourYGaraje(' . $reserva_id . ')">🖨️ Tours o Garaje</button>';
-    } elseif ($hab['reservada_hoy']) {
-        $estado = 'reservada';
-        $colorClass = 'amarillo';
-        $reserva_id = $hab['reservada_hoy'];
-        $total = floatval($hab['total_salida']);
-        $abono = floatval($hab['abono_salida']);
-        $faltante = $total - $abono;
+        // Determinar estado visual y botones según estado real
+        if ($estado_reserva === 'checkin') {
+            if ($hab['salida_hoy']) {
+                $estado = 'salida';
+                $colorClass = 'naranja';
+                $alerta_checkout = $esMediodiaPasado;
+            } else {
+                $estado = 'ocupada';
+                $colorClass = 'rojo';
+            }
+
+            $boton = '
+                <button class="btn-habitacion" onclick="confirmarCheckout(' . $reserva_id . ', ' . $total . ', ' . $abono . ')">Check-Out</button>
+                <button class="btn-habitacion" style="margin-top: 5px;" onclick="window.open(\'pdf/reservas/verReservaPDF.php?id=' . $reserva_id . '\', \'_blank\')">🧾 Ver</button>
+                <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirComprobanteEstadia(' . $reserva_id . ')">🖨️ Contrato</button>
+                <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirComprobanteEstadiaCLiente(' . $reserva_id . ')">🖨️ Nota de Venta</button>
+                <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirTicketsTourYGaraje(' . $reserva_id . ')">🖨️ Tours o Garaje</button>';
+        } elseif ($estado_reserva === 'confirmada') {
+            $estado = 'reservada';
+            $colorClass = 'amarillo';
+            $boton = '<button class="btn-habitacion" onclick="cambiarEstadoReserva(' . $reserva_id . ', \'checkin\')">Check-In</button>';
+        }
+
         if ($faltante > 0.01) {
             $mostrarBotonFaltante = true;
         }
-        $boton = '<button class="btn-habitacion" onclick="cambiarEstadoReserva(' . $reserva_id . ', \'checkin\')">Check-In</button>';
-    } elseif ($hab['estado'] == 'mantenimiento') {
+    } elseif ($hab['estado_habitacion'] === 'mantenimiento') {
         $estado = 'mantenimiento';
         $colorClass = 'gris';
         $boton = '<span class="badge gris">Mantenimiento</span>';
     }
+
+    // Renderizar HTML de tarjeta:
     ?>
           <div class="habitacion-card <?= $colorClass ?>">
             <span class="badge"><?= ucfirst($estado) ?></span>
             <h4>Hab. <?= $hab['numero'] ?></h4>
+
             <?php if (!empty($hab['cliente_actual'])): ?>
             <div class="habitacion-cliente">
               <?= htmlspecialchars($hab['cliente_actual']) ?>
@@ -778,23 +801,23 @@ while ($hab = mysqli_fetch_assoc($query)):
             <span title="Check-out pendiente" style="font-size:20px;">⚠️</span>
             <?php endif; ?>
 
-            <?php if (!$hab['abono_registrado'] && $hab['reservada_hoy']): ?>
+            <?php if (!$hab['abono_registrado'] && $estado === 'reservada'): ?>
             <span title="Sin abono registrado" style="font-size:18px;">🔴</span>
             <?php endif; ?>
 
             <div style="margin-top:10px; font-size:18px;">
-              <?php if ($hab['reservada_hoy'] || $hab['ocupada'] || $hab['salida_hoy']): ?>
+              <?php if ($estado !== 'disponible' && $estado !== 'mantenimiento'): ?>
               <?php if ($hab['incluye_desayuno']) {
                   echo '<span title="Incluye desayuno">🥐</span>';
               } ?>
               <?php if ($hab['incluye_tour']) {
                   echo '<span title="Incluye tour">🗺️</span>';
               } ?>
-
               <?php endif; ?>
             </div>
           </div>
           <?php endwhile; ?>
+
 
 
         </div>
