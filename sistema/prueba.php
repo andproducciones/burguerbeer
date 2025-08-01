@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Prueba de Impresión QZ Tray</title>
-  <script src="assets/qz-tray.js"></script>
+  <script src="assets/qz.tray.js"></script>
 </head>
 <body>
   <h2>Test de impresión QZ Tray</h2>
