@@ -841,84 +841,6 @@ function compararMontosEntregadosVsCalculados($calculado, $entregado)
 
     return $diferencias;
 }
-function imprimirDesayunosHoy()
-{
-    try {
-        include "../conexion.php";
-        $nombreImpresora = "comandas";
-
-        // Datos del hotel
-        $query_config = mysqli_query($conection, "SELECT * FROM configuracion LIMIT 1");
-        $config       = mysqli_fetch_assoc($query_config);
-
-        $razon_social = $config['razon_social'] ?? '';
-        $nit          = $config['nit'] ?? '';
-        $direccion    = $config['direccion'] ?? '';
-        $telefono     = $config['telefono'] ?? '';
-
-        // Consulta de desayunos para hoy (con nombre del cliente)
-        $query = mysqli_query($conection, "
-            SELECT 
-                h.numero AS habitacion, 
-                (rd.adultos + rd.ninos) AS total_desayunos,
-                CONCAT(c.nombre, ' ', c.p_apellido) AS cliente
-            FROM reservas_detalle rd
-            INNER JOIN reservas r ON rd.idreserva = r.idreserva
-            INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
-            INNER JOIN clientes c ON c.usuario = r.id_cliente
-            WHERE 
-                rd.incluye_desayuno = 1
-                AND r.estado = 'checkin'
-                AND CURDATE() BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
-            ORDER BY h.numero
-        ");
-
-        if (!$query || mysqli_num_rows($query) == 0) {
-            throw new Exception("No hay desayunos programados hoy.");
-        }
-
-        // Conexión con impresora
-        $connector = new WindowsPrintConnector($nombreImpresora);
-        $printer = new Printer($connector);
-
-        // Encabezado
-        $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->setEmphasis(true);
-        $printer->text(strtoupper($razon_social) . "\n");
-        $printer->setEmphasis(false);
-        $printer->text("RUC: $nit\n");
-        $printer->text("Tel: $telefono\n");
-        $printer->text("$direccion\n");
-        $printer->text(str_repeat("-", 42) . "\n");
-
-        $printer->setEmphasis(true);
-        $printer->text("DESAYUNOS PROGRAMADOS - " . date('d/m/Y') . "\n");
-        $printer->setEmphasis(false);
-        $printer->text(str_repeat("-", 42) . "\n");
-
-        // Contenido
-        while ($row = mysqli_fetch_assoc($query)) {
-            $hab = str_pad("Hab. " . $row['habitacion'], 15);
-            $cant = str_pad("🟢 {$row['total_desayunos']} desayuno(s)", 25);
-            $printer->text("$hab $cant\n");
-            $printer->text("Cliente: " . mb_strtoupper($row['cliente']) . "\n");
-            $printer->text("\n");
-        }
-
-        // Pie
-        $printer->text(str_repeat("-", 42) . "\n");
-        $printer->text("Preparación por cocina\n");
-        $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->text("Impreso: " . date('d/m/Y H:i') . "\n");
-
-        $printer->cut();
-        $printer->close();
-
-        return true;
-    } catch (Exception $e) {
-        return "Error al imprimir: " . $e->getMessage();
-    }
-}
 function verificarSesionPOS()
 {
     if (session_status() === PHP_SESSION_NONE) {
@@ -1065,6 +987,84 @@ function enviarComprobanteReserva($idreserva)
 }
 
 
+function imprimirDesayunosHoy()
+{
+    try {
+        include "../conexion.php";
+        $nombreImpresora = "comandas";
+
+        // Datos del hotel
+        $query_config = mysqli_query($conection, "SELECT * FROM configuracion LIMIT 1");
+        $config       = mysqli_fetch_assoc($query_config);
+
+        $razon_social = $config['razon_social'] ?? '';
+        $nit          = $config['nit'] ?? '';
+        $direccion    = $config['direccion'] ?? '';
+        $telefono     = $config['telefono'] ?? '';
+
+        // Consulta de desayunos para hoy (con nombre del cliente)
+        $query = mysqli_query($conection, "
+            SELECT 
+                h.numero AS habitacion, 
+                (rd.adultos + rd.ninos) AS total_desayunos,
+                CONCAT(c.nombre, ' ', c.p_apellido) AS cliente
+            FROM reservas_detalle rd
+            INNER JOIN reservas r ON rd.idreserva = r.idreserva
+            INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+            INNER JOIN clientes c ON c.usuario = r.id_cliente
+            WHERE 
+                rd.incluye_desayuno = 1
+                AND r.estado = 'checkin'
+                AND CURDATE() BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
+            ORDER BY h.numero
+        ");
+
+        if (!$query || mysqli_num_rows($query) == 0) {
+            throw new Exception("No hay desayunos programados hoy.");
+        }
+
+        // Conexión con impresora
+        $connector = new WindowsPrintConnector($nombreImpresora);
+        $printer = new Printer($connector);
+
+        // Encabezado
+        $printer->setJustification(Printer::JUSTIFY_CENTER);
+        $printer->setEmphasis(true);
+        $printer->text(strtoupper($razon_social) . "\n");
+        $printer->setEmphasis(false);
+        $printer->text("RUC: $nit\n");
+        $printer->text("Tel: $telefono\n");
+        $printer->text("$direccion\n");
+        $printer->text(str_repeat("-", 42) . "\n");
+
+        $printer->setEmphasis(true);
+        $printer->text("DESAYUNOS PROGRAMADOS - " . date('d/m/Y') . "\n");
+        $printer->setEmphasis(false);
+        $printer->text(str_repeat("-", 42) . "\n");
+
+        // Contenido
+        while ($row = mysqli_fetch_assoc($query)) {
+            $hab = str_pad("Hab. " . $row['habitacion'], 15);
+            $cant = str_pad("🟢 {$row['total_desayunos']} desayuno(s)", 25);
+            $printer->text("$hab $cant\n");
+            $printer->text("Cliente: " . mb_strtoupper($row['cliente']) . "\n");
+            $printer->text("\n");
+        }
+
+        // Pie
+        $printer->text(str_repeat("-", 42) . "\n");
+        $printer->text("Preparación por cocina\n");
+        $printer->setJustification(Printer::JUSTIFY_CENTER);
+        $printer->text("Impreso: " . date('d/m/Y H:i') . "\n");
+
+        $printer->cut();
+        $printer->close();
+
+        return true;
+    } catch (Exception $e) {
+        return "Error al imprimir: " . $e->getMessage();
+    }
+}
 function imprimirComprobanteEstadia($idreserva)
 {
     include "../conexion.php";
@@ -1167,7 +1167,6 @@ function imprimirComprobanteEstadia($idreserva)
         $printer->close();
     }
 }
-
 function imprimirComprobanteEstadiaCliente($idreserva)
 {
     include "../conexion.php";
@@ -1272,7 +1271,6 @@ function imprimirComprobanteEstadiaCliente($idreserva)
         $printer->close(); // Siempre se cierra aunque haya error
     }
 }
-
 function imprimirTicketsTourYGaraje($idreserva)
 {
     include "../conexion.php";
@@ -1382,8 +1380,6 @@ function imprimirTicketsTourYGaraje($idreserva)
         }
     }
 }
-
-
 function imprimirTicketsTourHoy()
 {
     try {

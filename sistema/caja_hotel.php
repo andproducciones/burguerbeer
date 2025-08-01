@@ -282,7 +282,9 @@ $desayunos .= '</div>';
 
   <?php
 include "includes/scripts.php";
+
 verificarSesionPOS();?>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qz-tray/2.1.0/qz-tray.js"></script>
 
   <style>
     html,
@@ -678,6 +680,10 @@ verificarSesionPOS();?>
             Reserva</button>
           <button class="btn-refresh" style="background:#17a2b8;" onclick="anadirForm('formCliente')">👥 Añadir
             Persona</button>
+
+          <button class="btn-refresh" style="background:#17a2b8;" onclick="imprimirDesayunosHoyQZ();">Prueba</button>
+
+
         </div>
       </div>
 

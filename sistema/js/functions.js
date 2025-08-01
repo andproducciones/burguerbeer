@@ -3053,5 +3053,66 @@ function mostrarInputOtro(idSelect) {
 }
 
 
+//--------impresiones---/////
 
+async function imprimirDesayunosHoyQZ() {
+    try {
+        const resp = await fetch('./impresiones/get/imprimirDesayunosHoy.php');
+        const res = await resp.json();
+        const configData = res.config;
+        const desayunos = res.desayunos;
 
+        if (desayunos.length === 0) {
+            Swal.fire("Sin desayunos", "No hay desayunos programados hoy", "info");
+            return;
+        }
+
+        await qz.websocket.connect();
+        const printer = await qz.printers.find("comandas");
+        const config = qz.configs.create(printer);
+
+        let contenido = [];
+
+        // === Encabezado
+        contenido.push(
+            "\x1B\x40", // Reset
+            "\x1B\x61\x01", // Centrar
+            configData.razon_social.toUpperCase() + "\n",
+            "\x1B\x61\x00",
+            "RUC: " + configData.nit + "\n",
+            "Tel: " + configData.telefono + "\n",
+            configData.direccion + "\n",
+            "------------------------------------------\n",
+            "\x1B\x61\x01",
+            "DESAYUNOS PROGRAMADOS - " + (new Date()).toLocaleDateString() + "\n",
+            "\x1B\x61\x00",
+            "------------------------------------------\n"
+        );
+
+        // === Contenido de desayunos
+        desayunos.forEach(d => {
+            let lineaHab = `Hab. ${d.habitacion}`.padEnd(15, ' ');
+            let lineaCant = `🟢 ${d.cantidad} desayuno(s)`.padEnd(25, ' ');
+            contenido.push(lineaHab + lineaCant + "\n");
+            contenido.push("Cliente: " + d.cliente.toUpperCase() + "\n\n");
+        });
+
+        // === Pie
+        contenido.push(
+            "------------------------------------------\n",
+            "Preparación por cocina\n",
+            "\x1B\x61\x01",
+            "Impreso: " + (new Date()).toLocaleString() + "\n",
+            "\n\n\n",
+            "\x1D\x56\x00" // Corte
+        );
+
+        await qz.print(config, contenido);
+
+    } catch (err) {
+        console.error(err);
+        Swal.fire("Error", "No se pudo imprimir: " + err.message, "error");
+    } finally {
+        if (qz.websocket.isActive()) await qz.websocket.disconnect();
+    }
+}
