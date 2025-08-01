@@ -1,6 +1,6 @@
 <?php
 
-include "../../conexion.php";
+include "../../../conexion.php";
 header('Content-Type: application/json');
 
 try {
