@@ -30,12 +30,17 @@ $query = mysqli_query($conection, "
            AND rd.id_habitacion = h.idhabitacion 
          LIMIT 1) AS reservada_hoy,
 
-        -- Ocupada actualmente (checkin activo)
+        -- Ocupada actualmente (checkin activo y salida no vencida)
         (SELECT r2.idreserva 
          FROM reservas r2
          INNER JOIN reservas_detalle rd2 ON r2.idreserva = rd2.idreserva
-         WHERE r2.fecha_entrada <= '$hoy' AND r2.fecha_salida > '$hoy' 
-           AND rd2.id_habitacion = h.idhabitacion AND r2.estado = 'checkin' 
+         WHERE r2.fecha_entrada <= '$hoy' 
+           AND rd2.id_habitacion = h.idhabitacion 
+           AND r2.estado = 'checkin'
+           AND (
+               r2.fecha_salida > '$hoy' OR 
+               (r2.fecha_salida = '$hoy' AND CURTIME() < '12:00:00')
+           )
          LIMIT 1) AS ocupada,
 
         -- Salida programada para hoy
@@ -130,13 +135,10 @@ $query = mysqli_query($conection, "
         ORDER BY r.estado DESC, r.fecha_entrada ASC
         LIMIT 1) AS cliente_actual
 
-
     FROM habitaciones h
     WHERE h.habilitada = 1 
     ORDER BY CAST(h.numero AS UNSIGNED) ASC
 ");
-
-
 
 
 $reservasProximas = mysqli_query($conection, "
