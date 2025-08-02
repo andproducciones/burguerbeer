@@ -186,18 +186,19 @@ ORDER BY r.fecha_entrada ASC
 
 
 $desayunosQuery = mysqli_query($conection, "
-SELECT 
-    h.numero AS habitacion,
-    SUM(rd.adultos + rd.ninos) AS total_desayunos
-FROM reservas_detalle rd
-INNER JOIN reservas r ON rd.idreserva = r.idreserva
-INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
-WHERE 
-    rd.incluye_desayuno = 1
-    AND r.estado = 'checkin'
-    AND CURDATE() BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
-GROUP BY h.numero
-ORDER BY h.numero
+    SELECT 
+        h.numero AS habitacion,
+        SUM(rd.adultos + rd.ninos) AS total_desayunos
+    FROM reservas_detalle rd
+    INNER JOIN reservas r ON rd.idreserva = r.idreserva
+    INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+    WHERE 
+        rd.incluye_desayuno = 1
+        AND r.estado = 'checkin'
+        AND DATE('$hoy') > r.fecha_entrada
+        AND DATE('$hoy') <= r.fecha_salida
+    GROUP BY h.numero
+    ORDER BY h.numero
 ");
 
 
@@ -230,8 +231,6 @@ $garajeQuery = mysqli_query($conection, "
         OR (r.estado = 'confirmada' AND r.fecha_entrada = CURDATE())
     )
 ");
-
-
 
 
 
@@ -709,76 +708,75 @@ verificarSesionPOS();?>
 
       <div class="seccion-habitaciones">
         <div class="grid-habitaciones">
-          <?php
+          <?php while ($hab = mysqli_fetch_assoc($query)):
+              $estado = 'disponible';
+              $colorClass = 'verde';
+              $boton = '<button class="btn-habitacion btn-accion-principal" onclick="anadirForm(\'formCheckinDirecto\','.$hab['idhabitacion'].')" title="Registrar nuevo ingreso">Check-In</button>';
+              $esMediodiaPasado = (int)date('H') >= 12;
+              $alerta_checkout = ($hab['salida_hoy'] && $esMediodiaPasado);
 
-while ($hab = mysqli_fetch_assoc($query)):
-    $estado = 'disponible';
-    $colorClass = 'verde';
-    $boton = '<button class="btn-habitacion" onclick="anadirForm(\'formCheckinDirecto\','.$hab['idhabitacion'].')">Check-In</button>';
-    $esMediodiaPasado = (int)date('H') >= 12;
-    $alerta_checkout = ($hab['salida_hoy'] && $esMediodiaPasado);
+              $mostrarBotonFaltante = false;
+              $faltante = 0;
+              $reserva_id = null;
 
-    $mostrarBotonFaltante = false;
-    $faltante = 0;
-    $reserva_id = null;
+              $reserva_activa = $hab['reserva_activa'];
+              $estado_reserva = $hab['estado_reserva'];
+              $total = 0;
+              $abono = 0;
 
-    $reserva_activa = $hab['reserva_activa'];
-    $estado_reserva = $hab['estado_reserva'];
-    $total = 0;
-    $abono = 0;
+              if ($reserva_activa) {
+                  $reserva_id = $reserva_activa;
 
-    if ($reserva_activa) {
-        $reserva_id = $reserva_activa;
-
-        // Obtener total y abono
-        $res = mysqli_query($conection, "
+                  // Obtener total y abono
+                  $res = mysqli_query($conection, "
             SELECT r.total, IFNULL(SUM(p.monto), 0) AS abono
             FROM reservas r
             LEFT JOIN reservas_pagos p ON r.idreserva = p.idreserva
             WHERE r.idreserva = $reserva_activa
             GROUP BY r.idreserva
         ");
-        if ($res && mysqli_num_rows($res)) {
-            $data = mysqli_fetch_assoc($res);
-            $total = floatval($data['total']);
-            $abono = floatval($data['abono']);
-            $faltante = $total - $abono;
-        }
+                  if ($res && mysqli_num_rows($res)) {
+                      $data = mysqli_fetch_assoc($res);
+                      $total = floatval($data['total']);
+                      $abono = floatval($data['abono']);
+                      $faltante = $total - $abono;
+                  }
 
-        // Determinar estado visual y botones según estado real
-        if ($estado_reserva === 'checkin') {
-            if ($hab['salida_hoy']) {
-                $estado = 'salida';
-                $colorClass = 'naranja';
-                $alerta_checkout = $esMediodiaPasado;
-            } else {
-                $estado = 'ocupada';
-                $colorClass = 'rojo';
-            }
+                  // Estado visual y botones
+                  if ($estado_reserva === 'checkin') {
+                      if ($hab['salida_hoy']) {
+                          $estado = 'salida';
+                          $colorClass = 'naranja';
+                          $alerta_checkout = $esMediodiaPasado;
+                      } else {
+                          $estado = 'ocupada';
+                          $colorClass = 'rojo';
+                      }
 
-            $boton = '
-                <button class="btn-habitacion" onclick="confirmarCheckout(' . $reserva_id . ', ' . $total . ', ' . $abono . ')">Check-Out</button>
-                <button class="btn-habitacion" style="margin-top: 5px;" onclick="window.open(\'pdf/reservas/verReservaPDF.php?id=' . $reserva_id . '\', \'_blank\')">🧾 Ver</button>
-                <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirComprobanteEstadia(' . $reserva_id . ')">🖨️ Contrato</button>
-                <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirComprobanteEstadiaCLiente(' . $reserva_id . ')">🖨️ Nota de Venta</button>
-                <button class="btn-habitacion" style="margin-top: 5px;" onclick="reimprimirTicketsTourYGaraje(' . $reserva_id . ')">🖨️ Tours o Garaje</button>';
-        } elseif ($estado_reserva === 'confirmada') {
-            $estado = 'reservada';
-            $colorClass = 'amarillo';
-            $boton = '<button class="btn-habitacion" onclick="cambiarEstadoReserva(' . $reserva_id . ', \'checkin\')">Check-In</button>';
-        }
+                      $boton = '
+                <button class="btn-habitacion btn-accion-principal" onclick="confirmarCheckout(' . $reserva_id . ', ' . $total . ', ' . $abono . ')" title="Finalizar estadía y registrar salida">Check-Out</button>
+                <div class="grupo-botones-secundarios" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">
+                    <button class="btn-habitacion btn-ver" onclick="window.open(\'pdf/reservas/verReservaPDF.php?id=' . $reserva_id . '\', \'_blank\')" title="Ver contrato PDF">🧾 Ver</button>
+                    <button class="btn-habitacion btn-print" onclick="reimprimirComprobanteEstadia(' . $reserva_id . ')" title="Reimprimir contrato interno">🖨️ Contrato</button>
+                    <button class="btn-habitacion btn-print" onclick="reimprimirComprobanteEstadiaCLiente(' . $reserva_id . ')" title="Reimprimir nota de venta">🖨️ Factura</button>
+                    <button class="btn-habitacion btn-print" onclick="reimprimirTicketsTourYGaraje(' . $reserva_id . ')" title="Reimprimir tickets de tour o garaje">🖨️ Tickets</button>
+                </div>';
+                  } elseif ($estado_reserva === 'confirmada') {
+                      $estado = 'reservada';
+                      $colorClass = 'amarillo';
+                      $boton = '<button class="btn-habitacion btn-accion-principal" onclick="cambiarEstadoReserva(' . $reserva_id . ', \'checkin\')" title="Confirmar ingreso de esta reserva">Check-In</button>';
+                  }
 
-        if ($faltante > 0.01) {
-            $mostrarBotonFaltante = true;
-        }
-    } elseif ($hab['estado_habitacion'] === 'mantenimiento') {
-        $estado = 'mantenimiento';
-        $colorClass = 'gris';
-        $boton = '<span class="badge gris">Mantenimiento</span>';
-    }
+                  if ($faltante > 0.01) {
+                      $mostrarBotonFaltante = true;
+                  }
+              } elseif ($hab['estado_habitacion'] === 'mantenimiento') {
+                  $estado = 'mantenimiento';
+                  $colorClass = 'gris';
+                  $boton = '<span class="badge gris">Mantenimiento</span>';
+              }
+              ?>
 
-    // Renderizar HTML de tarjeta:
-    ?>
           <div class="habitacion-card <?= $colorClass ?>">
             <span class="badge"><?= ucfirst($estado) ?></span>
             <h4>Hab. <?= $hab['numero'] ?></h4>
@@ -789,29 +787,31 @@ while ($hab = mysqli_fetch_assoc($query)):
             </div>
             <?php endif; ?>
 
-            <?= $boton ?>
+            <div class="habitacion-botones" style="margin-top: 5px; display: flex; flex-direction: column; gap: 4px;">
+              <?= $boton ?>
 
-            <?php if ($mostrarBotonFaltante): ?>
-            <button class="btn-habitacion btn_abono"
-              data-id="<?= $reserva_id ?>"
-              data-cliente="<?= htmlspecialchars($hab['cliente_actual'] ?? '') ?>"
-              data-total="<?= number_format($total, 2) ?>"
-              data-abono="<?= number_format($abono, 2) ?>"
-              data-saldo="<?= number_format($faltante, 2) ?>"
-              style="margin-top: 5px; background:#ffc107; color:black;">
-              💰 Falta $<?= number_format($faltante, 2) ?>
-            </button>
-            <?php endif; ?>
+              <?php if ($mostrarBotonFaltante): ?>
+              <button class="btn-habitacion btn_abono"
+                data-id="<?= $reserva_id ?>"
+                data-cliente="<?= htmlspecialchars($hab['cliente_actual'] ?? '') ?>"
+                data-total="<?= number_format($total, 2) ?>"
+                data-abono="<?= number_format($abono, 2) ?>"
+                data-saldo="<?= number_format($faltante, 2) ?>"
+                style="background:#ffc107; color:black;" title="Registrar abono pendiente">
+                💰 Falta $<?= number_format($faltante, 2) ?>
+              </button>
+              <?php endif; ?>
 
-            <?php if ($alerta_checkout): ?>
-            <span title="Check-out pendiente" style="font-size:20px;">⚠️</span>
-            <?php endif; ?>
+              <?php if ($alerta_checkout): ?>
+              <span title="Check-out pendiente (es mediodía o más)" style="font-size:18px;">⚠️</span>
+              <?php endif; ?>
 
-            <?php if (!$hab['abono_registrado'] && $estado === 'reservada'): ?>
-            <span title="Sin abono registrado" style="font-size:18px;">🔴</span>
-            <?php endif; ?>
+              <?php if (!$hab['abono_registrado'] && $estado === 'reservada'): ?>
+              <span title="Reserva sin abono registrado" style="font-size:18px;">🔴</span>
+              <?php endif; ?>
+            </div>
 
-            <div style="margin-top:10px; font-size:18px;">
+            <div class="habitacion-servicios" style="margin-top:10px; font-size:18px;">
               <?php if ($estado !== 'disponible' && $estado !== 'mantenimiento'): ?>
               <?php if ($hab['incluye_desayuno']) {
                   echo '<span title="Incluye desayuno">🥐</span>';

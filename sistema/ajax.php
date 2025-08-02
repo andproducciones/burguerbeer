@@ -4956,18 +4956,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 body: data
             })
             .then(res => res.text())
-            .then(resp => {
+            .then(resp => resp.json())
+            .then(data => {
                 Swal.close();
-                if (resp.trim() === 'ok') {
-                    Swal.fire('✅ Check-In exitoso',
-                        `Factura generada correctamente por <strong>$${total.toFixed(2)}</strong>`, 'success');
+
+                if (data.status === 'ok') {
+                    let detalles = '';
+                    detalles += data.imprimirEstadia === true ? '🖨️ Comprobante impreso<br>' :
+                        `❌ Falló impresión: ${data.imprimirEstadia}<br>`;
+                    detalles += data.imprimirCliente === true ? '👥 Copia cliente impresa<br>' :
+                        `❌ Cliente: ${data.imprimirCliente}<br>`;
+                    detalles += data.imprimirTickets === true ? '🎟️ Tickets impresos<br>' :
+                        `❌ Tickets: ${data.imprimirTickets}<br>`;
+                    detalles += data.enviarCorreo === true ? '📧 Correo enviado<br>' :
+                        `❌ Correo: ${data.enviarCorreo}<br>`;
+
+                    Swal.fire('✅ Check-In exitoso', detalles, 'success');
                     closeModal('modalReserva');
                     location.reload();
                 } else {
-                    Swal.fire('Error', resp, 'error');
+                    Swal.fire('Error', 'Algo salió mal en el proceso de check-in', 'error');
                 }
-            })
-            .catch(() => {
+            })  .catch(() => {
                 Swal.close();
                 Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
             });
@@ -5246,12 +5256,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             mysqli_commit($conection);
 
-            imprimirComprobanteEstadia($idreserva);
-            imprimirComprobanteEstadiaCliente($idreserva);
-            imprimirTicketsTourYGaraje($idreserva);
-            enviarComprobanteReserva($idreserva);
+            $resultado = [
+                'status' => 'ok',
+                'imprimirEstadia' => imprimirComprobanteEstadia($idreserva),
+                'imprimirCliente' => imprimirComprobanteEstadiaCliente($idreserva),
+                'imprimirTickets' => imprimirTicketsTourYGaraje($idreserva),
+                'enviarCorreo' => enviarComprobanteReserva($idreserva),
+            ];
 
-            echo 'ok';
+            echo json_encode($resultado);
+            exit;
+
 
         } catch (Exception $e) {
             mysqli_rollback($conection);
@@ -5383,10 +5398,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             mysqli_commit($conection);
 
-
-
-
-
             echo 'ok';
 
         } catch (Exception $e) {
@@ -5448,8 +5459,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         exit;
     }
-
-
 
     if ($_POST['action'] == 'calendarioHabitaciones_reservas') {
 
