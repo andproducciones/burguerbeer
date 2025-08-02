@@ -899,7 +899,7 @@ function enviarComprobanteReserva($idreserva)
 
     $id = intval($idreserva);
     if ($id <= 0) {
-        return "ID de reserva inválido";
+        return "❌ ID de reserva inválido.";
     }
 
     // CONSULTA PRINCIPAL
@@ -910,7 +910,7 @@ function enviarComprobanteReserva($idreserva)
         WHERE r.idreserva = $id
     ");
     if (!$query || mysqli_num_rows($query) == 0) {
-        return "Reserva no encontrada";
+        return "❌ Reserva no encontrada.";
     }
 
     $reserva = mysqli_fetch_assoc($query);
@@ -918,10 +918,9 @@ function enviarComprobanteReserva($idreserva)
 
     // 🔴 NO ENVIAR SI ESTÁ EN CHECKOUT U OTROS
     if (!in_array($estado, ['confirmada', 'checkin'])) {
-        return true;
+        return "ℹ️ Estado de reserva no permite envío automático ($estado).";
     }
 
-    // ✅ DEFINIR TIPO DE MAIL
     $tipo_mail = ($estado === 'checkin') ? 'estadia' : 'reserva';
     $titulo = ($estado === 'checkin') ? 'Comprobante de estadía' : 'Comprobante de reserva';
 
@@ -965,45 +964,43 @@ function enviarComprobanteReserva($idreserva)
     unlink($archivo_temp);
 
     if ($enviado) {
-        // ✅ ACTUALIZAR ENVÍO EXITOSO
+        // ✅ Registrar éxito
         mysqli_query($conection, "
             UPDATE reservas 
             SET mail = NOW(), tipo_mail = '$tipo_mail' 
             WHERE idreserva = $id
         ");
-        //return true;
+        return true;
     } else {
         $error = $GLOBALS['lastPHPMailerError'] ?? 'Sin detalle técnico';
-
-        // ❌ REGISTRAR INTENTO FALLIDO
         mysqli_query($conection, "
             UPDATE reservas 
             SET mail = NOW(), tipo_mail = 'fallo - $error' 
             WHERE idreserva = $id
         ");
-
-        //return "Error al enviar correo a $correoCliente – Detalle: $error";
+        return "❌ Error al enviar correo a $correoCliente – $error";
     }
 }
+
 
 
 function imprimirDesayunosHoy()
 {
     try {
-        include "../conexion.php";
         $nombreImpresora = "comandas";
+        $hoy = date('Y-m-d');
 
-        // Datos del hotel
-        $query_config = mysqli_query($conection, "SELECT * FROM configuracion LIMIT 1");
-        $config       = mysqli_fetch_assoc($query_config);
+        // Datos de encabezado
+        $query_config = mysqli_query($GLOBALS['conection'], "SELECT * FROM configuracion LIMIT 1");
+        $config = mysqli_fetch_assoc($query_config);
 
-        $razon_social = $config['razon_social'] ?? '';
+        $razon_social = $config['razon_social'] ?? 'GRUPO CAÑALIMEÑA';
         $nit          = $config['nit'] ?? '';
         $direccion    = $config['direccion'] ?? '';
         $telefono     = $config['telefono'] ?? '';
 
-        // Consulta de desayunos para hoy (con nombre del cliente)
-        $query = mysqli_query($conection, "
+        // Consulta corregida
+        $query = mysqli_query($GLOBALS['conection'], "
             SELECT 
                 h.numero AS habitacion, 
                 (rd.adultos + rd.ninos) AS total_desayunos,
@@ -1015,7 +1012,8 @@ function imprimirDesayunosHoy()
             WHERE 
                 rd.incluye_desayuno = 1
                 AND r.estado = 'checkin'
-                AND CURDATE() BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
+                AND DATE('$hoy') > r.fecha_entrada
+                AND DATE('$hoy') <= r.fecha_salida
             ORDER BY h.numero
         ");
 
@@ -1023,11 +1021,10 @@ function imprimirDesayunosHoy()
             throw new Exception("No hay desayunos programados hoy.");
         }
 
-        // Conexión con impresora
+        // Imprimir
         $connector = new WindowsPrintConnector($nombreImpresora);
         $printer = new Printer($connector);
 
-        // Encabezado
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->text(strtoupper($razon_social) . "\n");
@@ -1042,16 +1039,13 @@ function imprimirDesayunosHoy()
         $printer->setEmphasis(false);
         $printer->text(str_repeat("-", 42) . "\n");
 
-        // Contenido
         while ($row = mysqli_fetch_assoc($query)) {
             $hab = str_pad("Hab. " . $row['habitacion'], 15);
             $cant = str_pad("🟢 {$row['total_desayunos']} desayuno(s)", 25);
             $printer->text("$hab $cant\n");
-            $printer->text("Cliente: " . mb_strtoupper($row['cliente']) . "\n");
-            $printer->text("\n");
+            $printer->text("Cliente: " . mb_strtoupper($row['cliente']) . "\n\n");
         }
 
-        // Pie
         $printer->text(str_repeat("-", 42) . "\n");
         $printer->text("Preparación por cocina\n");
         $printer->setJustification(Printer::JUSTIFY_CENTER);
@@ -1065,9 +1059,11 @@ function imprimirDesayunosHoy()
         return "Error al imprimir: " . $e->getMessage();
     }
 }
+
 function imprimirComprobanteEstadia($idreserva)
 {
     include "../conexion.php";
+
     $query = mysqli_query($conection, "
         SELECT r.*, CONCAT(c.nombre, ' ', c.p_apellido) AS cliente,
                c.direccion, c.telefono, c.usuario AS usuario_cliente
@@ -1077,7 +1073,7 @@ function imprimirComprobanteEstadia($idreserva)
         LIMIT 1
     ");
     if (!$query || mysqli_num_rows($query) == 0) {
-        return;
+        return "❌ No se encontró la reserva.";
     }
 
     $reserva = mysqli_fetch_assoc($query);
@@ -1117,11 +1113,11 @@ function imprimirComprobanteEstadia($idreserva)
         }
     }
 
-    // === SEGURA: impresión con manejo de cierre ===
-    $connector = new WindowsPrintConnector("comandas");
-    $printer = new Printer($connector);
-
+    // === SEGURA: impresión con manejo de errores ===
     try {
+        $connector = new WindowsPrintConnector("comandas");
+        $printer = new Printer($connector);
+
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->text("GRUPO CAÑALIMEÑA\n");
@@ -1162,11 +1158,14 @@ function imprimirComprobanteEstadia($idreserva)
         $printer->text("registrado.\n");
 
         $printer->cut();
-
-    } finally {
         $printer->close();
+
+        return true;
+    } catch (Exception $e) {
+        return "❌ Error de impresión: " . $e->getMessage();
     }
 }
+
 function imprimirComprobanteEstadiaCliente($idreserva)
 {
     include "../conexion.php";
@@ -1181,7 +1180,7 @@ function imprimirComprobanteEstadiaCliente($idreserva)
     ");
 
     if (!$query || mysqli_num_rows($query) == 0) {
-        return;
+        return "❌ Reserva no encontrada.";
     }
 
     $reserva = mysqli_fetch_assoc($query);
@@ -1221,11 +1220,10 @@ function imprimirComprobanteEstadiaCliente($idreserva)
         }
     }
 
-    // Impresión protegida
-    $connector = new WindowsPrintConnector("comandas");
-    $printer = new Printer($connector);
-
     try {
+        $connector = new WindowsPrintConnector("comandas");
+        $printer = new Printer($connector);
+
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->text("GRUPO CAÑALIMEÑA\n");
@@ -1267,20 +1265,21 @@ function imprimirComprobanteEstadiaCliente($idreserva)
         $printer->setEmphasis(false);
         $printer->cut();
 
-    } finally {
-        $printer->close(); // Siempre se cierra aunque haya error
+        $printer->close();
+        return true;
+    } catch (Exception $e) {
+        return "❌ Error de impresión cliente: " . $e->getMessage();
     }
 }
+
 function imprimirTicketsTourYGaraje($idreserva)
 {
     include "../conexion.php";
 
     $reservaQ = mysqli_query($conection, "SELECT fecha_entrada FROM reservas WHERE idreserva = $idreserva LIMIT 1");
     if (!$reservaQ || mysqli_num_rows($reservaQ) == 0) {
-        return;
+        return "❌ No se encontró la reserva.";
     }
-
-    $fechaEntrada = mysqli_fetch_assoc($reservaQ)['fecha_entrada'];
 
     $detalle = mysqli_query($conection, "
         SELECT h.numero AS habitacion, d.adultos, d.ninos, d.incluye_tour, 
@@ -1296,24 +1295,24 @@ function imprimirTicketsTourYGaraje($idreserva)
     ");
 
     if (!$detalle || mysqli_num_rows($detalle) === 0) {
-        return;
+        return "❌ La reserva no tiene detalles asociados.";
     }
 
-    $impresosGaraje = []; // para evitar imprimir garaje más de una vez por habitación
+    $impresosGaraje = [];
 
     while ($row = mysqli_fetch_assoc($detalle)) {
         $habitacion = $row['habitacion'];
         $personas   = intval($row['adultos']) + intval($row['ninos']);
         $lugar      = $row['nombre_tour'] ?? 'Destino';
-        $fecha      = $row['fecha_entrada']; // por compatibilidad con registros por noche
+        $fecha      = $row['fecha_entrada'];
         $id_hab     = $row['id_habitacion'];
 
-        // === TOUR (una fila por noche con tour) ===
+        // === TOUR ===
         if (intval($row['incluye_tour'])) {
             $hash = strtoupper(substr(sha1("TOUR$habitacion$fecha$lugar"), 0, 10));
 
-            $printer = new Printer(new WindowsPrintConnector("comandas"));
             try {
+                $printer = new Printer(new WindowsPrintConnector("comandas"));
                 $printer->setJustification(Printer::JUSTIFY_CENTER);
                 $printer->setEmphasis(true);
                 $printer->text("TICKET DE TOUR\n");
@@ -1336,12 +1335,13 @@ function imprimirTicketsTourYGaraje($idreserva)
                 $printer->text("------------------------------------------------\n");
                 $printer->text("GRUPO CAÑALIMEÑA\n");
                 $printer->cut();
-            } finally {
                 $printer->close();
+            } catch (Exception $e) {
+                return "❌ Error al imprimir ticket de tour (Hab. $habitacion): " . $e->getMessage();
             }
         }
 
-        // === GARAJE (una vez por habitación) ===
+        // === GARAJE ===
         if (floatval($row['garaje']) > 0 && !in_array($id_hab, $impresosGaraje)) {
             $impresosGaraje[] = $id_hab;
 
@@ -1350,8 +1350,8 @@ function imprimirTicketsTourYGaraje($idreserva)
                 $fechaGaraje = date('Y-m-d', strtotime("+$d days", strtotime($row['fecha_entrada'])));
                 $hash = strtoupper(substr(sha1("GARAJE$habitacion$fechaGaraje"), 0, 10));
 
-                $printer = new Printer(new WindowsPrintConnector("comandas"));
                 try {
+                    $printer = new Printer(new WindowsPrintConnector("comandas"));
                     $printer->setJustification(Printer::JUSTIFY_CENTER);
                     $printer->setEmphasis(true);
                     $printer->text("TICKET DE GARAJE\n");
@@ -1373,13 +1373,17 @@ function imprimirTicketsTourYGaraje($idreserva)
                     $printer->text("------------------------------------------------\n");
                     $printer->text("GRUPO CAÑALIMEÑA\n");
                     $printer->cut();
-                } finally {
                     $printer->close();
+                } catch (Exception $e) {
+                    return "❌ Error al imprimir ticket de garaje (Hab. $habitacion - $fechaGaraje): " . $e->getMessage();
                 }
             }
         }
     }
+
+    return true; // ✅ Todo se imprimió correctamente
 }
+
 function imprimirTicketsTourHoy()
 {
     try {

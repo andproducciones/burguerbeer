@@ -221,7 +221,7 @@ if ($saldo <= 0) {
 $logoPath = __DIR__ . '/../../img/logo.jpg';
 $logo = file_exists($logoPath) ? '<img src="data:image/jpg;base64,' . base64_encode(file_get_contents($logoPath)) . '" width="200">' : '';
 $fecha_emision = date('d/m/Y H:i');
-$firma = $logoPath;
+$firma = __DIR__ .'/../../img/firma.jpg';
 
 $noches = max(1, round((strtotime($reserva['fecha_salida']) - strtotime($reserva['fecha_entrada'])) / 86400));
 $dias = $noches + 1;
@@ -264,11 +264,13 @@ if (in_array(strtolower($reserva['estado']), ['checkin', 'checkout', 'finalizada
         <li>Conductas agresivas o inapropiadas serán motivo de desalojo sin reembolso.</li>
         <li>Grupo Cañalimeña se reserva el derecho de admisión y permanencia.</li>
         <li>Datos personales protegidos según la Ley Orgánica de Protección de Datos Personales (LOPDP).</li>
+        <li><strong>Grupo Cañalimeña no se responsabiliza por ruidos, eventos públicos u otras situaciones externas ajenas a sus instalaciones.</strong></li> <!-- NUEVO -->
     </ul>
     <p style='margin-top:5px; font-style:italic; font-size:9px;'>
         <strong>Aviso:</strong> La permanencia implica aceptación total de estos términos. Abonos o firmas digitales constituyen aceptación legal electrónica.
     </p>
 </div>";
+
 
 } else {
     // Condiciones para RESERVA
@@ -291,6 +293,7 @@ if (in_array(strtolower($reserva['estado']), ['checkin', 'checkout', 'finalizada
         <li>El garaje tiene costo variable entre $3 y $5 por noche. Pérdida del ticket implica recargo de $2.</li>
         <li>Desayunos y tours son opcionales y deben constar en la reserva. Tours operados por terceros.</li>
         <li>No se responde por calidad de servicios de terceros (tours, parqueadero, taxis).</li>
+        <li><strong>Grupo Cañalimeña no se responsabiliza por ruidos, eventos públicos u otras situaciones externas ajenas a sus instalaciones.</strong></li> <!-- NUEVO -->
         <li>Solo se emite nota de venta física si se solicita en recepción antes del check-out. No se emite posterior.</li>
         <li>Se admiten mascotas con aviso previo. Costo por noche: $5 (pequeña), $7 (mediana), $10 (grande).</li>
         <li>Daños o manchas causados por mascotas se cobrarán más $10 por cada día de inhabilitación de la habitación.</li>
@@ -300,6 +303,7 @@ if (in_array(strtolower($reserva['estado']), ['checkin', 'checkout', 'finalizada
         <strong>Aviso:</strong> El registro de abono, firma o permanencia constituyen aceptación electrónica de estos términos legales.
     </p>
 </div>";
+
 }
 
 
@@ -448,6 +452,9 @@ if (isset($_GET['modoCorreo'])) {
     echo $html; // ← ¡esto es lo que capturará ob_get_clean()!
     return;
 }
+
+//echo $html;
+//exit;
 
 // Si es visualización directa:
 $dompdf = new Dompdf();
