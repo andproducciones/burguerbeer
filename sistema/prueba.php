@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Prueba QZ Tray - Impresión directa</title>
-  <script src="../assets/qz-tray.js"></script> <!-- Ajusta si lo moviste -->
+  <script src="assets/qz.tray.js"></script> <!-- Ajusta si lo moviste -->
 </head>
 <body>
   <h2>🧪 Test de Impresión Térmica con QZ Tray</h2>
