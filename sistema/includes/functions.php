@@ -1194,7 +1194,7 @@ function imprimirComprobanteEstadiaCliente($idreserva)
 
     $detalle = mysqli_query($conection, "
         SELECT h.numero, d.adultos, d.ninos, d.incluye_desayuno, d.incluye_tour, 
-               lt.nombre AS lugar_tour, d.garaje
+               lt.nombre AS lugar_tour, d.garaje, d.tarifa
         FROM reservas_detalle d
         INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
         LEFT JOIN lugares_tour lt ON lt.id = d.lugar_tour
@@ -1204,11 +1204,14 @@ function imprimirComprobanteEstadiaCliente($idreserva)
     $habitaciones = [];
     $adultos = $ninos = 0;
     $servicios = [];
+    $personas = 0;
+    $aplicaPromocion = false;
 
     while ($row = mysqli_fetch_assoc($detalle)) {
         $habitaciones[] = $row['numero'];
         $adultos += $row['adultos'];
         $ninos   += $row['ninos'];
+        $personas += $row['adultos'] + $row['ninos'];
         if ($row['incluye_desayuno']) {
             $servicios[] = "Desayuno";
         }
@@ -1217,6 +1220,11 @@ function imprimirComprobanteEstadiaCliente($idreserva)
         }
         if (floatval($row['garaje']) > 0) {
             $servicios[] = "Garaje";
+        }
+
+        // Validar si la tarifa seleccionada fue 12
+        if (floatval($row['tarifa']) >= 12) {
+            $aplicaPromocion = true;
         }
     }
 
@@ -1264,28 +1272,29 @@ function imprimirComprobanteEstadiaCliente($idreserva)
         $printer->setEmphasis(true);
         $printer->text("¡Gracias por preferirnos!\n");
         $printer->setEmphasis(false);
-        $printer->cut();
+        $printer->cut(); // Corte del comprobante
 
-        // === TICKET DE PROMOCIÓN CANALEZO / JAMAICA ===
-        $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->setEmphasis(true);
-        $printer->text("BEBIDA DE CORTESÍA\n");
-        $printer->setEmphasis(false);
-        $printer->text("Por su estadía en\n");
-        $printer->text("Grupo Cañalimeña recibe en BURGUEERBEER\n");
-        $printer->text("------------------------------------------------\n");
-        $personas = $adultos + $ninos;
-        $beneficio = $personas . " bebida(s) GRATIS (canalezo, agua aromatica o jamaica fría)";
-        $printer->text("$beneficio\n");
-        $printer->text("------------------------------------------------\n");
-        $printer->text("Presente este ticket en BURGUEERBEER durante su\n");
-        $printer->text("estadía para canjearlo.\n");
-        $printer->text("------------------------------------------------\n");
-        $printer->text("Fecha: " . date("d/m/Y H:i") . "\n");
-        $printer->setEmphasis(true);
-        $printer->text("¡Gracias por preferirnos!\n");
-        $printer->setEmphasis(false);
-        $printer->cut();
+        // === TICKET DE PROMOCIÓN SI APLICA ===
+        if ($aplicaPromocion && $personas > 0) {
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->setEmphasis(true);
+            $printer->text("BEBIDA DE CORTESÍA\n");
+            $printer->setEmphasis(false);
+            $printer->setJustification(Printer::JUSTIFY_LEFT);
+            $printer->text("Por su estadía en Grupo Cañalimeña recibe:\n");
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $beneficio = $personas . " bebida(s) GRATIS (canalezo, agua aromática o jamaica fría)";
+            $printer->text("$beneficio\n");
+            $printer->text("------------------------------------------------\n");
+            $printer->text("Presente este ticket en BURGUEERBEER durante su\n");
+            $printer->text("estadía para canjearlo.\n");
+            $printer->text("------------------------------------------------\n");
+            $printer->text("Fecha: " . date("d/m/Y") . "\n");
+            $printer->setEmphasis(true);
+            $printer->text("¡Gracias por preferirnos!\n");
+            $printer->setEmphasis(false);
+            $printer->cut();
+        }
 
         $printer->close();
         return true;
@@ -1293,6 +1302,7 @@ function imprimirComprobanteEstadiaCliente($idreserva)
         return "❌ Error de impresión cliente: " . $e->getMessage();
     }
 }
+
 
 function imprimirTicketsTourYGaraje($idreserva)
 {
