@@ -4091,9 +4091,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
-
-
-
     if ($_POST['action'] == 'agregarAbono') {
         mysqli_begin_transaction($conection);
 

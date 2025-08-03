@@ -1224,6 +1224,7 @@ function imprimirComprobanteEstadiaCliente($idreserva)
         $connector = new WindowsPrintConnector("comandas");
         $printer = new Printer($connector);
 
+        // === COMPROBANTE DE ESTADÍA ===
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->text("GRUPO CAÑALIMEÑA\n");
@@ -1255,11 +1256,32 @@ function imprimirComprobanteEstadiaCliente($idreserva)
         $printer->text("------------------------------------------------\n");
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
-        $printer->setTextSize(1, 1); // Tamaño grande
+        $printer->setTextSize(1, 1);
         $printer->text("Total pagado: $ $total\n");
-        $printer->setTextSize(1, 1); // Restaurar tamaño
+        $printer->setTextSize(1, 1);
         $printer->setEmphasis(false);
         $printer->text("------------------------------------------------\n");
+        $printer->setEmphasis(true);
+        $printer->text("¡Gracias por preferirnos!\n");
+        $printer->setEmphasis(false);
+        $printer->cut();
+
+        // === TICKET DE PROMOCIÓN CANALEZO / JAMAICA ===
+        $printer->setJustification(Printer::JUSTIFY_CENTER);
+        $printer->setEmphasis(true);
+        $printer->text("BEBIDA DE CORTESÍA\n");
+        $printer->setEmphasis(false);
+        $printer->text("Por su estadía en\n");
+        $printer->text("Grupo Cañalimeña recibe en BURGUEERBEER\n");
+        $printer->text("------------------------------------------------\n");
+        $personas = $adultos + $ninos;
+        $beneficio = $personas . " bebida(s) GRATIS (canalezo, agua aromatica o jamaica fría)";
+        $printer->text("$beneficio\n");
+        $printer->text("------------------------------------------------\n");
+        $printer->text("Presente este ticket en BURGUEERBEER durante su\n");
+        $printer->text("estadía para canjearlo.\n");
+        $printer->text("------------------------------------------------\n");
+        $printer->text("Fecha: " . date("d/m/Y H:i") . "\n");
         $printer->setEmphasis(true);
         $printer->text("¡Gracias por preferirnos!\n");
         $printer->setEmphasis(false);
