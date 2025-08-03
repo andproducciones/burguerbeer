@@ -1283,7 +1283,7 @@ function imprimirComprobanteEstadiaCliente($idreserva)
             $printer->setJustification(Printer::JUSTIFY_LEFT);
             $printer->text("Por su estadía en Grupo Cañalimeña recibe:\n");
             $printer->setJustification(Printer::JUSTIFY_CENTER);
-            $beneficio = $personas . " bebida(s) GRATIS (canalezo, agua aromática o jamaica fría)";
+            $beneficio = $personas . " bebida(s) GRATIS (Agua aromática o Bebida Fría)";
             $printer->text("$beneficio\n");
             $printer->text("------------------------------------------------\n");
             $printer->text("Presente este ticket en BURGUEERBEER durante su\n");
