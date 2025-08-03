@@ -1223,7 +1223,7 @@ function imprimirComprobanteEstadiaCliente($idreserva)
         }
 
         // Validar si la tarifa seleccionada fue 12
-        if (floatval($row['tarifa']) >= 12) {
+        if (floatval($row['precio_unitario']) >= 12) {
             $aplicaPromocion = true;
         }
     }
