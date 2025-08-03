@@ -1194,7 +1194,7 @@ function imprimirComprobanteEstadiaCliente($idreserva)
 
     $detalle = mysqli_query($conection, "
         SELECT h.numero, d.adultos, d.ninos, d.incluye_desayuno, d.incluye_tour, 
-               lt.nombre AS lugar_tour, d.garaje, d.tarifa
+               lt.nombre AS lugar_tour, d.garaje, d.precio_unitario
         FROM reservas_detalle d
         INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
         LEFT JOIN lugares_tour lt ON lt.id = d.lugar_tour
