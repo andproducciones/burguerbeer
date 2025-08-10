@@ -987,7 +987,7 @@ function enviarComprobanteReserva($idreserva)
 function imprimirDesayunosHoy()
 {
     try {
-        $nombreImpresora = "comandas";
+        $nombreImpresora = "hotel2";
         $hoy = date('Y-m-d');
 
         // Datos de encabezado
@@ -1115,7 +1115,7 @@ function imprimirComprobanteEstadia($idreserva)
 
     // === SEGURA: impresión con manejo de errores ===
     try {
-        $connector = new WindowsPrintConnector("comandas");
+        $connector = new WindowsPrintConnector("hotel2");
         $printer = new Printer($connector);
 
         $printer->setJustification(Printer::JUSTIFY_CENTER);
@@ -1229,7 +1229,7 @@ function imprimirComprobanteEstadiaCliente($idreserva)
     }
 
     try {
-        $connector = new WindowsPrintConnector("comandas");
+        $connector = new WindowsPrintConnector("hotel2");
         $printer = new Printer($connector);
 
         // === COMPROBANTE DE ESTADÍA ===
@@ -1344,7 +1344,7 @@ function imprimirTicketsTourYGaraje($idreserva)
             $hash = strtoupper(substr(sha1("TOUR$habitacion$fecha$lugar"), 0, 10));
 
             try {
-                $printer = new Printer(new WindowsPrintConnector("comandas"));
+                $printer = new Printer(new WindowsPrintConnector("hotel2"));
                 $printer->setJustification(Printer::JUSTIFY_CENTER);
                 $printer->setEmphasis(true);
                 $printer->text("TICKET DE TOUR\n");
@@ -1383,7 +1383,7 @@ function imprimirTicketsTourYGaraje($idreserva)
                 $hash = strtoupper(substr(sha1("GARAJE$habitacion$fechaGaraje"), 0, 10));
 
                 try {
-                    $printer = new Printer(new WindowsPrintConnector("comandas"));
+                    $printer = new Printer(new WindowsPrintConnector("hotel2"));
                     $printer->setJustification(Printer::JUSTIFY_CENTER);
                     $printer->setEmphasis(true);
                     $printer->text("TICKET DE GARAJE\n");
@@ -1422,7 +1422,7 @@ function imprimirTicketsTourHoy()
         include "../conexion.php";
 
 
-        $nombreImpresora = "comandas";
+        $nombreImpresora = "hotel2";
         $hoy = date('Y-m-d');
 
         // Datos del hotel
@@ -1492,7 +1492,7 @@ function imprimirTicketsGarajeHoy()
     try {
         include "../conexion.php";
 
-        $nombreImpresora = "comandas";
+        $nombreImpresora = "hotel2";
         $hoy = date('Y-m-d');
 
         $config = mysqli_fetch_assoc(mysqli_query($conection, "SELECT * FROM configuracion LIMIT 1"));
