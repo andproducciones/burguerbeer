@@ -308,13 +308,13 @@ if (isset($desayunosQuery) && $desayunosQuery && mysqli_num_rows($desayunosQuery
 }
 
 // BLOQUE FINAL (no agregues nada más después)
-$desayunos = <<<HTML
+$desayunos = '
 <div id="bloqueDesayunos">
   <div class="desayuno-header">
     <strong>🍽️ Desayunos hoy:</strong>
     <div class="desayuno-controles">
       <button class="btn-imprimir-hoy" onclick="imprimirDesayunos()">🖨️ Hoy</button>
-      <input type="date" id="fecha_desayuno" min="{$minDateDes}">
+      <input type="date" id="fecha_desayuno" min="' . $minDateDes . '">
       <button class="btn-ver-fecha" onclick="verDesayunosPorFecha()">📅 Ver</button>
     </div>
   </div>
@@ -322,13 +322,14 @@ $desayunos = <<<HTML
 
   <!-- Contenedor de HOY: se vacía desde verDesayunosPorFecha() -->
   <div id="desayunos_hoy_lista">
-    {$listaHoyDes}
+    ' . $listaHoyDes . '
   </div>
 
   <!-- Resultado por FECHA (reemplaza al de HOY) -->
   <div id="resultado_desayunos_fecha" style="margin-top:10px;"></div>
 </div>
-HTML;
+';
+
 
 
 $reservas_array = [];
