@@ -1901,59 +1901,123 @@ function seleccionarPago(valor) {
 
     }
 
-    function calcular() {
-    const input1 = document.getElementById('monto_efectivo');
-    const input2 = document.getElementById('monto_tarjeta');
-    const input3 = document.getElementById('monto_transferencia');
-    const input4 = document.getElementById('monto_deuna');
-    const resultado = document.getElementById('monto_final');
-    const resultado2 = document.getElementById('monto_final2');
+function toNumber(v){
+  if (typeof v !== 'string') v = String(v ?? '');
+  v = v.replace(/\s+/g,'').replace(',', '.');
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : 0;
+}
+function setMoney(el, value){
+  if (!el) return;
+  const n = Number.isFinite(value) ? value : 0;
+  el.value = n.toFixed(2);
+}
 
-    if (input1 && input2 && input3 && input4 && resultado) {
-        const valor1 = parseFloat(input1.value) || 0;
-        const valor2 = parseFloat(input2.value) || 0;
-        const valor3 = parseFloat(input3.value) || 0;
-        const valor4 = parseFloat(input4.value) || 0;
+// ====== Cálculo principal: suma montos entregados ======
+window.calcular = function(){
+  const vE  = toNumber(document.getElementById('monto_efectivo')?.value);
+  const vT  = toNumber(document.getElementById('monto_tarjeta')?.value);
+  const vTr = toNumber(document.getElementById('monto_transferencia')?.value);
+  const vD  = toNumber(document.getElementById('monto_deuna')?.value);
 
-        const sumaTotal = valor1 + valor2 + valor3 + valor4;
-        resultado.value = sumaTotal.toFixed(2);
-        if (resultado2) resultado2.value = sumaTotal.toFixed(2);
+  const sumaTotal = vE + vT + vTr + vD;
+
+  setMoney(document.getElementById('monto_final'),  sumaTotal);
+  setMoney(document.getElementById('monto_final2'), sumaTotal);
+
+  // recalcula neto considerando salarios
+  window.calcular3();
+};
+
+// ====== Cálculo de salarios y efectivo neto ======
+window.calcular3 = function(){
+  // mensual por día (si asistió)
+  const chkMensual = document.getElementById('mensual_asistio_chk');
+  const montoDiaEl = document.getElementById('mensual_monto_dia');
+  const mensual = (chkMensual && chkMensual.checked) ? toNumber(montoDiaEl?.value) : 0;
+
+  // diarios variables
+  const emp2 = toNumber(document.getElementById('empleado_2')?.value);
+  const emp3 = toNumber(document.getElementById('empleado_3')?.value);
+
+  const salarios = mensual + emp2 + emp3;
+
+  // total efectivo calculado por el sistema (hidden, name)
+  const totalEfectivoCalc = toNumber(document.querySelector('input[name="monto_efectivo_calc"]')?.value);
+
+  const efectivoNeto = totalEfectivoCalc - salarios;
+
+  const out = document.getElementById('efectivo_neto');
+  if (out){
+    setMoney(out, efectivoNeto);
+    // feedback visual opcional
+    out.style.color = (efectivoNeto < 0) ? 'red' : '';
+    out.title = `Salarios: ${salarios.toFixed(2)} | Efectivo calc.: ${totalEfectivoCalc.toFixed(2)}`;
+  }
+};
+
+// ====== Listeners (soportan onkeyup del HTML y también aquí) ======
+(function attachCerrarCajaHandlers(){
+  const idsInput = [
+    'monto_efectivo','monto_tarjeta','monto_transferencia','monto_deuna'
+  ];
+  idsInput.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', window.calcular);
+    el.addEventListener('blur',  () => setMoney(el, toNumber(el.value)));
+  });
+
+  // Empleados
+  ['empleado_2','empleado_3','mensual_monto_dia'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', window.calcular3);
+    if (id !== 'mensual_monto_dia'){
+      el.addEventListener('blur', () => setMoney(el, toNumber(el.value)));
     }
+  });
 
-    calcular3(); // Ejecuta también cálculo de efectivo neto al cambiar montos entregados
-}
+  // Checkbox asistencia mensual -> actualiza hidden y recalcula
+  const chk = document.getElementById('mensual_asistio_chk');
+  const hid = document.getElementById('mensual_asistio');
+  if (chk && hid){
+    chk.addEventListener('change', function(){
+      hid.value = this.checked ? '1' : '0';
+      window.calcular3();
+    });
+  }
 
-function calcular3() {
-    const totalEntregado = parseFloat(document.getElementById('monto_efectivo')?.value) || 0;
-
-    const empleado2 = parseFloat(document.getElementById('empleado_cristina')?.value) || 0;
-    const empleado3 = parseFloat(document.getElementById('empleado_patricia')?.value) || 0;
-
-    const totalPagadoPersonal = empleado2 + empleado3;
-    const efectivoNeto = totalEntregado - totalPagadoPersonal;
-
-    const output = document.getElementById('efectivo_neto');
-    if (output) output.value = efectivoNeto.toFixed(2);
-}
-
+  // Inicializa valores al cargar el modal/form
+  window.calcular();
+})();
 
 
-function calcular2() {
+(function(){
+  function syncCompras(){
+    const checks = Array.from(document.querySelectorAll('input[name="compras_items[]"]:checked'))
+      .map(el => el.value);
+    const otros = (document.getElementById('compras_otro')?.value || '').trim();
+    const partes = [];
+    if (checks.length) partes.push(checks.join(', '));
+    if (otros) partes.push('Otros: ' + otros);
+    const txt = document.getElementById('compras');
+    if (txt) txt.value = partes.join(' | ');
+  }
 
-    const input1 = document.getElementById('entrega');
-    const input2 = document.getElementById('totalCalcular');
+  document.addEventListener('change', e => {
+    if (e.target && e.target.name === 'compras_items[]') syncCompras();
+  });
 
-    const resultado = document.getElementById('cambio');
+  document.getElementById('compras_otro')?.addEventListener('input', syncCompras);
 
-    const valor1 = parseFloat(input1.value) || 0;
-    const valor2 = parseFloat(input2.value) || 0;
+  const form = document.getElementById('form_add_product');
+  if (form) form.addEventListener('submit', syncCompras);
 
-    
-    const sumaTotal = valor2 - valor1;
-    resultado.innerHTML = "$ " + Math.abs(sumaTotal).toFixed(2);
-    console.log(sumaTotal);
+  syncCompras();
+})();
 
-}
+
 function procesarDivisionCuenta () {
     // Mostrar mensaje de carga con SweetAlert
     Swal.fire({

@@ -488,36 +488,69 @@ function imprimirCierreCaja($data)
     include "../conexion.php";
     $nombreImpresora = "comandas";
 
-    // Extraer datos
+    // Extraer datos del arreglo
     $fecha_inicio       = $data['fecha_inicio'];
     $fecha_fin          = $data['fecha_fin'];
-    $id_cierre          = $data['idArqueo'];
-    $user               = $data['idUser'];
+    $id_cierre          = (int)$data['idArqueo'];
+    $user               = (int)$data['idUser'];
     $nombre             = $data['nombre'];
     $apellido           = $data['apellido'];
-    $monto_inicial      = $data['monto_inicial'];
-    $monto_final        = $data['monto_final'];
-    $total_ventas       = $data['total_ventas'];
-    $total_cash         = $data['total_cash'];
-    $efectivo           = $data['efectivo'];
-    $transferencia      = $data['transferencia'];
-    $tarjeta            = $data['tarjeta'];
-    $deuna              = $data['deuna'];
-    $total_salidas      = $data['total_movimientos'];
-    $salidas            = $data['salidas'];
-    $salarios           = $data['salarios'];
+    $monto_inicial      = (float)$data['monto_inicial'];
+    $monto_final        = (float)$data['monto_final'];
+    $total_ventas       = (float)$data['total_ventas'];
+    $total_cash         = (float)$data['total_cash'];
+    $efectivo           = (float)$data['efectivo'];
+    $transferencia      = (float)$data['transferencia'];
+    $tarjeta            = (float)$data['tarjeta'];
+    $deuna              = (float)$data['deuna'];
+    $total_salidas      = (float)$data['total_movimientos'];
+    $salidas            = is_array($data['salidas']) ? $data['salidas'] : [];
+    // El backend ya trae este total desde pagos_personal (salariosCierre)
+    $salarios_total     = isset($data['salarios']) ? (float)$data['salarios'] : 0.0;
 
-    // Valores calculados del sistema
-    $totalEfectivo      = $data['total_efectivo'];
-    $totalTarjeta       = $data['total_tarjeta'];
-    $totalTransferencia = $data['total_transferencia'];
-    $totalDeUna         = $data['total_deuna'];
+    // Valores calculados del sistema (montos por entregar)
+    $totalEfectivo      = (float)$data['total_efectivo'];
+    $totalTarjeta       = (float)$data['total_tarjeta'];
+    $totalTransferencia = (float)$data['total_transferencia'];
+    $totalDeUna         = (float)$data['total_deuna'];
 
     $total_venta = $monto_inicial + $total_cash;
     $observaciones = $data['observaciones'] ?? '';
-    $compras = $data['compras'] ?? '';
+    $compras       = $data['compras'] ?? '';
 
-    $monto_final_final = $totalEfectivo - $salarios;
+    // --- Traer detalle de salarios (pagos_personal) para imprimir desglose ---
+    $detalle_salarios = [];
+    $total_por_tipo = ['por_dia' => 0.0, 'por_cierre' => 0.0];
+    $sql_det = "
+        SELECT empleado, tipo, monto
+        FROM pagos_personal
+        WHERE arqueo_id = {$id_cierre}
+        ORDER BY tipo, empleado
+    ";
+    if ($rs = mysqli_query($conection, $sql_det)) {
+        while ($row = mysqli_fetch_assoc($rs)) {
+            $tipo = $row['tipo']; // 'por_dia' o 'por_cierre'
+            $empleado = $row['empleado'];
+            $monto = (float)$row['monto'];
+            $detalle_salarios[] = [
+                'tipo' => $tipo,
+                'empleado' => $empleado,
+                'monto' => $monto
+            ];
+            if (isset($total_por_tipo[$tipo])) {
+                $total_por_tipo[$tipo] += $monto;
+            }
+        }
+        mysqli_free_result($rs);
+    }
+
+    // Si no vino del backend, suma por seguridad
+    if ($salarios_total <= 0 && !empty($detalle_salarios)) {
+        $salarios_total = array_reduce($detalle_salarios, function ($acc, $it) { return $acc + (float)$it['monto']; }, 0.0);
+    }
+
+    // Cierre final en efectivo (tu lógica actual): efectivo neto – salarios
+    $monto_final_final = $totalEfectivo - $salarios_total;
 
     try {
         $connector = new WindowsPrintConnector($nombreImpresora);
@@ -530,51 +563,53 @@ function imprimirCierreCaja($data)
         $printer->setPrintWidth(576);
         $printer->setTextSize(1, 1);
 
+        // Encabezado
         $printer->setEmphasis(true);
         $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->text("CIERRE DE CAJA # $id_cierre\n");
+        $printer->text("CIERRE DE CAJA # {$id_cierre}\n");
         $printer->setEmphasis(false);
         $printer->setJustification(Printer::JUSTIFY_LEFT);
-        $printer->text("Fecha Inicio: $fecha_inicio\n");
-        $printer->text("Fecha Final:  $fecha_fin\n");
-        $printer->text("Cajero:       $nombre $apellido\n");
+        $printer->text("Fecha Inicio: {$fecha_inicio}\n");
+        $printer->text("Fecha Final:  {$fecha_fin}\n");
+        $printer->text("Cajero:       {$nombre} {$apellido}\n");
         $printer->text("------------------------------------------------\n");
         $printer->text("Monto Inicial:          $ " . number_format($monto_inicial, 2) . "\n");
         $printer->text("------------------------------------------------\n");
 
-
+        // Ventas del día
         $printer->setEmphasis(true);
-        $printer->setJustification(Printer::JUSTIFY_LEFT);
         $printer->text("VENTAS DEL DIA\n");
         $printer->setEmphasis(false);
-        $printer->setJustification(Printer::JUSTIFY_LEFT);
-        $printer->text("Cantidad de Ventas:     $total_ventas\n");
-        $printer->text("TOTAL EN VENTAS:       $ " . number_format($total_cash, 2) . "\n");
+        $printer->text("Cantidad de Ventas:     " . number_format($total_ventas, 0) . "\n");
+        $printer->text("TOTAL EN VENTAS:        $ " . number_format($total_cash, 2) . "\n");
         $printer->text("------------------------------------------------\n");
 
+        // Movimientos de caja
         $printer->setEmphasis(true);
         $printer->text("MOVIMIENTOS DE CAJA\n");
         $printer->setEmphasis(false);
-        foreach ($salidas as $salida) {
-            $nombre_usuario = $salida['nombre_usuario'];
-            $motivo = $salida['motivo'];
-            $valor = $salida['valor'];
-            $tipo_moneda = $salida['tipo_moneda'] == 1 ? 'EF' : 'TR';
 
-            // Si tipo_transaccion es 2, se resta
-            if (isset($salida['tipo_transaccion']) && $salida['tipo_transaccion'] == 1) {
+        // Nota: en tu sistema, tipo_transaccion: 1=Salida (resta), 2=Entrada (suma)
+        foreach ($salidas as $salida) {
+            $nombre_usuario = $salida['nombre_usuario'] ?? '';
+            $motivo = $salida['motivo'] ?? '';
+            $valor = (float)($salida['valor'] ?? 0);
+            $tipo_moneda = (isset($salida['tipo_moneda']) && (int)$salida['tipo_moneda'] === 1) ? 'EF' : 'TR';
+            if (isset($salida['tipo_transaccion']) && (int)$salida['tipo_transaccion'] === 1) {
+                // Salida: se muestra como negativo
                 $valor = -abs($valor);
             }
-
-            $printer->text("$nombre_usuario ($tipo_moneda): $motivo - $ " . number_format($valor, 2) . "\n");
+            $printer->text("{$nombre_usuario} ({$tipo_moneda}): {$motivo} - $ " . number_format($valor, 2) . "\n");
         }
-        //$printer->setEmphasis(true);
-        //$printer->text("Total Salidas:          $ " . number_format($total_salidas, 2) . "\n");
-        //$printer->setEmphasis(false);
+        // Si quieres mostrar total de movimientos, descomenta:
+        // $printer->setEmphasis(true);
+        // $printer->text("Total Movimientos:      $ " . number_format($total_salidas, 2) . "\n");
+        // $printer->setEmphasis(false);
         $printer->text("------------------------------------------------\n");
 
+        // Montos a entregar (cálculo del sistema)
         $printer->setEmphasis(true);
-        $printer->text("MONTOS A ENTREGAR\n");
+        $printer->text("MONTOS A ENTREGAR (Sistema)\n");
         $printer->setEmphasis(false);
         $printer->text("Efectivo:        $ " . number_format($totalEfectivo, 2) . "\n");
         $printer->text("Tarjeta:         $ " . number_format($totalTarjeta, 2) . "\n");
@@ -582,13 +617,10 @@ function imprimirCierreCaja($data)
         $printer->text("DeUna:           $ " . number_format($totalDeUna, 2) . "\n");
         $printer->text("------------------------------------------------\n");
 
-
-
+        // Montos entregados (lo que digitó el cajero)
         $printer->setEmphasis(true);
-        $printer->setJustification(Printer::JUSTIFY_LEFT);
-        $printer->text("MONTOS ENTREGADOS\n");
+        $printer->text("MONTOS ENTREGADOS (Cajero)\n");
         $printer->setEmphasis(false);
-        $printer->setJustification(Printer::JUSTIFY_LEFT);
         $printer->text("Efectivo:               $ " . number_format($efectivo, 2) . "\n");
         $printer->text("Tarjeta:                $ " . number_format($tarjeta, 2) . "\n");
         $printer->text("Transferencia:          $ " . number_format($transferencia, 2) . "\n");
@@ -598,21 +630,19 @@ function imprimirCierreCaja($data)
         $printer->setEmphasis(false);
         $printer->text("------------------------------------------------\n");
 
+        // Auditoría de diferencias
         $q_auditoria = mysqli_query(
             $conection,
             "SELECT tipo_pago, estado, diferencia 
-            FROM auditoria_cierre_caja 
-            WHERE id_cierre = $id_cierre"
+             FROM auditoria_cierre_caja 
+             WHERE id_cierre = {$id_cierre}"
         );
 
         $novedad_encontrada = false;
         $auditoria_detalle = [];
-
-        if (mysqli_num_rows($q_auditoria) > 0) {
+        if ($q_auditoria && mysqli_num_rows($q_auditoria) > 0) {
             while ($row = mysqli_fetch_assoc($q_auditoria)) {
                 $auditoria_detalle[] = $row;
-
-                // Detecta si hay alguna novedad (estado distinto de "OK")
                 if (strtoupper($row['estado']) !== 'OK') {
                     $novedad_encontrada = true;
                 }
@@ -621,20 +651,19 @@ function imprimirCierreCaja($data)
 
         if ($novedad_encontrada) {
             $printer->setEmphasis(true);
-            $printer->text("RESULTADO DE AUDITORÍA\n");
+            $printer->text("RESULTADO DE AUDITORIA\n");
             $printer->setEmphasis(false);
-
             foreach ($auditoria_detalle as $row) {
-                $printer->text("{$row['tipo_pago']}: {$row['estado']} - $ " . number_format($row['diferencia'], 2) . "\n");
+                $printer->text("{$row['tipo_pago']}: {$row['estado']} - $ " . number_format((float)$row['diferencia'], 2) . "\n");
             }
             $printer->text("------------------------------------------------\n");
         }
 
+        // Códigos de pago
         if (!empty($data['pagos_codigos'])) {
             $printer->setEmphasis(true);
-            $printer->text("DETALLE CÓDIGOS DE PAGO\n");
+            $printer->text("DETALLE CODIGOS DE PAGO\n");
             $printer->setEmphasis(false);
-
             foreach ($data['pagos_codigos'] as $tipo => $codigos) {
                 $printer->text(strtoupper($tipo) . "\n");
                 foreach ($codigos as $c) {
@@ -644,31 +673,68 @@ function imprimirCierreCaja($data)
             $printer->text("------------------------------------------------\n");
         }
 
+        // === Detalle de pagos al personal ===
+        $printer->setEmphasis(true);
+        $printer->text("PAGOS AL PERSONAL\n");
+        $printer->setEmphasis(false);
 
+        if (!empty($detalle_salarios)) {
+            // Primero por_dia (mensual)
+            $t_por_dia = $total_por_tipo['por_dia'];
+            if ($t_por_dia > 0) {
+                $printer->text("Mensual (por dia):\n");
+                foreach ($detalle_salarios as $d) {
+                    if ($d['tipo'] === 'por_dia') {
+                        $printer->text("  {$d['empleado']}: $ " . number_format($d['monto'], 2) . "\n");
+                    }
+                }
+                $printer->text("  Total por dia:   $ " . number_format($t_por_dia, 2) . "\n");
+            }
+            // Luego por_cierre (diarios variables)
+            $t_por_cierre = $total_por_tipo['por_cierre'];
+            if ($t_por_cierre > 0) {
+                $printer->text("Por cierre:\n");
+                foreach ($detalle_salarios as $d) {
+                    if ($d['tipo'] === 'por_cierre') {
+                        $printer->text("  {$d['empleado']}: $ " . number_format($d['monto'], 2) . "\n");
+                    }
+                }
+                $printer->text("  Total por cierre: $ " . number_format($t_por_cierre, 2) . "\n");
+            }
+        } else {
+            $printer->text("  (Sin registros)\n");
+        }
+        $printer->setEmphasis(true);
+        $printer->text("TOTAL SALARIOS:         $ " . number_format($salarios_total, 2) . "\n");
+        $printer->setEmphasis(false);
+        $printer->text("------------------------------------------------\n");
 
+        // Observaciones / Compras
         if (!empty($observaciones)) {
             $printer->setEmphasis(true);
             $printer->text("OBSERVACIONES\n");
             $printer->setEmphasis(false);
-            $printer->text("$observaciones\n");
+            $printer->text($observaciones . "\n");
             $printer->text("------------------------------------------------\n");
         }
         if (!empty($compras)) {
             $printer->setEmphasis(true);
             $printer->text("COMPRAS\n");
             $printer->setEmphasis(false);
-            $printer->text("$compras\n");
+            $printer->text($compras . "\n");
             $printer->text("------------------------------------------------\n");
         }
 
+        // Cierre final en efectivo (efectivo neto – salarios)
         $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->text("CIERRE FINAL EN EFECTIVO $ $monto_final_final\n");
+        $printer->setEmphasis(true);
+        $printer->text("CIERRE FINAL EN EFECTIVO  $ " . number_format($monto_final_final, 2) . "\n");
+        $printer->setEmphasis(false);
         $printer->cut();
 
         try {
             $printer->close();
-        } catch (Exception $e) {
-            // Silenciar error de cierre
+        } catch (Exception $e) { /* silencio */
         }
 
         return true;
@@ -676,8 +742,7 @@ function imprimirCierreCaja($data)
     } catch (Exception $e) {
         try {
             $printer->close();
-        } catch (Exception $e2) {
-            // Silenciar cualquier otro error
+        } catch (Exception $e2) { /* silencio */
         }
         return false;
     }
@@ -891,143 +956,58 @@ function sanearPost(array $post): array
 
     return $limpio;
 }
-function enviarComprobanteReserva($idreserva)
-{
-    include "../conexion.php";
-    require_once __DIR__ . '/email.php';
-    require_once __DIR__ . '/../pdf/vendor/autoload.php';
-
-    $id = intval($idreserva);
-    if ($id <= 0) {
-        return "❌ ID de reserva inválido.";
-    }
-
-    // CONSULTA PRINCIPAL
-    $query = mysqli_query($conection, "
-        SELECT r.*, CONCAT(c.nombre, ' ', c.p_apellido) AS cliente, c.usuario, c.telefono, c.correo_c
-        FROM reservas r
-        INNER JOIN clientes c ON r.id_cliente = c.usuario
-        WHERE r.idreserva = $id
-    ");
-    if (!$query || mysqli_num_rows($query) == 0) {
-        return "❌ Reserva no encontrada.";
-    }
-
-    $reserva = mysqli_fetch_assoc($query);
-    $estado = strtolower($reserva['estado']);
-
-    // 🔴 NO ENVIAR SI ESTÁ EN CHECKOUT U OTROS
-    if (!in_array($estado, ['confirmada', 'checkin'])) {
-        return "ℹ️ Estado de reserva no permite envío automático ($estado).";
-    }
-
-    $tipo_mail = ($estado === 'checkin') ? 'estadia' : 'reserva';
-    $titulo = ($estado === 'checkin') ? 'Comprobante de estadía' : 'Comprobante de reserva';
-
-    // === GENERAR PDF ===
-    $_GET['modoCorreo'] = true;
-    $_GET['id'] = $id;
-
-    ob_start();
-    include __DIR__ . '/../pdf/reservas/verReservaPDF.php';
-    $pdf_html = ob_get_clean();
-
-    $dompdf = new Dompdf();
-    $options = $dompdf->getOptions();
-    $options->set('isRemoteEnabled', true);
-    $dompdf->setOptions($options);
-    $dompdf->loadHtml($pdf_html);
-    $dompdf->setPaper('A5', 'portrait');
-    $dompdf->render();
-
-    $archivo_temp = __DIR__ . "/comprobante_temp_{$id}.pdf";
-    file_put_contents($archivo_temp, $dompdf->output());
-
-    // === ENVIAR CORREO ===
-    $nombreCliente = $reserva['cliente'];
-    $correoCliente = $reserva['correo_c'];
-
-    $logoCID = 'logoGrupo';
-    $plantillaHTML = file_get_contents(__DIR__ . '/plantillas/plantilla_comprobante.php');
-    $plantillaHTML = str_replace('{{NOMBRE}}', $nombreCliente, $plantillaHTML);
-    $plantillaHTML = str_replace('{{TITULO}}', $titulo, $plantillaHTML);
-
-    $enviado = enviarCorreo(
-        $correoCliente,
-        $nombreCliente,
-        "$titulo – Grupo Cañalimeña",
-        $plantillaHTML,
-        [$archivo_temp],
-        [['ruta' => __DIR__ . '/../../img/logo.jpg', 'cid' => $logoCID]]
-    );
-
-    unlink($archivo_temp);
-
-    if ($enviado) {
-        // ✅ Registrar éxito
-        mysqli_query($conection, "
-            UPDATE reservas 
-            SET mail = NOW(), tipo_mail = '$tipo_mail' 
-            WHERE idreserva = $id
-        ");
-        return true;
-    } else {
-        $error = $GLOBALS['lastPHPMailerError'] ?? 'Sin detalle técnico';
-        mysqli_query($conection, "
-            UPDATE reservas 
-            SET mail = NOW(), tipo_mail = 'fallo - $error' 
-            WHERE idreserva = $id
-        ");
-        return "❌ Error al enviar correo a $correoCliente – $error";
-    }
-}
-
-
 
 function imprimirDesayunosHoy()
 {
     try {
+<<<<<<< Updated upstream
         $nombreImpresora = "hotel2";
+=======
+        include "../conexion.php";
+        mysqli_set_charset($conection, 'utf8mb4');
+
+        $nombreImpresora = "comandas";
+>>>>>>> Stashed changes
         $hoy = date('Y-m-d');
 
-        // Datos de encabezado
-        $query_config = mysqli_query($GLOBALS['conection'], "SELECT * FROM configuracion LIMIT 1");
-        $config = mysqli_fetch_assoc($query_config);
-
+        // Encabezado hotel
+        $cfg = mysqli_query($conection, "SELECT razon_social, nit, direccion, telefono FROM configuracion LIMIT 1");
+        $config = $cfg ? mysqli_fetch_assoc($cfg) : [];
         $razon_social = $config['razon_social'] ?? 'GRUPO CAÑALIMEÑA';
         $nit          = $config['nit'] ?? '';
         $direccion    = $config['direccion'] ?? '';
         $telefono     = $config['telefono'] ?? '';
 
-        // Consulta corregida
-        $query = mysqli_query($GLOBALS['conection'], "
+        // Desayunos del día: después del check-in (entrada+1) y hasta salida
+        $sql = "
             SELECT 
                 h.numero AS habitacion, 
-                (rd.adultos + rd.ninos) AS total_desayunos,
+                (d.adultos + d.ninos) AS total_desayunos,
                 CONCAT(c.nombre, ' ', c.p_apellido) AS cliente
-            FROM reservas_detalle rd
-            INNER JOIN reservas r ON rd.idreserva = r.idreserva
-            INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
-            INNER JOIN clientes c ON c.usuario = r.id_cliente
+            FROM reservas_detalle d
+            INNER JOIN reservas r       ON d.idreserva = r.idreserva
+            INNER JOIN habitaciones h   ON d.id_habitacion = h.idhabitacion
+            INNER JOIN clientes c       ON c.usuario = r.id_cliente
             WHERE 
-                rd.incluye_desayuno = 1
+                d.incluye_desayuno = 1
                 AND r.estado = 'checkin'
-                AND DATE('$hoy') > r.fecha_entrada
-                AND DATE('$hoy') <= r.fecha_salida
+                AND DATE(?) BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
             ORDER BY h.numero
-        ");
+        ";
+        $stmt = mysqli_prepare($conection, $sql);
+        mysqli_stmt_bind_param($stmt, "s", $hoy);
+        mysqli_stmt_execute($stmt);
+        $query = mysqli_stmt_get_result($stmt);
 
-        if (!$query || mysqli_num_rows($query) == 0) {
+        if (!$query || mysqli_num_rows($query) === 0) {
             throw new Exception("No hay desayunos programados hoy.");
         }
 
-        // Imprimir
-        $connector = new WindowsPrintConnector($nombreImpresora);
-        $printer = new Printer($connector);
+        $printer = new Printer(new WindowsPrintConnector($nombreImpresora));
 
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
-        $printer->text(strtoupper($razon_social) . "\n");
+        $printer->text(mb_strtoupper($razon_social) . "\n");
         $printer->setEmphasis(false);
         $printer->text("RUC: $nit\n");
         $printer->text("Tel: $telefono\n");
@@ -1040,7 +1020,7 @@ function imprimirDesayunosHoy()
         $printer->text(str_repeat("-", 42) . "\n");
 
         while ($row = mysqli_fetch_assoc($query)) {
-            $hab = str_pad("Hab. " . $row['habitacion'], 15);
+            $hab  = str_pad("Hab. " . $row['habitacion'], 15);
             $cant = str_pad("🟢 {$row['total_desayunos']} desayuno(s)", 25);
             $printer->text("$hab $cant\n");
             $printer->text("Cliente: " . mb_strtoupper($row['cliente']) . "\n\n");
@@ -1060,174 +1040,245 @@ function imprimirDesayunosHoy()
     }
 }
 
-function imprimirComprobanteEstadia($idreserva)
+function imprimirComprobanteEstadia($idreserva = null, $id_detalle = null)
 {
     include "../conexion.php";
+    mysqli_set_charset($conection, 'utf8mb4');
+
+    // ====== DETALLE (check-in directo) ======
+    if (!is_null($id_detalle)) {
+        $id = intval($id_detalle);
+        if ($id <= 0) {
+            return "❌ ID de detalle inválido.";
+        }
+
+        $q = mysqli_query($conection, "
+            SELECT d.id, d.idcliente, d.fecha_entrada, d.fecha_salida, d.subtotal,
+                   d.adultos, d.ninos, d.incluye_desayuno, d.incluye_tour, d.lugar_tour, d.garaje,
+                   h.numero AS habitacion,
+                   CONCAT(c.nombre,' ',c.p_apellido) AS cliente, c.usuario AS usuario_cliente
+            FROM reservas_detalle d
+            INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
+            INNER JOIN clientes c     ON c.usuario = d.idcliente
+            WHERE d.id = $id
+            LIMIT 1
+        ");
+        if (!$q || mysqli_num_rows($q) === 0) {
+            return "❌ Detalle no encontrado.";
+        }
+        $r = mysqli_fetch_assoc($q);
+
+        // LUGARES
+        $lugares = '';
+        if (!empty($r['lugar_tour'])) {
+            $csv = mysqli_real_escape_string($conection, $r['lugar_tour']);
+            $qL = mysqli_query($conection, "
+                SELECT GROUP_CONCAT(nombre SEPARATOR ', ') AS lugares
+                FROM lugares_tour
+                WHERE FIND_IN_SET(id, '$csv')
+            ");
+            if ($qL && mysqli_num_rows($qL)) {
+                $lugares = mysqli_fetch_assoc($qL)['lugares'] ?? '';
+            }
+        }
+
+        $numeroContrato = "01-".date('Y')."-D".str_pad($id, 4, '0', STR_PAD_LEFT);
+        $hash           = strtoupper(substr(sha1("ESTADIADET{$id}".$r['fecha_entrada']), 0, 10));
+        $cliente        = $r['cliente'];
+        $usuario_cli    = $r['usuario_cliente'];
+        $entrada        = function_exists('formatearFechaEspanol') ? formatearFechaEspanol($r['fecha_entrada']) : $r['fecha_entrada'];
+        $salida         = function_exists('formatearFechaEspanol') ? formatearFechaEspanol($r['fecha_salida']) : $r['fecha_salida'];
+        $total          = number_format((float)$r['subtotal'], 2);
+        $servicios      = [];
+        if ((int)$r['incluye_desayuno']) {
+            $servicios[] = "Desayuno";
+        }
+        if ((int)$r['incluye_tour']) {
+            $servicios[] = "Tour".($lugares ? ": $lugares" : "");
+        }
+        if ((float)$r['garaje'] > 0) {
+            $servicios[] = "Garaje";
+        }
+
+        try {
+            $printer = new Printer(new WindowsPrintConnector("comandas"));
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->setEmphasis(true);
+            $printer->text("GRUPO CAÑALIMEÑA\n");
+            $printer->text("COMPROBANTE DE ESTADÍA\n");
+            $printer->setEmphasis(false);
+            $printer->text("Contrato N°: $numeroContrato\n");
+            $printer->text("Verificación: #$hash\n");
+            $printer->text(str_repeat("-", 46)."\n");
+
+            $printer->setJustification(Printer::JUSTIFY_LEFT);
+            $printer->text("Cliente: $cliente ($usuario_cli)\n");
+            $printer->text("Entrada: $entrada\n");
+            $printer->text("Salida:  $salida\n");
+            $printer->text("Hab: {$r['habitacion']} | Adultos: {$r['adultos']}  Niños: {$r['ninos']}\n");
+            if ($servicios) {
+                $printer->text("Servicios: ".implode(", ", $servicios)."\n");
+            }
+
+            $printer->text(str_repeat("-", 46)."\n");
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->setEmphasis(true);
+            $printer->text("Total pagado: $ $total\n");
+            $printer->setEmphasis(false);
+            $printer->text("\n\n");
+            $printer->text("________________________________________\n");
+            $printer->text("$cliente ($usuario_cli)\n");
+            $printer->text(str_repeat("-", 46)."\n");
+            $printer->text("Al firmar, el cliente declara haber leído y\n");
+            $printer->text("aceptado los términos enviados al correo.\n");
+
+            $printer->cut();
+            $printer->close();
+            return true;
+        } catch (Exception $e) {
+            return "❌ Error de impresión: ".$e->getMessage();
+        }
+    }
+
+    // ====== RESERVA (cabecera + múltiples) ======
+    $id = intval($idreserva);
+    if ($id <= 0) {
+        return "❌ ID de reserva inválido.";
+    }
 
     $query = mysqli_query($conection, "
-        SELECT r.*, CONCAT(c.nombre, ' ', c.p_apellido) AS cliente,
-               c.direccion, c.telefono, c.usuario AS usuario_cliente
+        SELECT r.*, CONCAT(c.nombre,' ',c.p_apellido) AS cliente, c.usuario AS usuario_cliente
         FROM reservas r
         INNER JOIN clientes c ON r.id_cliente = c.usuario
-        WHERE r.idreserva = $idreserva
+        WHERE r.idreserva = $id
         LIMIT 1
     ");
     if (!$query || mysqli_num_rows($query) == 0) {
         return "❌ No se encontró la reserva.";
     }
-
     $reserva = mysqli_fetch_assoc($query);
-    $cliente = $reserva['cliente'];
-    $entrada = formatearFechaEspanol($reserva['fecha_entrada']);
-    $salida  = formatearFechaEspanol($reserva['fecha_salida']);
-    $total   = number_format($reserva['total'], 2);
-    $usuario_cliente = $reserva['usuario_cliente'];
-    $numeroContrato = "01-" . date('Y') . "-" . str_pad($idreserva, 4, '0', STR_PAD_LEFT);
-    $hash = strtoupper(substr(sha1("ESTADIA$idreserva" . $reserva['fecha_entrada']), 0, 10));
 
     $detalle = mysqli_query($conection, "
-        SELECT h.numero, d.adultos, d.ninos, d.incluye_desayuno, d.incluye_tour, 
-               lt.nombre AS lugar_tour, d.garaje
+        SELECT h.numero, d.adultos, d.ninos, d.incluye_desayuno, d.incluye_tour,
+               d.lugar_tour, d.garaje
         FROM reservas_detalle d
         INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
-        LEFT JOIN lugares_tour lt ON lt.id = d.lugar_tour
-        WHERE d.idreserva = $idreserva
+        WHERE d.idreserva = $id
     ");
-
     $habitaciones = [];
-    $adultos = $ninos = 0;
+    $adultos = 0;
+    $ninos = 0;
     $servicios = [];
+    if ($detalle) {
+        while ($row = mysqli_fetch_assoc($detalle)) {
+            $habitaciones[] = $row['numero'];
+            $adultos += (int)$row['adultos'];
+            $ninos   += (int)$row['ninos'];
 
-    while ($row = mysqli_fetch_assoc($detalle)) {
-        $habitaciones[] = $row['numero'];
-        $adultos += $row['adultos'];
-        $ninos   += $row['ninos'];
-        if ($row['incluye_desayuno']) {
-            $servicios[] = "Desayuno";
-        }
-        if ($row['incluye_tour']) {
-            $servicios[] = "Tour: " . ($row['lugar_tour'] ?? 'Destino');
-        }
-        if (floatval($row['garaje']) > 0) {
-            $servicios[] = "Garaje";
+            $lugares = '';
+            if (!empty($row['lugar_tour'])) {
+                $csv = mysqli_real_escape_string($conection, $row['lugar_tour']);
+                $qL  = mysqli_query($conection, "
+                    SELECT GROUP_CONCAT(nombre SEPARATOR ', ') AS lugares
+                    FROM lugares_tour
+                    WHERE FIND_IN_SET(id, '$csv')
+                ");
+                if ($qL && mysqli_num_rows($qL)) {
+                    $lugares = mysqli_fetch_assoc($qL)['lugares'] ?? '';
+                }
+            }
+            if ((int)$row['incluye_desayuno']) {
+                $servicios[] = "Desayuno";
+            }
+            if ((int)$row['incluye_tour']) {
+                $servicios[] = "Tour".($lugares ? ": $lugares" : "");
+            }
+            if ((float)$row['garaje'] > 0) {
+                $servicios[] = "Garaje";
+            }
         }
     }
 
+<<<<<<< Updated upstream
     // === SEGURA: impresión con manejo de errores ===
     try {
         $connector = new WindowsPrintConnector("hotel2");
         $printer = new Printer($connector);
+=======
+    $cliente     = $reserva['cliente'];
+    $usuario_cli = $reserva['usuario_cliente'];
+    $entrada     = function_exists('formatearFechaEspanol') ? formatearFechaEspanol($reserva['fecha_entrada']) : $reserva['fecha_entrada'];
+    $salida      = function_exists('formatearFechaEspanol') ? formatearFechaEspanol($reserva['fecha_salida']) : $reserva['fecha_salida'];
+    $total       = number_format((float)$reserva['total'], 2);
+    $numeroC     = "01-".date('Y')."-".str_pad($id, 4, '0', STR_PAD_LEFT);
+    $hash        = strtoupper(substr(sha1("ESTADIA{$id}".$reserva['fecha_entrada']), 0, 10));
+>>>>>>> Stashed changes
 
+    try {
+        $printer = new Printer(new WindowsPrintConnector("comandas"));
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->text("GRUPO CAÑALIMEÑA\n");
         $printer->text("COMPROBANTE DE ESTADÍA\n");
         $printer->setEmphasis(false);
-        $printer->text("Contrato de estadía N°: $numeroContrato\n");
+        $printer->text("Contrato de estadía N°: $numeroC\n");
         $printer->text("Verificación: #$hash\n");
-        $printer->text("------------------------------------------------\n");
+        $printer->text(str_repeat("-", 48)."\n");
 
         $printer->setJustification(Printer::JUSTIFY_LEFT);
-        $printer->text("Cliente: $cliente ($usuario_cliente)\n");
+        $printer->text("Cliente: $cliente ($usuario_cli)\n");
         $printer->text("Entrada: $entrada\n");
         $printer->text("Salida:  $salida\n");
-        $printer->text("Hab(s): " . implode(", ", $habitaciones) . "\n");
+        $printer->text("Hab(s): ".implode(', ', $habitaciones)."\n");
         $printer->text("Adultos: $adultos  Niños: $ninos\n");
-
-        if (!empty($servicios)) {
-            $printer->text("Servicios: " . implode(", ", $servicios) . "\n");
+        if ($servicios) {
+            $printer->text("Servicios: ".implode(', ', array_unique($servicios))."\n");
         }
 
-        $printer->text("------------------------------------------------\n");
+        $printer->text(str_repeat("-", 48)."\n");
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
-        $printer->setTextSize(1, 1); // Tamaño grande
         $printer->text("Total pagado: $ $total\n");
-        $printer->setTextSize(1, 1); // Restaurar tamaño normal
         $printer->setEmphasis(false);
-        $printer->text("------------------------------------------------\n\n\n\n\n");
-
-        $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->text("________________________________________\n");
-        $printer->text("$cliente ($usuario_cliente)\n");
-
-        $printer->text("------------------------------------------------\n");
-        $printer->text("Al firmar, el cliente declara que:\n");
-        $printer->text("Ha leído y acepta los términos y condiciones\n");
-        $printer->text("del servicio enviados al correo electrónico\n");
-        $printer->text("registrado.\n");
-
         $printer->cut();
         $printer->close();
-
         return true;
     } catch (Exception $e) {
-        return "❌ Error de impresión: " . $e->getMessage();
+        return "❌ Error de impresión: ".$e->getMessage();
     }
 }
 
-function imprimirComprobanteEstadiaCliente($idreserva)
+function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null)
 {
     include "../conexion.php";
+    mysqli_set_charset($conection, 'utf8mb4');
 
-    $query = mysqli_query($conection, "
-        SELECT r.*, CONCAT(c.nombre, ' ', c.p_apellido) AS cliente,
-               c.direccion, c.telefono, c.usuario AS usuario_cliente
-        FROM reservas r
-        INNER JOIN clientes c ON r.id_cliente = c.usuario
-        WHERE r.idreserva = $idreserva
-        LIMIT 1
-    ");
-
-    if (!$query || mysqli_num_rows($query) == 0) {
-        return "❌ Reserva no encontrada.";
-    }
-
-    $reserva = mysqli_fetch_assoc($query);
-    $cliente = $reserva['cliente'];
-    $entrada = formatearFechaEspanol($reserva['fecha_entrada']);
-    $salida  = formatearFechaEspanol($reserva['fecha_salida']);
-    $total   = number_format($reserva['total'], 2);
-    $usuario_cliente = $reserva['usuario_cliente'];
-    $numeroContrato = "01-" . date('Y') . "-" . str_pad($idreserva, 4, '0', STR_PAD_LEFT);
-    $hash = strtoupper(substr(sha1("ESTADIA$idreserva" . $reserva['fecha_entrada']), 0, 10));
-
-    $detalle = mysqli_query($conection, "
-        SELECT h.numero, d.adultos, d.ninos, d.incluye_desayuno, d.incluye_tour, 
-               lt.nombre AS lugar_tour, d.garaje, d.precio_unitario
-        FROM reservas_detalle d
-        INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
-        LEFT JOIN lugares_tour lt ON lt.id = d.lugar_tour
-        WHERE d.idreserva = $idreserva
-    ");
-
-    $habitaciones = [];
-    $adultos = $ninos = 0;
-    $servicios = [];
-    $personas = 0;
-    $aplicaPromocion = false;
-
-    while ($row = mysqli_fetch_assoc($detalle)) {
-        $habitaciones[] = $row['numero'];
-        $adultos += $row['adultos'];
-        $ninos   += $row['ninos'];
-        $personas += $row['adultos'] + $row['ninos'];
-        if ($row['incluye_desayuno']) {
-            $servicios[] = "Desayuno";
-        }
-        if ($row['incluye_tour']) {
-            $servicios[] = "Tour: " . ($row['lugar_tour'] ?? 'Destino');
-        }
-        if (floatval($row['garaje']) > 0) {
-            $servicios[] = "Garaje";
+    // ====== DETALLE ======
+    if (!is_null($id_detalle)) {
+        $id = intval($id_detalle);
+        if ($id <= 0) {
+            return "❌ ID de detalle inválido.";
         }
 
-        // Validar si la tarifa seleccionada fue 12
-        if (floatval($row['precio_unitario']) >= 12) {
-            $aplicaPromocion = true;
+        $q = mysqli_query($conection, "
+            SELECT d.id, d.idcliente, d.fecha_entrada, d.fecha_salida, d.subtotal, d.adultos, d.ninos,
+                   d.incluye_desayuno, d.incluye_tour, d.lugar_tour, d.garaje, d.precio_unitario,
+                   d.precio_nino, d.precio_desayuno, d.precio_tour,
+                   h.numero AS habitacion,
+                   CONCAT(c.nombre,' ',c.p_apellido) AS cliente, c.usuario AS usuario_cliente,
+                   c.telefono, c.correo_c AS correo
+            FROM reservas_detalle d
+            INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
+            INNER JOIN clientes c     ON c.usuario = d.idcliente
+            WHERE d.id = $id
+            LIMIT 1
+        ");
+        if (!$q || mysqli_num_rows($q) === 0) {
+            return "❌ Detalle no encontrado.";
         }
-    }
+        $r = mysqli_fetch_assoc($q);
 
+<<<<<<< Updated upstream
     try {
         $connector = new WindowsPrintConnector("hotel2");
         $printer = new Printer($connector);
@@ -1259,91 +1310,322 @@ function imprimirComprobanteEstadiaCliente($idreserva)
         $printer->text("Adultos: $adultos  Niños: $ninos\n");
         if (!empty($servicios)) {
             $printer->text("Servicios: " . implode(", ", $servicios) . "\n");
+=======
+        $lugares = '';
+        if (!empty($r['lugar_tour'])) {
+            $csv = mysqli_real_escape_string($conection, $r['lugar_tour']);
+            $rs  = mysqli_query($conection, "
+                SELECT GROUP_CONCAT(nombre SEPARATOR ', ') AS lugares
+                FROM lugares_tour
+                WHERE FIND_IN_SET(id, '$csv')
+            ");
+            if ($rs && mysqli_num_rows($rs)) {
+                $lugares = mysqli_fetch_assoc($rs)['lugares'] ?? '';
+            }
+>>>>>>> Stashed changes
         }
 
-        $printer->text("------------------------------------------------\n");
-        $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->setEmphasis(true);
-        $printer->setTextSize(1, 1);
-        $printer->text("Total pagado: $ $total\n");
-        $printer->setTextSize(1, 1);
-        $printer->setEmphasis(false);
-        $printer->text("------------------------------------------------\n");
-        $printer->setEmphasis(true);
-        $printer->text("¡Gracias por preferirnos!\n");
-        $printer->setEmphasis(false);
-        $printer->cut(); // Corte del comprobante
+        $numeroC  = "01-".date('Y')."-D".str_pad($id, 4, '0', STR_PAD_LEFT);
+        $hash     = strtoupper(substr(sha1("ESTADIADET{$id}".$r['fecha_entrada']), 0, 10));
+        $entrada  = formatearFechaEspanol($r['fecha_entrada']);
+        $salida   = formatearFechaEspanol($r['fecha_salida']);
+        $total    = number_format((float)$r['subtotal'], 2);
+        $servs    = [];
+        if ((int)$r['incluye_desayuno']) {
+            $servs[] = "Desayuno";
+        }
+        if ((int)$r['incluye_tour']) {
+            $servs[] = "Tour".($lugares ? ": $lugares" : "");
+        }
+        if ((float)$r['garaje'] > 0) {
+            $servs[] = "Garaje";
+        }
 
-        // === TICKET DE PROMOCIÓN SI APLICA ===
-        if ($aplicaPromocion && $personas > 0) {
+        try {
+            $printer = new Printer(new WindowsPrintConnector("comandas"));
             $printer->setJustification(Printer::JUSTIFY_CENTER);
             $printer->setEmphasis(true);
-            $printer->text("BEBIDA DE CORTESÍA\n");
+            $printer->text("GRUPO CAÑALIMEÑA\n");
             $printer->setEmphasis(false);
+            $printer->text("COMPROBANTE SIN VALOR TRIBUTARIO\n");
+            $printer->text(str_repeat("-", 48)."\n");
+
+            $printer->setEmphasis(true);
+            $printer->text("COMPROBANTE DE ESTADÍA\n");
+            $printer->setEmphasis(false);
+            $printer->text("Contrato N°: $numeroC\n");
+            $printer->text("Verificación: #$hash\n");
+            $printer->text(str_repeat("-", 48)."\n");
+
             $printer->setJustification(Printer::JUSTIFY_LEFT);
-            $printer->text("Por su estadía en Grupo Cañalimeña recibe:\n");
+            $printer->text("Cliente: {$r['cliente']} ({$r['usuario_cliente']})\n");
+            $printer->text("Entrada: $entrada\n");
+            $printer->text("Salida:  $salida\n");
+            $printer->text("Hab: {$r['habitacion']} | Adultos: {$r['adultos']}  Niños: {$r['ninos']}\n");
+            if ($servs) {
+                $printer->text("Servicios: ".implode(", ", $servs)."\n");
+            }
+
+            $printer->text(str_repeat("-", 48)."\n");
             $printer->setJustification(Printer::JUSTIFY_CENTER);
-            $beneficio = $personas . " bebida(s) GRATIS (Agua aromática o Bebida Fría)";
-            $printer->text("$beneficio\n");
-            $printer->text("------------------------------------------------\n");
-            $printer->text("Presente este ticket en BURGUEERBEER durante su\n");
-            $printer->text("estadía para canjearlo.\n");
-            $printer->text("------------------------------------------------\n");
-            $printer->text("Fecha: " . date("d/m/Y") . "\n");
+            $printer->setEmphasis(true);
+            $printer->text("Total pagado: $ $total\n");
+            $printer->setEmphasis(false);
+            $printer->text(str_repeat("-", 48)."\n");
             $printer->setEmphasis(true);
             $printer->text("¡Gracias por preferirnos!\n");
             $printer->setEmphasis(false);
             $printer->cut();
+
+            $printer->close();
+            return true;
+        } catch (Exception $e) {
+            return "❌ Error de impresión cliente: ".$e->getMessage();
         }
+    }
+
+    // ====== RESERVA ======
+    $id = intval($idreserva);
+    if ($id <= 0) {
+        return "❌ ID de reserva inválido.";
+    }
+
+    $qR = mysqli_query($conection, "
+        SELECT r.*, CONCAT(c.nombre,' ',c.p_apellido) AS cliente, c.usuario AS usuario_cliente
+        FROM reservas r
+        INNER JOIN clientes c ON r.id_cliente = c.usuario
+        WHERE r.idreserva = $id
+        LIMIT 1
+    ");
+    if (!$qR || mysqli_num_rows($qR) === 0) {
+        return "❌ Reserva no encontrada.";
+    }
+    $reserva = mysqli_fetch_assoc($qR);
+
+    $detalle = mysqli_query($conection, "
+        SELECT h.numero, d.adultos, d.ninos, d.incluye_desayuno, d.incluye_tour, d.lugar_tour,
+               d.garaje, d.precio_unitario
+        FROM reservas_detalle d
+        INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
+        WHERE d.idreserva = $id
+    ");
+
+    $habitaciones = [];
+    $adultos = 0;
+    $ninos = 0;
+    $servicios = [];
+    $aplicaPromo = false;
+    $personas = 0;
+    while ($row = mysqli_fetch_assoc($detalle)) {
+        $habitaciones[] = $row['numero'];
+        $adultos += (int)$row['adultos'];
+        $ninos   += (int)$row['ninos'];
+        $personas += (int)$row['adultos'] + (int)$row['ninos'];
+        if ((float)$row['precio_unitario'] >= 12) {
+            $aplicaPromo = true;
+        }
+
+        $lugares = '';
+        if (!empty($row['lugar_tour'])) {
+            $csv = mysqli_real_escape_string($conection, $row['lugar_tour']);
+            $rs  = mysqli_query($conection, "
+                SELECT GROUP_CONCAT(nombre SEPARATOR ', ') AS lugares
+                FROM lugares_tour
+                WHERE FIND_IN_SET(id, '$csv')
+            ");
+            if ($rs && mysqli_num_rows($rs)) {
+                $lugares = mysqli_fetch_assoc($rs)['lugares'] ?? '';
+            }
+        }
+        if ((int)$row['incluye_desayuno']) {
+            $servicios[] = "Desayuno";
+        }
+        if ((int)$row['incluye_tour']) {
+            $servicios[] = "Tour".($lugares ? ": $lugares" : "");
+        }
+        if ((float)$row['garaje'] > 0) {
+            $servicios[] = "Garaje";
+        }
+    }
+
+    $entrada = formatearFechaEspanol($reserva['fecha_entrada']);
+    $salida  = formatearFechaEspanol($reserva['fecha_salida']);
+    $total   = number_format((float)$reserva['total'], 2);
+    $numeroC = "01-".date('Y')."-".str_pad($id, 4, '0', STR_PAD_LEFT);
+    $hash    = strtoupper(substr(sha1("ESTADIA{$id}".$reserva['fecha_entrada']), 0, 10));
+
+    try {
+        $printer = new Printer(new WindowsPrintConnector("comandas"));
+        $printer->setJustification(Printer::JUSTIFY_CENTER);
+        $printer->setEmphasis(true);
+        $printer->text("GRUPO CAÑALIMEÑA\n");
+        $printer->setEmphasis(false);
+        $printer->text("COMPROBANTE SIN VALOR TRIBUTARIO\n");
+        $printer->text(str_repeat("-", 48)."\n");
+
+        $printer->setEmphasis(true);
+        $printer->text("COMPROBANTE DE ESTADÍA\n");
+        $printer->setEmphasis(false);
+        $printer->text("Contrato N°: $numeroC\n");
+        $printer->text("Verificación: #$hash\n");
+        $printer->text(str_repeat("-", 48)."\n");
+
+        $printer->setJustification(Printer::JUSTIFY_LEFT);
+        $printer->text("Cliente: {$reserva['cliente']} ({$reserva['usuario_cliente']})\n");
+        $printer->text("Entrada: $entrada\n");
+        $printer->text("Salida:  $salida\n");
+        $printer->text("Hab(s): ".implode(', ', $habitaciones)."\n");
+        $printer->text("Adultos: $adultos  Niños: $ninos\n");
+        if ($servicios) {
+            $printer->text("Servicios: ".implode(', ', array_unique($servicios))."\n");
+        }
+
+        $printer->text(str_repeat("-", 48)."\n");
+        $printer->setJustification(Printer::JUSTIFY_CENTER);
+        $printer->setEmphasis(true);
+        $printer->text("Total pagado: $ $total\n");
+        $printer->setEmphasis(false);
+        $printer->text(str_repeat("-", 48)."\n");
+        $printer->setEmphasis(true);
+        $printer->text("¡Gracias por preferirnos!\n");
+        $printer->setEmphasis(false);
+        $printer->cut();
 
         $printer->close();
         return true;
     } catch (Exception $e) {
-        return "❌ Error de impresión cliente: " . $e->getMessage();
+        return "❌ Error de impresión cliente: ".$e->getMessage();
     }
 }
-
-
-function imprimirTicketsTourYGaraje($idreserva)
+function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
 {
     include "../conexion.php";
+    mysqli_set_charset($conection, 'utf8mb4');
 
-    $reservaQ = mysqli_query($conection, "SELECT fecha_entrada FROM reservas WHERE idreserva = $idreserva LIMIT 1");
-    if (!$reservaQ || mysqli_num_rows($reservaQ) == 0) {
-        return "❌ No se encontró la reserva.";
+    // ====== DETALLE ======
+    if (!is_null($id_detalle)) {
+        $id = intval($id_detalle);
+        if ($id <= 0) {
+            return "❌ ID de detalle inválido.";
+        }
+
+        $q = mysqli_query($conection, "
+            SELECT d.*, h.numero AS habitacion
+            FROM reservas_detalle d
+            INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
+            WHERE d.id = $id
+            LIMIT 1
+        ");
+        if (!$q || mysqli_num_rows($q) === 0) {
+            return "❌ Detalle no encontrado.";
+        }
+        $d = mysqli_fetch_assoc($q);
+
+        // TOUR
+        if ((int)$d['incluye_tour']) {
+            $lugares = 'Destino';
+            if (!empty($d['lugar_tour'])) {
+                $csv = mysqli_real_escape_string($conection, $d['lugar_tour']);
+                $rs  = mysqli_query($conection, "
+                    SELECT GROUP_CONCAT(nombre SEPARATOR ', ') AS lugares
+                    FROM lugares_tour
+                    WHERE FIND_IN_SET(id, '$csv')
+                ");
+                if ($rs && mysqli_num_rows($rs)) {
+                    $lugares = mysqli_fetch_assoc($rs)['lugares'] ?? $lugares;
+                }
+            }
+            $hash = strtoupper(substr(sha1("TOUR".$d['habitacion'].$d['fecha_entrada'].$lugares), 0, 10));
+            $personas = (int)$d['adultos'] + (int)$d['ninos'];
+
+            try {
+                $p = new Printer(new WindowsPrintConnector("comandas"));
+                $p->setJustification(Printer::JUSTIFY_CENTER);
+                $p->setEmphasis(true);
+                $p->text("TICKET DE TOUR\n");
+                $p->setEmphasis(false);
+                $p->setJustification(Printer::JUSTIFY_LEFT);
+                $p->text("Habitación: ".$d['habitacion']."\n");
+                $p->text("Fecha:      ".$d['fecha_entrada']."\n");
+                $p->text("Destino:    $lugares\n");
+                $p->text("Personas:   $personas\n");
+                $p->text("Código:     #$hash\n");
+                $p->cut();
+                $p->close();
+            } catch (Exception $e) {
+                return "❌ Error al imprimir ticket de tour: ".$e->getMessage();
+            }
+        }
+
+        // GARAJE (un ticket por noche)
+        if ((float)$d['garaje'] > 0) {
+            $dias = max(1, (strtotime($d['fecha_salida']) - strtotime($d['fecha_entrada'])) / 86400);
+            for ($i = 0; $i < $dias; $i++) {
+                $fechaG = date('Y-m-d', strtotime("+$i days", strtotime($d['fecha_entrada'])));
+                $hash = strtoupper(substr(sha1("GARAJE".$d['habitacion'].$fechaG), 0, 10));
+                try {
+                    $p = new Printer(new WindowsPrintConnector("comandas"));
+                    $p->setJustification(Printer::JUSTIFY_CENTER);
+                    $p->setEmphasis(true);
+                    $p->text("TICKET DE GARAJE\n");
+                    $p->setEmphasis(false);
+                    $p->setJustification(Printer::JUSTIFY_LEFT);
+                    $p->text("Habitación: ".$d['habitacion']."\n");
+                    $p->text("Fecha:      $fechaG\n");
+                    $p->text("Código:     #$hash\n");
+                    $p->text("Horario:    18h00 - 09h00\n");
+                    $p->text("Un (1) vehículo por habitación\n");
+                    $p->cut();
+                    $p->close();
+                } catch (Exception $e) {
+                    return "❌ Error al imprimir ticket de garaje ($fechaG): ".$e->getMessage();
+                }
+            }
+        }
+        return true;
+    }
+
+    // ====== RESERVA ======
+    $id = intval($idreserva);
+    if ($id <= 0) {
+        return "❌ ID de reserva inválido.";
     }
 
     $detalle = mysqli_query($conection, "
-        SELECT h.numero AS habitacion, d.adultos, d.ninos, d.incluye_tour, 
-               d.lugar_tour, lt.nombre AS nombre_tour, d.garaje, d.subtotal,
-               d.incluye_desayuno, d.incluye_tour, r.fecha_entrada, r.fecha_salida,
-               d.id_habitacion
+        SELECT h.numero AS habitacion, d.adultos, d.ninos, d.incluye_tour, d.lugar_tour,
+               d.garaje, r.fecha_entrada, r.fecha_salida, d.id_habitacion
         FROM reservas_detalle d
         INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
-        INNER JOIN reservas r ON r.idreserva = d.idreserva
-        LEFT JOIN lugares_tour lt ON lt.id = d.lugar_tour
-        WHERE d.idreserva = $idreserva
+        INNER JOIN reservas r     ON r.idreserva = d.idreserva
+        WHERE d.idreserva = $id
         ORDER BY d.id_habitacion ASC
     ");
-
     if (!$detalle || mysqli_num_rows($detalle) === 0) {
         return "❌ La reserva no tiene detalles asociados.";
     }
 
     $impresosGaraje = [];
-
     while ($row = mysqli_fetch_assoc($detalle)) {
         $habitacion = $row['habitacion'];
-        $personas   = intval($row['adultos']) + intval($row['ninos']);
-        $lugar      = $row['nombre_tour'] ?? 'Destino';
-        $fecha      = $row['fecha_entrada'];
-        $id_hab     = $row['id_habitacion'];
+        $personas   = (int)$row['adultos'] + (int)$row['ninos'];
 
-        // === TOUR ===
-        if (intval($row['incluye_tour'])) {
-            $hash = strtoupper(substr(sha1("TOUR$habitacion$fecha$lugar"), 0, 10));
-
+        // TOUR
+        if ((int)$row['incluye_tour']) {
+            $lugares = 'Destino';
+            if (!empty($row['lugar_tour'])) {
+                $csv = mysqli_real_escape_string($conection, $row['lugar_tour']);
+                $rs  = mysqli_query($conection, "
+                    SELECT GROUP_CONCAT(nombre SEPARATOR ', ') AS lugares
+                    FROM lugares_tour
+                    WHERE FIND_IN_SET(id, '$csv')
+                ");
+                if ($rs && mysqli_num_rows($rs)) {
+                    $lugares = mysqli_fetch_assoc($rs)['lugares'] ?? $lugares;
+                }
+            }
+            $hash = strtoupper(substr(sha1("TOUR$habitacion".$row['fecha_entrada'].$lugares), 0, 10));
             try {
+<<<<<<< Updated upstream
                 $printer = new Printer(new WindowsPrintConnector("hotel2"));
                 $printer->setJustification(Printer::JUSTIFY_CENTER);
                 $printer->setEmphasis(true);
@@ -1368,21 +1650,35 @@ function imprimirTicketsTourYGaraje($idreserva)
                 $printer->text("GRUPO CAÑALIMEÑA\n");
                 $printer->cut();
                 $printer->close();
+=======
+                $p = new Printer(new WindowsPrintConnector("comandas"));
+                $p->setJustification(Printer::JUSTIFY_CENTER);
+                $p->setEmphasis(true);
+                $p->text("TICKET DE TOUR\n");
+                $p->setEmphasis(false);
+                $p->setJustification(Printer::JUSTIFY_LEFT);
+                $p->text("Habitación: $habitacion\n");
+                $p->text("Fecha:      ".$row['fecha_entrada']."\n");
+                $p->text("Destino:    $lugares\n");
+                $p->text("Personas:   $personas\n");
+                $p->text("Código:     #$hash\n");
+                $p->cut();
+                $p->close();
+>>>>>>> Stashed changes
             } catch (Exception $e) {
-                return "❌ Error al imprimir ticket de tour (Hab. $habitacion): " . $e->getMessage();
+                return "❌ Error al imprimir ticket de tour (Hab. $habitacion): ".$e->getMessage();
             }
         }
 
-        // === GARAJE ===
-        if (floatval($row['garaje']) > 0 && !in_array($id_hab, $impresosGaraje)) {
-            $impresosGaraje[] = $id_hab;
-
-            $diasGaraje = max(1, (strtotime($row['fecha_salida']) - strtotime($row['fecha_entrada'])) / 86400);
-            for ($d = 0; $d < $diasGaraje; $d++) {
-                $fechaGaraje = date('Y-m-d', strtotime("+$d days", strtotime($row['fecha_entrada'])));
-                $hash = strtoupper(substr(sha1("GARAJE$habitacion$fechaGaraje"), 0, 10));
-
+        // GARAJE (evitar duplicar por habitación)
+        if ((float)$row['garaje'] > 0 && !in_array($row['id_habitacion'], $impresosGaraje, true)) {
+            $impresosGaraje[] = $row['id_habitacion'];
+            $dias = max(1, (strtotime($row['fecha_salida']) - strtotime($row['fecha_entrada'])) / 86400);
+            for ($d = 0; $d < $dias; $d++) {
+                $fechaG = date('Y-m-d', strtotime("+$d days", strtotime($row['fecha_entrada'])));
+                $hash = strtoupper(substr(sha1("GARAJE$habitacion$fechaG"), 0, 10));
                 try {
+<<<<<<< Updated upstream
                     $printer = new Printer(new WindowsPrintConnector("hotel2"));
                     $printer->setJustification(Printer::JUSTIFY_CENTER);
                     $printer->setEmphasis(true);
@@ -1406,48 +1702,63 @@ function imprimirTicketsTourYGaraje($idreserva)
                     $printer->text("GRUPO CAÑALIMEÑA\n");
                     $printer->cut();
                     $printer->close();
+=======
+                    $p = new Printer(new WindowsPrintConnector("comandas"));
+                    $p->setJustification(Printer::JUSTIFY_CENTER);
+                    $p->setEmphasis(true);
+                    $p->text("TICKET DE GARAJE\n");
+                    $p->setEmphasis(false);
+                    $p->setJustification(Printer::JUSTIFY_LEFT);
+                    $p->text("Habitación: $habitacion\n");
+                    $p->text("Fecha:      $fechaG\n");
+                    $p->text("Código:     #$hash\n");
+                    $p->text("Horario:    18h00 - 09h00\n");
+                    $p->text("Un (1) vehículo por habitación\n");
+                    $p->cut();
+                    $p->close();
+>>>>>>> Stashed changes
                 } catch (Exception $e) {
-                    return "❌ Error al imprimir ticket de garaje (Hab. $habitacion - $fechaGaraje): " . $e->getMessage();
+                    return "❌ Error al imprimir ticket de garaje (Hab. $habitacion - $fechaG): ".$e->getMessage();
                 }
             }
         }
     }
-
-    return true; // ✅ Todo se imprimió correctamente
+    return true;
 }
-
 function imprimirTicketsTourHoy()
 {
     try {
         include "../conexion.php";
-
+        mysqli_set_charset($conection, 'utf8mb4');
 
         $nombreImpresora = "hotel2";
         $hoy = date('Y-m-d');
 
-        // Datos del hotel
-        $config = mysqli_fetch_assoc(mysqli_query($conection, "SELECT * FROM configuracion LIMIT 1"));
+        $config = mysqli_fetch_assoc(mysqli_query($conection, "SELECT razon_social, nit, direccion, telefono FROM configuracion LIMIT 1"));
         $razon_social = $config['razon_social'] ?? '';
         $nit = $config['nit'] ?? '';
         $direccion = $config['direccion'] ?? '';
         $telefono = $config['telefono'] ?? '';
 
-        // Consulta
-        $query = mysqli_query($conection, "
+        $sql = "
             SELECT 
                 h.numero AS habitacion,
-                rd.adultos + rd.ninos AS total_personas,
+                (d.adultos + d.ninos) AS total_personas,
                 CONCAT(c.nombre, ' ', c.p_apellido) AS cliente,
                 r.idreserva
-            FROM reservas_detalle rd
-            INNER JOIN reservas r ON r.idreserva = rd.idreserva
-            INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
-            INNER JOIN clientes c ON c.usuario = r.id_cliente
-            WHERE rd.incluye_tour = 1
+            FROM reservas_detalle d
+            INNER JOIN reservas r     ON r.idreserva = d.idreserva
+            INNER JOIN habitaciones h ON d.id_habitacion = h.idhabitacion
+            INNER JOIN clientes c     ON c.usuario = r.id_cliente
+            WHERE d.incluye_tour = 1
               AND r.estado = 'checkin'
-              AND '$hoy' BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
+              AND ? BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
             ORDER BY h.numero
-        ");
+        ";
+        $stmt = mysqli_prepare($conection, $sql);
+        mysqli_stmt_bind_param($stmt, "s", $hoy);
+        mysqli_stmt_execute($stmt);
+        $query = mysqli_stmt_get_result($stmt);
 
         if (!$query || mysqli_num_rows($query) == 0) {
             throw new Exception("No hay tours programados hoy.");
@@ -1458,7 +1769,7 @@ function imprimirTicketsTourHoy()
         while ($row = mysqli_fetch_assoc($query)) {
             $printer->setJustification(Printer::JUSTIFY_CENTER);
             $printer->setEmphasis(true);
-            $printer->text(strtoupper($razon_social) . "\n");
+            $printer->text(mb_strtoupper($razon_social) . "\n");
             $printer->setEmphasis(false);
             $printer->text("RUC: $nit\nTel: $telefono\n$direccion\n");
             $printer->text(str_repeat("-", 42) . "\n");
@@ -1491,31 +1802,36 @@ function imprimirTicketsGarajeHoy()
 {
     try {
         include "../conexion.php";
+        mysqli_set_charset($conection, 'utf8mb4');
 
         $nombreImpresora = "hotel2";
         $hoy = date('Y-m-d');
 
-        $config = mysqli_fetch_assoc(mysqli_query($conection, "SELECT * FROM configuracion LIMIT 1"));
+        $config = mysqli_fetch_assoc(mysqli_query($conection, "SELECT razon_social, nit, direccion, telefono FROM configuracion LIMIT 1"));
         $razon_social = $config['razon_social'] ?? '';
         $nit = $config['nit'] ?? '';
         $direccion = $config['direccion'] ?? '';
         $telefono = $config['telefono'] ?? '';
 
-        $query = mysqli_query($conection, "
+        $sql = "
             SELECT 
                 h.numero AS habitacion,
-                rd.garaje,
+                d.garaje,
                 CONCAT(c.nombre, ' ', c.p_apellido) AS cliente,
                 r.idreserva
-            FROM reservas_detalle rd
-            INNER JOIN reservas r ON r.idreserva = rd.idreserva
-            INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
-            INNER JOIN clientes c ON c.usuario = r.id_cliente
-            WHERE rd.garaje > 0
+            FROM reservas_detalle d
+            INNER JOIN reservas r     ON r.idreserva = d.idreserva
+            INNER JOIN habitaciones h ON d.id_habitacion = h.idhabitacion
+            INNER JOIN clientes c     ON c.usuario = r.id_cliente
+            WHERE d.garaje > 0
               AND r.estado = 'checkin'
-              AND '$hoy' BETWEEN r.fecha_entrada AND r.fecha_salida
+              AND ? BETWEEN r.fecha_entrada AND r.fecha_salida
             ORDER BY h.numero
-        ");
+        ";
+        $stmt = mysqli_prepare($conection, $sql);
+        mysqli_stmt_bind_param($stmt, "s", $hoy);
+        mysqli_stmt_execute($stmt);
+        $query = mysqli_stmt_get_result($stmt);
 
         if (!$query || mysqli_num_rows($query) == 0) {
             throw new Exception("No hay garajes registrados hoy.");
@@ -1526,7 +1842,7 @@ function imprimirTicketsGarajeHoy()
         while ($row = mysqli_fetch_assoc($query)) {
             $printer->setJustification(Printer::JUSTIFY_CENTER);
             $printer->setEmphasis(true);
-            $printer->text(strtoupper($razon_social) . "\n");
+            $printer->text(mb_strtoupper($razon_social) . "\n");
             $printer->setEmphasis(false);
             $printer->text("RUC: $nit\nTel: $telefono\n$direccion\n");
             $printer->text(str_repeat("-", 42) . "\n");
