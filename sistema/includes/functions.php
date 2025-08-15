@@ -5,8 +5,8 @@ date_default_timezone_set('America/Guayaquil');
 use Dompdf\Dompdf;
 // ======= (Opcional) Autoloads de librerías externas =======
 // Ajusta a tu estructura real. Descomenta la que te aplique.
-// @include_once __DIR__ . '/../libreries/mike42/autoload.php';
-// @include_once 'C:\wamp64\www\burguerbeer\sistema\libreries\mike42\autoload.php';
+@include_once __DIR__ . '/../libreries/mike42/autoload.php';
+//include_once 'C:\wamp64\www\burguerbeer\sistema\libreries\mike42\autoload.php';
 
 use Mike42\Escpos\Printer;
 use Mike42\Escpos\EscposImage;
@@ -859,7 +859,7 @@ function imprimirComprobanteEstadia($idreserva = null, $id_detalle = null)
         }
 
         try {
-            $printer = new Printer(new WindowsPrintConnector(PRN_COMANDAS));
+            $printer = new Printer(new WindowsPrintConnector(PRN_HOTEL));
             $printer->setJustification(Printer::JUSTIFY_CENTER);
             $printer->setEmphasis(true);
             $printer->text("GRUPO CAÑALIMEÑA\n");
@@ -968,7 +968,7 @@ function imprimirComprobanteEstadia($idreserva = null, $id_detalle = null)
     $hash        = strtoupper(substr(sha1("ESTADIA{$id}".$reserva['fecha_entrada']), 0, 10));
 
     try {
-        $printer = new Printer(new WindowsPrintConnector(PRN_COMANDAS));
+        $printer = new Printer(new WindowsPrintConnector(PRN_HOTEL));
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->text("GRUPO CAÑALIMEÑA\n");
@@ -1062,7 +1062,7 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
         }
 
         try {
-            $printer = new Printer(new WindowsPrintConnector(PRN_COMANDAS));
+            $printer = new Printer(new WindowsPrintConnector(PRN_HOTEL));
             $printer->setJustification(Printer::JUSTIFY_CENTER);
             $printer->setEmphasis(true);
             $printer->text("GRUPO CAÑALIMEÑA\n");
@@ -1088,20 +1088,24 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
 
             $printer->text(str_repeat("-", 48)."\n");
             $printer->setJustification(Printer::JUSTIFY_CENTER);
-<<<<<<< Updated upstream
+
             $printer->setEmphasis(true);
             $printer->text("Total pagado: $ $total\n");
             $printer->setEmphasis(false);
             $printer->text(str_repeat("-", 48)."\n");
-=======
-            $beneficio = $personas . " bebida(s) GRATIS (Agua aromática o Te o Jamaica)";
+
+            $personas = (int)$r['adultos'] + (int)$r['ninos'];
+            $habitaciones = [$r['habitacion']];
+
+            $beneficio = $personas . " bebida(s) GRATIS (Agua aromática o Te o \nJamaica)";
             $printer->text("$beneficio\n");
             $printer->text("Hab(s): " . implode(", ", $habitaciones) . "\n");
+
             $printer->text("------------------------------------------------\n");
-            $printer->text("PROMOCION VALIDA CON LA COMPRA DE UNA ORDEN EN BURGUEERBEER\n");
+            $printer->text("PROMOCION VALIDA CON LA COMPRA DE UNA ORDEN \n EN BURGUEERBEER\n");
             $printer->text("------------------------------------------------\n");
             $printer->text("Fecha: " . date("d/m/Y") . "\n");
->>>>>>> Stashed changes
+
             $printer->setEmphasis(true);
             $printer->text("¡Gracias por preferirnos!\n");
             $printer->setEmphasis(false);
@@ -1186,7 +1190,7 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
     $hash    = strtoupper(substr(sha1("ESTADIA{$id}".$reserva['fecha_entrada']), 0, 10));
 
     try {
-        $printer = new Printer(new WindowsPrintConnector(PRN_COMANDAS));
+        $printer = new Printer(new WindowsPrintConnector(PRN_HOTEL));
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->text("GRUPO CAÑALIMEÑA\n");
@@ -1271,7 +1275,7 @@ function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
             $personas = (int)$d['adultos'] + (int)$d['ninos'];
 
             try {
-                $p = new Printer(new WindowsPrintConnector(PRN_COMANDAS));
+                $p = new Printer(new WindowsPrintConnector(PRN_HOTEL));
                 $p->setJustification(Printer::JUSTIFY_CENTER);
                 $p->setEmphasis(true);
                 $p->text("TICKET DE TOUR\n");
@@ -1296,7 +1300,7 @@ function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
                 $fechaG = date('Y-m-d', strtotime("+$i days", strtotime($d['fecha_entrada'])));
                 $hash   = strtoupper(substr(sha1("GARAJE".$d['habitacion'].$fechaG), 0, 10));
                 try {
-                    $p = new Printer(new WindowsPrintConnector(PRN_COMANDAS));
+                    $p = new Printer(new WindowsPrintConnector(PRN_HOTEL));
                     $p->setJustification(Printer::JUSTIFY_CENTER);
                     $p->setEmphasis(true);
                     $p->text("TICKET DE GARAJE\n");
@@ -1357,7 +1361,7 @@ function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
             }
             $hash = strtoupper(substr(sha1("TOUR$habitacion".$row['fecha_entrada'].$lugares), 0, 10));
             try {
-                $p = new Printer(new WindowsPrintConnector(PRN_COMANDAS));
+                $p = new Printer(new WindowsPrintConnector(PRN_HOTEL));
                 $p->setJustification(Printer::JUSTIFY_CENTER);
                 $p->setEmphasis(true);
                 $p->text("TICKET DE TOUR\n");
@@ -1383,7 +1387,7 @@ function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
                 $fechaG = date('Y-m-d', strtotime("+$d days", strtotime($row['fecha_entrada'])));
                 $hash   = strtoupper(substr(sha1("GARAJE$habitacion$fechaG"), 0, 10));
                 try {
-                    $p = new Printer(new WindowsPrintConnector(PRN_COMANDAS));
+                    $p = new Printer(new WindowsPrintConnector(PRN_HOTEL));
                     $p->setJustification(Printer::JUSTIFY_CENTER);
                     $p->setEmphasis(true);
                     $p->text("TICKET DE GARAJE\n");
@@ -1554,4 +1558,185 @@ function formatearFechaEspanol($fechaStr)
     $meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
     $t     = strtotime($fechaStr);
     return ucfirst($dias[(int)date('w', $t)]) . " " . date('d', $t) . " de " . $meses[(int)date('n', $t) - 1] . " de " . date('Y', $t);
+}
+
+function enviarComprobante(?int $idreserva, ?int $id_detalle): array
+{
+    include "../conexion.php";
+
+    // ─── Autoload Dompdf/PHPMailer ───────────────────────────────────────────────
+    (function () {
+        $candidatos = [
+            __DIR__ . '/../libreries/vendor/autoload.php',
+            __DIR__ . '/../vendor/autoload.php',
+            __DIR__ . '/../../vendor/autoload.php',
+        ];
+        foreach ($candidatos as $p) { if (is_file($p)) { require_once $p; break; } }
+    })();
+
+    // ─── Cargar email.php con enviarCorreo() ────────────────────────────────────
+    if (!function_exists('enviarCorreo')) {
+        $candidatos = [
+            __DIR__ . '/../includes/email.php',
+            __DIR__ . '/../email.php',
+            __DIR__ . '/../../includes/email.php',
+            __DIR__ . '/../../email.php',
+        ];
+        foreach ($candidatos as $p) { if (is_file($p)) { require_once $p; break; } }
+    }
+    if (!function_exists('enviarCorreo')) {
+        return ['success' => false, 'message' => 'No se encontró enviarCorreo() en email.php', 'error' => null];
+    }
+
+    mysqli_set_charset($conection, 'utf8mb4');
+
+    // ─── Determinar tipo y SQL ─────────────────────────────────────────────────
+    if ($idreserva !== null && $id_detalle === null) {
+        $tipo       = 'reserva';
+        $id         = intval($idreserva);
+        $sql        = "
+            SELECT r.idreserva,
+                   r.estado,
+                   CONCAT(c.nombre,' ',c.p_apellido) AS cliente,
+                   c.correo_c
+            FROM reservas r
+            JOIN clientes c ON c.usuario = r.id_cliente
+            WHERE r.idreserva = {$id}
+            LIMIT 1
+        ";
+        $vistaPDF   = __DIR__ . '/../pdf/reservas/verReservaPDF.php';
+        $getParams  = ['id' => $id];
+        $permitidos = ['confirmada','checkin','checkout','finalizada'];
+
+    } elseif ($id_detalle !== null && $idreserva === null) {
+        $tipo       = 'detalle';
+        $id         = intval($id_detalle);
+        $sql        = "
+            SELECT rd.id                 AS id_detalle,
+                   rd.estado_detalle             AS estado_detalle,
+                   r.idreserva,
+                   r.estado              AS estado_reserva,
+                   CONCAT(c.nombre,' ',c.p_apellido) AS cliente,
+                   c.correo_c
+            FROM reservas_detalle rd
+            JOIN reservas r ON r.idreserva = rd.idreserva
+            JOIN clientes c ON c.usuario   = r.id_cliente
+            WHERE rd.id = {$id}
+            LIMIT 1
+        ";
+        $vistaDetalle = __DIR__ . '/../pdf/reservas/verDetallePDF.php';
+        $vistaPDF   = is_file($vistaDetalle) ? $vistaDetalle : (__DIR__ . '/../pdf/reservas/verReservaPDF.php');
+        // Pasamos ambos por compatibilidad (algunas vistas usan idreserva)
+        $getParams  = ['id_detalle' => $id];
+        $permitidos = ['reservada','checkin','checkout','finalizada'];
+
+    } else {
+        return ['success' => false, 'message' => 'Debe indicar solo idreserva o solo id_detalle', 'error' => null];
+    }
+
+    // ─── Ejecutar consulta ─────────────────────────────────────────────────────
+    $q = mysqli_query($conection, $sql);
+    if (!$q || mysqli_num_rows($q) === 0) {
+        return ['success' => false, 'message' => ucfirst($tipo) . ' no encontrada', 'error' => null];
+    }
+    $row = mysqli_fetch_assoc($q);
+
+    // ─── Resolver estado/cliente/correo y preparar vista ───────────────────────
+    if ($tipo === 'reserva') {
+        $estado        = strtolower((string)$row['estado']);
+        $correoCliente = trim((string)$row['correo_c']);
+        $nombreCliente = trim((string)$row['cliente']);
+        $idReservaPDF  = intval($row['idreserva']);
+        $getParams['id'] = $idReservaPDF; // asegurar para la vista
+    } else {
+        $estadoDet     = strtolower((string)$row['estado_detalle']);
+        $estadoRes     = strtolower((string)$row['estado_reserva']);
+        $estado        = $estadoDet ?: $estadoRes;
+        $correoCliente = trim((string)$row['correo_c']);
+        $nombreCliente = trim((string)$row['cliente']);
+        $idReservaPDF  = intval($row['idreserva']);
+        $getParams['id'] = $idReservaPDF; // muchas vistas requieren idreserva
+    }
+
+    if (!filter_var($correoCliente, FILTER_VALIDATE_EMAIL)) {
+        return ['success' => false, 'message' => "Correo del cliente inválido: {$correoCliente}", 'error' => null];
+    }
+    if (!in_array($estado, $permitidos, true)) {
+        return ['success' => false, 'message' => "No se puede enviar comprobante en estado: {$estado}", 'error' => null];
+    }
+
+    // ─── Título (reserva vs flujo de estadía) ──────────────────────────────────
+    $esFlujoEstadia = in_array($estado, ['checkin','checkout','finalizada'], true);
+    $titulo = $esFlujoEstadia ? 'Comprobante de estadía' : 'Comprobante de reserva';
+
+    // ─── Renderizar HTML para PDF (vista existente) ────────────────────────────
+    $_GET_bk = $_GET ?? [];
+    $_GET    = array_merge($_GET_bk, $getParams, ['modoCorreo' => true]);
+
+    ob_start();
+    include $vistaPDF;           // IMPORTANTE: que la vista no haga exit()
+    $pdf_html = ob_get_clean();
+
+    $_GET = $_GET_bk;
+
+    if (!$pdf_html || trim($pdf_html) === '') {
+        return ['success' => false, 'message' => 'No se pudo generar el HTML del PDF', 'error' => null];
+    }
+
+    // ─── Generar PDF en memoria ────────────────────────────────────────────────
+    if (!class_exists(Dompdf::class)) {
+        return ['success' => false, 'message' => 'Dompdf no disponible (autoload)', 'error' => null];
+    }
+    $dompdf = new Dompdf();
+    $opts = $dompdf->getOptions();
+    $opts->set('isRemoteEnabled', true);
+    $dompdf->setOptions($opts);
+    $dompdf->loadHtml($pdf_html);
+    $dompdf->setPaper('A5', 'portrait');
+    $dompdf->render();
+    $pdfBinary = $dompdf->output();
+
+    if (!$pdfBinary) {
+        return ['success' => false, 'message' => 'No se pudo generar el PDF', 'error' => null];
+    }
+
+    // ─── Guardar PDF temporal (enviarCorreo() solo acepta rutas) ───────────────
+    $tmpFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR .
+               (($tipo === 'reserva') ? "comprobante_reserva_{$id}.pdf" : "comprobante_detalle_{$id}.pdf");
+    file_put_contents($tmpFile, $pdfBinary);
+
+    // ─── Plantilla correo + logo CID ───────────────────────────────────────────
+    $plantillaPath = __DIR__ . '/../plantillas/plantillaComprobante.html';
+    if (!is_file($plantillaPath)) {
+        @unlink($tmpFile);
+        return ['success' => false, 'message' => "Plantilla no encontrada: {$plantillaPath}", 'error' => null];
+    }
+    $plantilla = file_get_contents($plantillaPath);
+    $plantilla = str_replace('{{NOMBRE}}', $nombreCliente, $plantilla);
+    $plantilla = str_replace('{{TITULO}}', $titulo,        $plantilla);
+
+    $logoPath = __DIR__ . '/../img/logo.jpg';
+    $imagenesCID = [];
+    if (is_file($logoPath)) {
+        $imagenesCID[] = ['ruta' => $logoPath, 'cid' => 'logoGrupo'];
+    }
+
+    // ─── Enviar correo (SOLO enviarCorreo()) ───────────────────────────────────
+    $asunto = "{$titulo} – Grupo Cañalimeña";
+    $ok = enviarCorreo(
+        $correoCliente,
+        $nombreCliente,
+        $asunto,
+        $plantilla,
+        [$tmpFile],
+        $imagenesCID
+    );
+
+    @unlink($tmpFile);
+
+    return [
+        'success' => (bool)$ok,
+        'message' => $ok ? "Comprobante enviado a {$correoCliente}" : "No se pudo enviar",
+        'error'   => $ok ? null : ($GLOBALS['lastPHPMailerError'] ?? null)
+    ];
 }

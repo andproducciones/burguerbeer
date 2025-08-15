@@ -4,16 +4,11 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Dompdf\Dompdf;
 
 require_once __DIR__ . '/../../../conexion.php';
+require_once __DIR__ . '/../../includes/functions.php';
 date_default_timezone_set('America/Guayaquil');
 
 /* =================== Helpers =================== */
-function formatearFechaEspanol($fechaStr)
-{
-    $dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-    $meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-    $ts = strtotime($fechaStr);
-    return ucfirst($dias[(int)date('w', $ts)]) . " " . date('d', $ts) . " de " . $meses[(int)date('n', $ts) - 1] . " de " . date('Y', $ts);
-}
+
 
 /* =================== Entrada =================== */
 $idreserva = isset($_GET['id']) ? (int)$_GET['id'] : 0;

@@ -1073,7 +1073,7 @@ verificarSesionPOS();
       const modalAbierto = document.querySelector('.modal')?.style.display === 'block';
       const swalVisible = !!document.querySelector('.swal2-container');
       if (!modalAbierto && !swalVisible) location.reload();
-    }, 60000);
+    }, 600000);
 
     // DataTable
     $(document).ready(function() {
@@ -1276,7 +1276,7 @@ verificarSesionPOS();
                 console.log('[cobrarYCheckinDetalle] respuesta cruda:', r3);
               } catch (_) {}
 
-              const txt = (r3 || '').trim().toLowerCase();
+              const txt = (typeof r3 === 'string' ? r3 : String(r3 || '')).trim().toLowerCase();
               if (txt === 'ok' || txt === '{"ok":true}' || txt === 'true') {
                 Swal.fire({
                   icon: 'success',
@@ -1345,8 +1345,8 @@ verificarSesionPOS();
               console.log('[checkoutDetalle] respuesta:', r3);
             } catch (_) {}
 
-            const txt = (r3 || '').trim().toLowerCase();
-            if (txt === 'ok' || txt === '{"ok":true}' || txt === 'true') {
+            const txt = (typeof r3 === 'string' ? r3 : String(r3 || '')).trim().toLowerCase();
+              if (txt === 'ok' || txt === '{"ok":true}' || txt === 'true') {
               Swal.fire({
                 icon: 'success',
                 title: 'Check-Out realizado correctamente',

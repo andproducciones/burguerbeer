@@ -4580,8 +4580,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             mysqli_commit($conection);
 
             if ($estado_reserva === 'confirmada' && function_exists('enviarComprobante')) {
-                //enviarComprobante($idreserva, null);
-            }
+                
+                enviarComprobante($idreserva, null);
+            } 
 
             echo 'ok';
 
@@ -6004,6 +6005,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 Swal.close();
 
                 if (data.status === 'ok') {
+
+                    console.log(data);
                     // Armamos detalles de impresión/envío
                     const det = (etiqueta, valor, okText) => {
                         if (valor === true) return `${okText}<br>`;
@@ -6020,7 +6023,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                     Swal.fire('✅ Check-in exitoso', detalles, 'success');
                     closeModal('modalReserva');
-                    location.reload();
+                    //location.reload();
                 } else {
                     // Muestra el mensaje real que vino del backend
                     const msg = data.msg || 'Algo salió mal en el proceso de check-in';
@@ -6485,7 +6488,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             mysqli_commit($conection);
 
             // Disparadores de impresión/comprobantes para el momento del check-in
-            enviarComprobante($idreserva);
+            enviarComprobante($idreserva,null);
             imprimirComprobanteEstadia($idreserva);
             imprimirTicketsTourYGaraje($idreserva);
 
