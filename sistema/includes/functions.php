@@ -1088,10 +1088,20 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
 
             $printer->text(str_repeat("-", 48)."\n");
             $printer->setJustification(Printer::JUSTIFY_CENTER);
+<<<<<<< Updated upstream
             $printer->setEmphasis(true);
             $printer->text("Total pagado: $ $total\n");
             $printer->setEmphasis(false);
             $printer->text(str_repeat("-", 48)."\n");
+=======
+            $beneficio = $personas . " bebida(s) GRATIS (Agua aromática o Te o Jamaica)";
+            $printer->text("$beneficio\n");
+            $printer->text("Hab(s): " . implode(", ", $habitaciones) . "\n");
+            $printer->text("------------------------------------------------\n");
+            $printer->text("PROMOCION VALIDA CON LA COMPRA DE UNA ORDEN EN BURGUEERBEER\n");
+            $printer->text("------------------------------------------------\n");
+            $printer->text("Fecha: " . date("d/m/Y") . "\n");
+>>>>>>> Stashed changes
             $printer->setEmphasis(true);
             $printer->text("¡Gracias por preferirnos!\n");
             $printer->setEmphasis(false);
