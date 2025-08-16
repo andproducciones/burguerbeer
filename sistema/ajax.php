@@ -2395,23 +2395,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $user = $_SESSION['idUser'];
         $user2 = md5($_SESSION['idUser']);
 
-        // Consultar datos del arqueo de caja temporal (órdenes abiertas)
+        // Consultar datos del arqueo de caja
         $query_pro_temp = mysqli_query($conection, "SELECT * FROM detalle_temp WHERE token_user = '$user2'");
+
         if (mysqli_num_rows($query_pro_temp) > 0) {
 
             echo '<form action="" method="post" name="form_add_product" class="cierreCaja" id="form_add_product" onsubmit="event.preventDefault(); sendDataForm();" style="width: 200px; height:auto;">
-                <div class="acciones wd100">
-                    <h2 style="text-align:center;">Existen ordenes abiertas</h2>
-                </div>
-                <div class="acciones wd100">
-                    <a href="#" class="btn_ok closeModal" onclick="closeModal2();"><i class="fas fa-ban"></i> Cerrar</a>
-                </div>
-            </form>';
+                    <div class="acciones wd100">
+                    <h2 style="text-align:center; ">Existen ordenes abiertas</h2>
+                    </div>
+                    <div class="acciones wd100">
+                            
+                        <a href="#" class="btn_ok closeModal" onclick="closeModal2();"><i class="fas fa-ban"></i> Cerrar</a>
+                    </div>
+             
+                </form>';
             exit;
+
+
         }
 
         // Consultar datos del arqueo de caja
         $query = mysqli_query($conection, "SELECT * FROM arqueo_caja WHERE id = $id AND estatus = 1");
+
         if (mysqli_num_rows($query) == 1) {
             $data = mysqli_fetch_assoc($query);
             $fecha_inicio = $data['fecha_inicio'];
@@ -2419,14 +2425,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $fecha_fin = date('Y-m-d G:i:s');
 
             // Consultar ventas agrupadas por tipo de pago
-            $query_ventas = mysqli_query($conection, "
-            SELECT tipopago, SUM(totalfactura) AS totalMonto, COUNT(totalfactura) AS totalVentas
-            FROM factura
-            WHERE caja = $id_caja
-              AND estatus = 1
-              AND fecha BETWEEN '$fecha_inicio' AND '$fecha_fin'
-            GROUP BY tipopago
-        ");
+            $query_ventas = mysqli_query($conection, "SELECT tipopago, SUM(totalfactura) AS totalMonto, COUNT(totalfactura) AS totalVentas FROM factura WHERE caja = $id_caja AND estatus = 1 AND fecha BETWEEN '$fecha_inicio' AND '$fecha_fin' GROUP BY tipopago");
 
             // Inicializar variables para totales por tipo de pago
             $montoEfectivo = 0;
@@ -2441,6 +2440,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             // Contenedor para los inputs HTML
             $inputs = '';
             if (mysqli_num_rows($query_ventas) > 0) {
+
                 while ($data_ventas = mysqli_fetch_assoc($query_ventas)) {
                     // Calcular montos individuales según el tipo de pago
                     switch ($data_ventas['tipopago']) {
@@ -2481,15 +2481,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $ventasFinal += $data_ventas['totalVentas'];
                 }
 
-                $inputs .= '
-                <div class="caja_valores">
-                    <span>Total Ventas</span>
-                    <span>$ ' . number_format($montoFinal, 2) . '</span>
-                </div>';
+                $inputs .= '<div class="caja_valores">
+                                    <span>Total Ventas</span>
+                                    <span>$ ' . number_format($montoFinal, 2) . '</span>
+                                </div>
+        ';
+
             } else {
-                $inputs = '
-                <div class="caja_valores">
-                    <span>No hay ventas</span>
+                $inputs = '<div class="caja_valores"><span>No hay ventas</span>
                 </div>';
             }
 
@@ -2502,17 +2501,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $salidasTransferencia = 0;
 
             $totalSalidas = 0; // Inicializar
-            $entregar = 0;     // Inicializar
+            $entregar = 0; // Inicializar
 
-            $query_salidas = mysqli_query($conection, "
-            SELECT k.id, k.id_usuario, k.valor, k.tipo_transaccion, k.motivo, k.tipo_moneda,
-                   p.nombres AS nombre_usuario
-            FROM kardex k
-            JOIN personas p ON k.id_usuario = p.id
-            WHERE k.id_user = '$user'
-              AND k.fecha BETWEEN '$fecha_inicio' AND '$fecha_fin'
-            ORDER BY k.tipo_transaccion
-        ");
+            $query_salidas = mysqli_query($conection, "SELECT k.id, k.id_usuario, k.valor, k.tipo_transaccion, k.motivo, k.tipo_moneda, p.nombres AS nombre_usuario FROM kardex k JOIN personas p ON k.id_usuario = p.id WHERE k.id_user = '$user' AND k.fecha BETWEEN '$fecha_inicio' AND '$fecha_fin' ORDER BY k.tipo_transaccion");
 
             $salidasHTML = '';
 
@@ -2530,7 +2521,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                     if ($data_salidas['tipo_transaccion'] == 1) { // Salida
                         $signo = '-';
-                        $estilo = 'style="color: red;"';
+                        $estilo = 'sty  le="color: red;"';
                         if ($data_salidas['tipo_moneda'] == 1) { // Efectivo
                             $salidasEfectivo += $data_salidas['valor'];
                         } elseif ($data_salidas['tipo_moneda'] == 2) { // Transferencia
@@ -2545,32 +2536,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     }
 
                     $salidasHTML .= '
-                <div class="caja_valores">
-                    <span>' . $data_salidas['nombre_usuario'] . '</span>
-                    <span>' . $data_salidas['motivo'] . '</span>
-                    <span ' . $estilo . '>' . $signo . '$ ' . number_format($data_salidas['valor'], 2) . '</span>
-                </div>';
+            <div class="caja_valores">
+                <span>' . $data_salidas['nombre_usuario'] . '</span>
+                <span>' . $data_salidas['motivo'] . '</span>
+                <span ' . $estilo . '>' . $signo . '$ ' . number_format($data_salidas['valor'], 2) . '</span>
+            </div>';
                 }
 
                 $salidasHTML .= '<hr>
-                <div class="caja_valores">
-                    <span>Efectivo</span>
-                    <span>$ ' . number_format($entradasEfectivo - $salidasEfectivo, 2) .'</span>
-                </div>
-                <div class="caja_valores">
-                    <span>Transferencia</span>
-                    <span>$ ' . number_format($entradasTransferencia - $salidasTransferencia, 2) .'</span>
-                </div>';
+        <div class="caja_valores">
+            <span>Efectivo</span>
+            <span>$ ' . number_format($entradasEfectivo - $salidasEfectivo, 2) .'</span>
+        </div>
+        <div class="caja_valores">
+            <span>Transferencia</span>
+            <span>$ ' . number_format($entradasTransferencia - $salidasTransferencia, 2) .'</span>
+        </div>';
             } else {
                 $salidasHTML .= '
-                <div class="caja_valores">
-                    <span>No hay Movimientos</span>
-                </div>';
+        <div class="caja_valores">
+            <span>No hay Movimientos</span>
+        </div>';
             }
 
-            // === Códigos de pago agrupados por tipo ===
+
+            // === NUEVO BLOQUE: traer códigos de pago ===
             $query_codigos = mysqli_query($conection, "
-            SELECT tipopago, codigopago, SUM(totalfactura) AS total
+            SELECT 
+                tipopago,
+                codigopago,
+                SUM(totalfactura) AS total
             FROM factura
             WHERE caja = $id_caja
               AND estatus = 1
@@ -2581,13 +2576,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         ");
 
             $codigosAgrupados = [];
+
             if (mysqli_num_rows($query_codigos) > 0) {
                 while ($row = mysqli_fetch_assoc($query_codigos)) {
                     $tipoPago = tipoPagoNombre($row['tipopago']);
                     $codigo = $row['codigopago'];
                     $total = $row['total'];
 
-                    if ($row['tipopago'] == 2) { // Tarjeta con factor
+                    if ($row['tipopago'] == 2) {
                         $total = $total / 0.94;
                     }
 
@@ -2605,38 +2601,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
 
             $codigosHTML = '';
+
             if (!empty($codigosAgrupados)) {
                 $codigosHTML .= '<h3>Códigos de Pago</h3><hr>';
                 foreach ($codigosAgrupados as $tipo => $codigos) {
                     $codigosHTML .= "<strong>$tipo:</strong>";
                     $codigosHTML .= '
-                <table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse; margin-top: 5px; margin-bottom: 10px; width: 100%;">
-                    <thead style="background-color: #f2f2f2;">
-                        <tr>
-                            <th style="text-align: left;">Código</th>
-                            <th style="text-align: right;">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>';
+            <table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse; margin-top: 5px; margin-bottom: 10px; width: 100%;">
+                <thead style="background-color: #f2f2f2;">
+                    <tr>
+                        <th style="text-align: left;">Código</th>
+                        <th style="text-align: right;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>';
                     foreach ($codigos as $item) {
                         $codigosHTML .= '
-                        <tr>
-                            <td>' . htmlspecialchars($item['codigo']) . '</td>
-                            <td style="text-align: right;">$ ' . $item['total'] . '</td>
-                        </tr>';
+                    <tr>
+                        <td>' . htmlspecialchars($item['codigo']) . '</td>
+                        <td style="text-align: right;">$ ' . $item['total'] . '</td>
+                    </tr>';
                     }
                     $codigosHTML .= '
-                    </tbody>
-                </table>
-                <hr>';
+                </tbody>
+            </table>
+            <hr>';
                 }
             }
+
+            // === FIN BLOQUE NUEVO ===
+
+
+
 
             // Calcular el monto final a entregar
             $totalSalidas = $entradasEfectivo - $salidasEfectivo + $entradasTransferencia - $salidasTransferencia;
             $entregar = ($inicial + $montoFinal) + $totalSalidas;
 
             $totalFinalEfectivoEntregar = $montoEfectivo + $inicial + $entradasEfectivo - $salidasEfectivo;
+
             $totalFinalTransferenciaEntregar = $montoTransferencia + $entradasTransferencia - $salidasTransferencia;
 
             $totalEfectivo = number_format($totalFinalEfectivoEntregar, 2, '.', '');
@@ -2644,433 +2647,218 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $totalTransferencia = number_format($totalFinalTransferenciaEntregar, 2, '.', '');
             $totalDeUna = number_format($montoDeUna, 2, '.', '');
 
-            // === EMPLEADOS (UI mejorada) ===
-            $empleadosHTML = '';
-            // Mensual (1)
-            $empMensual = null;
-            $qMen = mysqli_query($conection, "
-          SELECT id, nombre, salario_mensual, COALESCE(dias_semana,5) AS dias_semana
-          FROM empleados
-          WHERE modalidad='mensual_por_dia' AND activo=1
-          LIMIT 1
-        ");
-            if ($qMen && mysqli_num_rows($qMen) === 1) {
-                $empMensual = mysqli_fetch_assoc($qMen);
-                $diasSemana = (int)$empMensual['dias_semana'];
-                $diasMesLaboral = ($diasSemana * 52.0) / 12.0; // ~21.6667 si 5 días/semana
-                $montoDiaMensual = $diasMesLaboral > 0 ? round(((float)$empMensual['salario_mensual']) / $diasMesLaboral, 2) : 0.00;
-            } else {
-                $montoDiaMensual = 0.00;
-            }
-            // Dos diario_variable
-            $dv = [];
-            $qDV = mysqli_query($conection, "
-          SELECT id, nombre
-          FROM empleados
-          WHERE modalidad='diario_variable' AND activo=1
-          ORDER BY id ASC
-          LIMIT 2
-        ");
-            while ($qDV && $row = mysqli_fetch_assoc($qDV)) {
-                $dv[] = $row;
-            }
-            $dv1Nom = isset($dv[0]) ? $dv[0]['nombre'] : 'Trabajador 1';
-            $dv2Nom = isset($dv[1]) ? $dv[1]['nombre'] : 'Trabajador 2';
-
-            $empleadosHTML .= '
-            <h3>Pagos al Personal</h3>
-            <div class="caja_valores" style="flex-wrap:wrap; width:100%;">
-                <!-- Empleado mensual -->
-                <div class="empleado" style="margin: 0px; width:100%;">
-                    <label style="display:block;">
-                        ' . htmlspecialchars($empMensual ? $empMensual["nombre"] : "Empleado mensual") . ' (mensual)
-                        <div style="display:flex; align-items:center; margin-top:4px;">
-                            <input type="checkbox" id="mensual_asistio_chk" ' . ($montoDiaMensual > 0 ? 'checked' : '') . '>
-                            <small>Asistió hoy</small>
-                        </div>
-                        <small>Monto/día:</small>
-                        <input type="number" step="0.01" id="mensual_monto_dia" value="' . number_format($montoDiaMensual, 2, ".", "") . '" readonly>
-                    </label>
-                </div>
-
-                <!-- Diario variable #1 -->
-                <div class="empleado" style="margin: 0px; width:100%;">
-                    <label for="empleado_2" style="display:block;">
-                        ' . htmlspecialchars($dv1Nom) . '
-                        <input type="number" step="0.01" min="0" name="empleado_2" id="empleado_2" onkeyup="calcular3();" placeholder="0.00">
-                    </label>
-                </div>
-
-                <!-- Diario variable #2 -->
-                <div class="empleado" style="margin: ; width:100%;">
-                    <label for="empleado_3" style="display:block;">
-                        ' . htmlspecialchars($dv2Nom) . '
-                        <input type="number" step="0.01" min="0" name="empleado_3" id="empleado_3" onkeyup="calcular3();" placeholder="0.00">
-                    </label>
-                </div>
-            </div>
-
-            <!-- Compatibilidad con cerrarCaja (valida empleado_1) -->
-            <input type="hidden" name="empleado_1" value="1">
-            <!-- Asistencia mensual para backend -->
-            <input type="hidden" name="mensual_asistio" id="mensual_asistio" value="1">
-            <script>
-              (function(){
-                var chk = document.getElementById("mensual_asistio_chk");
-                var hid = document.getElementById("mensual_asistio");
-                if(chk && hid){
-                  chk.addEventListener("change", function(){ hid.value = this.checked ? "1" : "0"; });
-                }
-              })();
-            </script>
-        ';
-
-            // ====== Sesiones para preview/PDF ======
             $_SESSION['preview_form'] = [
-                'fecha_inicio' => $fecha_inicio,
-                'fecha_fin' => $fecha_fin,
-                'monto_inicial' => $inicial,
-                'ventas_totales' => $ventasFinal,
-                'monto_total' => $montoFinal,
-                'movimientos' => $salidasHTML,
-                'total_salidas' => number_format($totalSalidas, 2),
-                'entregar' => $entregar,
-                'montoEfectivo' => $totalFinalEfectivoEntregar,
-                'montoTarjeta' => $montoTarjeta != 0 ? number_format($montoTarjeta / 0.94, 2) : '0.00',
-                'montoTransferencia' => $totalFinalTransferenciaEntregar,
-                'montoDeUna' => $montoDeUna,
-                'detalle_ventas' => $inputs,
-                'observaciones' => '',
-                'compras' => ''
-            ];
+                    'fecha_inicio' => $fecha_inicio,
+                    'fecha_fin' => $fecha_fin,
+                    'monto_inicial' => $inicial,
+                    'ventas_totales' => $ventasFinal,
+                    'monto_total' => $montoFinal,
+                    'movimientos' => $salidasHTML,
+                    'total_salidas' => number_format($totalSalidas, 2) ,
+                    'entregar' => $entregar,
+                    'montoEfectivo' => $totalFinalEfectivoEntregar,
+                    'montoTarjeta' => $montoTarjeta != 0 ? number_format($montoTarjeta / 0.94, 2) : '0.00',
+                    'montoTransferencia' => $totalFinalTransferenciaEntregar,
+                    'montoDeUna' => $montoDeUna,
+                    'detalle_ventas' => $inputs,
+                    'observaciones' => '',
+                    'compras' => ''
+                ];
 
             $_SESSION['data_cierre_pdf'] = [
-                'idArqueo' => $id,
-                'fecha_inicio' => $fecha_inicio,
-                'fecha_fin' => $fecha_fin,
-                'monto_inicial' => $inicial,
-                'monto_total' => $montoFinal,
-                'total_cash' => $montoFinal,
-                'total_ventas' => $ventasFinal,
-                'total_efectivo' => $totalFinalEfectivoEntregar,
-                'total_tarjeta' => $montoTarjeta != 0 ? number_format($montoTarjeta / 0.94, 2, '.', '') : '0.00',
-                'total_transferencia' => $totalFinalTransferenciaEntregar,
-                'total_deuna' => $montoDeUna,
-                'movimientos' => $salidasHTML,
-                // Los siguientes cuatro son necesarios para evitar warnings
-                'montoEfectivo' => $totalFinalEfectivoEntregar,
-                'montoTarjeta' => $montoTarjeta != 0 ? number_format($montoTarjeta / 0.94, 2, '.', '') : 0,
-                'montoTransferencia' => $totalFinalTransferenciaEntregar,
-                'montoDeUna' => $montoDeUna,
-                'total_salidas' => number_format($totalSalidas, 2),
-                'efectivo' => 0,
-                'tarjeta' => 0,
-                'transferencia' => 0,
-                'deuna' => 0,
-                'monto_final' => 0,
-                'nombre' => $_SESSION['nombre'],
-                'apellido' => $_SESSION['apellido'],
-                'salidas' => [],
-                'observaciones' => '',
-                'compras' => ''
-            ];
+            'idArqueo' => $id,
+            'fecha_inicio' => $fecha_inicio,
+            'fecha_fin' => $fecha_fin,
+            'monto_inicial' => $inicial,
+            'monto_total' => $montoFinal,
+            'total_cash' => $montoFinal,
+            'total_ventas' => $ventasFinal,
+            'total_efectivo' => $totalFinalEfectivoEntregar,
+            'total_tarjeta' => $montoTarjeta != 0 ? number_format($montoTarjeta / 0.94, 2, '.', '') : '0.00',
+            'total_transferencia' => $totalFinalTransferenciaEntregar,
+            'total_deuna' => $montoDeUna,
+            'movimientos' => $salidasHTML,
+            // Los siguientes cuatro son necesarios para evitar warnings
+            'montoEfectivo' => $totalFinalEfectivoEntregar,
+            'montoTarjeta' => $montoTarjeta != 0 ? number_format($montoTarjeta / 0.94, 2, '.', '') : 0,
+            'montoTransferencia' => $totalFinalTransferenciaEntregar,
+            'montoDeUna' => $montoDeUna,
+            'total_salidas' => number_format($totalSalidas, 2) ,
+
+            'efectivo' => 0,
+            'tarjeta' => 0,
+            'transferencia' => 0,
+            'deuna' => 0,
+            'monto_final' => 0,
+            'nombre' => $_SESSION['nombre'],
+            'apellido' => $_SESSION['apellido'],
+            'salidas' => [],
+            'observaciones' => '',
+            'compras' => ''
+        ];
+
 
             $comillas = "'";
 
-            // ====== FORMULARIO FINAL ======
+
+            // Generar el HTML del formulario
             echo '
-            <form action="" method="post" name="form_add_product" class="cierreCaja" id="form_add_product" onsubmit="event.preventDefault(); sendDataForm();">
-                <div class="wd60">
-                    <h2>Arqueo de Caja</h2>
-                    <hr>
+        
+            
+                <form action="" method="post" name="form_add_product" class="cierreCaja" id="form_add_product" onsubmit="event.preventDefault(); sendDataForm();">
+                    <div class="wd60">
+                        <h2>Arqueo de Caja</h2>
+                        <hr>
 
-                    <h3>Ventas Realizadas</h3>
-                    <hr>
-                    ' . $inputs . '
-                    <hr>
+                        <h3>Ventas Realizadas</h3>
+                        <hr>
+                        ' . $inputs . '
+                        
+                        <hr>
 
-                    ' . $codigosHTML . '
+                        ' . $codigosHTML . '
+                    
 
-                    <h3>Movimientos de Caja</h3>
-                    <hr>
-                    ' . $salidasHTML . '
-                    <hr>
+                        <h3>Movimientos de Caja</h3>
+                        <hr>
+                        ' . $salidasHTML . '
+                        <hr>
 
-                    <h2>Arqueo de Caja</h2>
-                    <hr>
+                        <h2>Arqueo de Caja</h2>
+                        <hr>
+                        
+                        <div class="caja_valores">
+                            <span>Monto Inicial (Sueltos)</span> 
+                            <span>$ ' . number_format($inicial, 2) . '</span>
+                        </div>
 
+                        
+                        <div class="caja_valores">
+                            <span>Total Ventas </span>
+                            <span>$ ' . number_format($montoFinal, 2) . '</span>
+                        </div>
+                        
+                        <div class="caja_valores">
+                            <span>Total Movimientos</span>
+                            <span>$ ' . number_format($totalSalidas, 2) . '</span>
+                        </div>
+                        <hr>
+                        
+                        <div class="caja_valores total-entregar">
+                            <h2>CIERRE DE CAJA DEL DIA</h2>
+                            <h2>$ ' . number_format($entregar, 2) . '</h2>
+                        </div>
+                    </div>
+
+                    <div class="wd30">
+                        <h2>MONTOS POR ENTREGAR</h2>
                     <div class="caja_valores">
-                        <span>Monto Inicial (Sueltos)</span>
-                        <span>$ ' . number_format($inicial, 2) . '</span>
+                    <span>Efectivo </span>
+                    <span>$'.number_format($totalFinalEfectivoEntregar, 2).' </span>
+                    </div>
+                    <div class="caja_valores">
+                    <span>Tarjeta </span>
+                    <span>$'.($montoTarjeta != 0 ? number_format($montoTarjeta / 0.94, 2) : '0.00').' </span>
                     </div>
 
                     <div class="caja_valores">
-                        <span>Total Ventas </span>
-                        <span>$ ' . number_format($montoFinal, 2) . '</span>
+                    <span>Transferencia </span>
+                    <span>$'.number_format($totalFinalTransferenciaEntregar, 2).'</span>
                     </div>
 
                     <div class="caja_valores">
-                        <span>Total Movimientos</span>
-                        <span>$ ' . number_format($totalSalidas, 2) . '</span>
-                    </div>
-                    <hr>
-
-                    <div class="caja_valores total-entregar">
-                        <h2>CIERRE DE CAJA DEL DIA</h2>
-                        <h2>$ ' . number_format($entregar, 2) . '</h2>
-                    </div>
-                </div>
-
-                <div class="wd30">
-                    <h2>MONTOS POR ENTREGAR</h2>
-                    <div class="caja_valores">
-                        <span>Efectivo </span>
-                        <span>$ ' . number_format($totalFinalEfectivoEntregar, 2) . ' </span>
-                    </div>
-                    <div class="caja_valores">
-                        <span>Tarjeta </span>
-                        <span>$ ' . ($montoTarjeta != 0 ? number_format($montoTarjeta / 0.94, 2) : '0.00') . ' </span>
-                    </div>
-                    <div class="caja_valores">
-                        <span>Transferencia </span>
-                        <span>$ ' . number_format($totalFinalTransferenciaEntregar, 2) . '</span>
-                    </div>
-                    <div class="caja_valores">
-                        <span>DeUna </span>
-                        <span>$ ' . number_format($montoDeUna, 2) . ' </span>
+                    <span>DeUna </span>
+                    <span>$'.number_format($montoDeUna, 2).' </span>
                     </div>
 
                     <h2>MONTOS ENTREGADOS</h2>
-                    <label for="monto_efectivo">Efectivo</label>
-                    <input type="number" step="0.01" name="monto_efectivo" id="monto_efectivo" onkeyup="calcular();">
+                        <label for="monto_efectivo">Efectivo</label>
+                        <input type="number" step="0.01" name="monto_efectivo" id="monto_efectivo" onkeyup="calcular();">
 
-                    <label for="monto_tarjeta">Tarjeta</label>
-                    <input type="number" step="0.01" name="monto_tarjeta" id="monto_tarjeta" onkeyup="calcular();">
+                        <label for="monto_tarjeta">Tarjeta</label>
+                        <input type="number" step="0.01" name="monto_tarjeta" id="monto_tarjeta" onkeyup="calcular();">
 
-                    <label for="monto_transferencia">Transferencia</label>
-                    <input type="number" step="0.01" name="monto_transferencia" id="monto_transferencia" onkeyup="calcular();">
+                        <label for="monto_transferencia">Transferencia</label>
+                        <input type="number" step="0.01" name="monto_transferencia" id="monto_transferencia" onkeyup="calcular();">
 
-                    <label for="monto_deuna">DeUna</label>
-                    <input type="number" step="0.01" name="monto_deuna" id="monto_deuna" onkeyup="calcular();">
+                        <label for="monto_deuna">DeUna</label>
+                        <input type="number" step="0.01" name="monto_deuna" id="monto_deuna" onkeyup="calcular();">
 
-                    <label for="monto_final">Entrega Total</label>
-                    <input type="number" step="0.01" name="monto_final" id="monto_final" disabled>
-                    <br>
+                        <label for="monto_final">Entrega Total</label>
+                        <input type="number" step="0.01" name="monto_final" id="monto_final" disabled>
+                 <br>
+                        <h3>Pagos al Personal</h3>
+                        <div class="caja_valores">
+                            <div class="empleado" style="margin: 0px 5px">
+                                <label for="empleado_1">
+                                    Trabajador 1
+                                    <input type="number" name="empleado_1" id="empleado_1" value="23" readonly>
+                                </label>
+                            </div>
+                            <div class="empleado" style="margin: 0px 5px">
+                                <label for="empleado_cristina">
+                                    Trabajador 2
+                                    <input type="number" name="empleado_2" id="empleado_cristina" onkeyup="calcular3();">
+                                </label>
+                            </div>
+                            <div class="empleado" style="margin: 0px 5px">
+                                <label for="empleado_patricia">
+                                    Trabajador 3
+                                    <input type="number" name="empleado_3" id="empleado_patricia" onkeyup="calcular3();">
+                                </label>
+                            </div>
+                        </div>
 
-                    ' . $empleadosHTML . '
-
-                    <div style="margin: 5px;">
+                        <div style="margin: 5px;">
                         <label for="efectivo_neto">
                             Efectivo Final:
                             <input type="number" id="efectivo_neto" readonly>
                         </label>
                     </div>
 
-                    <div>
+                        <div>
                         <label>Observaciones</label>
-                        <textarea class="wd100" style="height: 100px" id="observaciones" name="observaciones"></textarea>
-                    </div>
+                        <textarea class="wd100"  style="height: 100px" id="observaciones" name="observaciones"></textarea>
+                        </div>
 
-                    <div style="margin-top:12px;">
-  <label style="display:block; font-weight:700; margin-bottom:6px;">Compras</label>
+                        <div>
+                        <label>Compras</label>
+                        <textarea class="wd100" style="height: 100px" id="compras" name="compras"></textarea>
+                        </div>
 
-  <!-- PROTEÍNAS -->
-  <div style="margin:10px 0;">
-    <div style="font-weight:600; margin-bottom:6px;">Proteínas</div>
-    <div style="display:flex; flex-wrap:wrap; gap:10px;">
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Carne de res">Carne de res</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Carne molida">Carne molida</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Pollo (pechuga)">Pollo (pechuga)</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Muslos/Encuentro">Muslos/Encuentro</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Alitas">Alitas</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Cerdo/Pernil">Cerdo/Pernil</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Tocino/Bacon">Tocino/Bacon</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Chorizo/Salchicha">Chorizo/Salchicha</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Jamón">Jamón</label>
-    </div>
-  </div>
+                        </div>
 
-  <!-- PANES Y BASES -->
-  <div style="margin:10px 0;">
-    <div style="font-weight:600; margin-bottom:6px;">Panes y bases</div>
-    <div style="display:flex; flex-wrap:wrap; gap:10px;">
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Pan de hamburguesa">Pan de hamburguesa</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Pan hot dog">Pan hot dog</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Pan brioche">Pan brioche</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Pan integral">Pan integral</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Tortillas/Wraps">Tortillas/Wraps</label>
-    </div>
-  </div>
+                    <input type="hidden" name="action" value="cerrarCaja">
+                    <input type="hidden" name="co" value="' . $id . '">
+                    <input type="hidden" name="total_ventas" value="' . $ventasFinal . '">
+                    <input type="hidden" id="monto_final2" name="monto_final" value="">
+                    <input type="hidden" name="total_cash" value="' . number_format($entregar, 2) . '">
+                    <input type="hidden" name="total_movimientos" value="' . number_format($totalSalidas, 2) . '">
 
-  <!-- LÁCTEOS Y HUEVOS -->
-  <div style="margin:10px 0;">
-    <div style="font-weight:600; margin-bottom:6px;">Lácteos y huevos</div>
-    <div style="display:flex; flex-wrap:wrap; gap:10px;">
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Queso cheddar">Queso cheddar</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Queso mozzarella">Queso mozzarella</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Queso suizo">Queso suizo</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Queso americano">Queso americano</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Queso crema">Queso crema</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Leche">Leche</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Huevos">Huevos</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Mantequilla">Mantequilla</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Crema de leche">Crema de leche</label>
-    </div>
-  </div>
+                    <input type="hidden" name="total_efectivo" value="'.$totalEfectivo.'">
+                    <input type="hidden" name="total_tarjeta" value="'.$totalTarjeta.'">
+                    <input type="hidden" name="total_transferencia" value="'.$totalTransferencia.'">
+                    <input type="hidden" name="total_deuna" value="'.$totalDeUna.'">
 
-  <!-- VERDURAS Y FRESCOS -->
-  <div style="margin:10px 0;">
-    <div style="font-weight:600; margin-bottom:6px;">Verduras y frescos</div>
-    <div style="display:flex; flex-wrap:wrap; gap:10px;">
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Tomate">Tomate</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Cebolla paiteña">Cebolla paiteña</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Cebolla perla">Cebolla perla</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Lechuga">Lechuga</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Pepinillos">Pepinillos</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Jalapeños">Jalapeños</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Pimiento">Pimiento</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Zanahoria">Zanahoria</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Ajo">Ajo</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Perejil">Perejil</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Cilantro">Cilantro</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Limón">Limón</label>
-    </div>
-  </div>
+                        <div class="acciones wd100">
+                            <button type="submit" class="btn_new"><i class="fas fa-edit"></i> Guardar</button>
+                            <a href="#" class="btn_ok closeModal" onclick="closeModal2();"><i class="fas fa-ban"></i> Cerrar</a>
+                            <a href="#" onclick="prepararDatosParaPDF().then(() => window.open('.$comillas.'generarCierrePDF.php?preview=1'.$comillas.', '.$comillas.'_blank'.$comillas.'));" class="btn_ok" style="margin-top:10px;">
+                                <i class="fas fa-file-pdf"></i> Ver Cierre en PDF
+                            </a>
 
-  <!-- FRITOS / ACOMPAÑANTES -->
-  <div style="margin:10px 0;">
-    <div style="font-weight:600; margin-bottom:6px;">Fritos / Acompañantes</div>
-    <div style="display:flex; flex-wrap:wrap; gap:10px;">
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Papas para freír">Papas para freír</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Papa prefrita congelada">Papa prefrita congelada</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Yuca">Yuca</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Camote">Camote</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Aros de cebolla">Aros de cebolla</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Nuggets">Nuggets</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Empanizador (panko/harina)">Empanizador (panko/harina)</label>
-    </div>
-  </div>
+                        </div>
 
-  <!-- SALSAS Y CONDIMENTOS -->
-  <div style="margin:10px 0;">
-    <div style="font-weight:600; margin-bottom:6px;">Salsas y condimentos</div>
-    <div style="display:flex; flex-wrap:wrap; gap:10px;">
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Ketchup">Ketchup</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Mostaza">Mostaza</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Mayonesa">Mayonesa</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Salsa BBQ">Salsa BBQ</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Salsa de ajo">Salsa de ajo</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Salsa picante">Salsa picante</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Ranch/Tártara">Ranch/Tártara</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Vinagre">Vinagre</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Aceite vegetal">Aceite vegetal</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Aceite para freír">Aceite para freír</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Sal">Sal</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Pimienta">Pimienta</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Orégano">Orégano</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Comino">Comino</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Paprika">Paprika</label>
-    </div>
-  </div>
+                        <input type="hidden" name="monto_efectivo_calc" value="' . $totalFinalEfectivoEntregar . '">
+                        <input type="hidden" name="monto_tarjeta_calc" value="' . ($montoTarjeta != 0 ? number_format($montoTarjeta / 0.94, 2, '.', '') : '0.00') . '">
+                        <input type="hidden" name="monto_transferencia_calc" value="' . $totalFinalTransferenciaEntregar . '">
+                        <input type="hidden" name="monto_deuna_calc" value="' . $montoDeUna . '">
+                        <input type="hidden" name="redirigir_pdf" value="1">
 
-  <!-- BEBIDAS -->
-  <div style="margin:10px 0;">
-    <div style="font-weight:600; margin-bottom:6px;">Bebidas y frío</div>
-    <div style="display:flex; flex-wrap:wrap; gap:10px;">
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Gaseosas">Gaseosas</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Agua">Agua</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Jugos">Jugos</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Té">Té</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Hielo">Hielo</label>
-    </div>
-  </div>
-
-  <!-- EMPAQUES / DESECHABLES -->
-  <div style="margin:10px 0;">
-    <div style="font-weight:600; margin-bottom:6px;">Empaques y desechables</div>
-    <div style="display:flex; flex-wrap:wrap; gap:10px;">
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Cajas para burger">Cajas para burger</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Cajitas para papas">Cajitas para papas</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Vasos">Vasos</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Tapas de vaso">Tapas de vaso</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Sorbetes/Pitillos">Sorbetes/Pitillos</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Servilletas">Servilletas</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Bolsas kraft">Bolsas kraft</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Papel parafinado">Papel parafinado</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Film plástico">Film plástico</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Papel aluminio">Papel aluminio</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Guantes">Guantes</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Gorros">Gorros</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Mascarillas">Mascarillas</label>
-    </div>
-  </div>
-
-  <!-- LIMPIEZA -->
-  <div style="margin:10px 0;">
-    <div style="font-weight:600; margin-bottom:6px;">Limpieza</div>
-    <div style="display:flex; flex-wrap:wrap; gap:10px;">
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Detergente">Detergente</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Desengrasante">Desengrasante</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Cloro">Cloro</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Desinfectante">Desinfectante</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Paños/Esponjas">Paños/Esponjas</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Toallas azules">Toallas azules</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Bolsas de basura">Bolsas de basura</label>
-    </div>
-  </div>
-
-  <!-- COCCIÓN / ENERGÍA -->
-  <div style="margin:10px 0;">
-    <div style="font-weight:600; margin-bottom:6px;">Cocción / Energía</div>
-    <div style="display:flex; flex-wrap:wrap; gap:10px;">
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Gas/Propano">Gas/Propano</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Carbón">Carbón</label>
-      <label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" name="compras_items[]" value="Fósforos/Encendedor">Fósforos/Encendedor</label>
-    </div>
-  </div>
-
-  <!-- OTROS (textarea visible) -->
-  <div style="margin:10px 0;">
-    <label style="display:block; font-weight:600; margin-bottom:6px;">Otros</label>
-    <textarea id="compras_otro" name="compras_otro"
-      placeholder="Especifique otras compras..."
-      style="width:100%; height:80px; padding:6px; border:1px solid #ccc; border-radius:4px;"></textarea>
-  </div>
-
-  <!-- Campo oculto que usa tu backend -->
-  <textarea id="compras" name="compras" style="display:none;"></textarea>
-</div>
-                </div>
-
-                <input type="hidden" name="action" value="cerrarCaja">
-                <input type="hidden" name="co" value="' . $id . '">
-                <input type="hidden" name="total_ventas" value="' . $ventasFinal . '">
-                <input type="hidden" id="monto_final2" name="monto_final" value="">
-                <input type="hidden" name="total_cash" value="' . number_format($entregar, 2) . '">
-                <input type="hidden" name="total_movimientos" value="' . number_format($totalSalidas, 2) . '">
-
-                <input type="hidden" name="total_efectivo" value="' . $totalEfectivo . '">
-                <input type="hidden" name="total_tarjeta" value="' . $totalTarjeta . '">
-                <input type="hidden" name="total_transferencia" value="' . $totalTransferencia . '">
-                <input type="hidden" name="total_deuna" value="' . $totalDeUna . '">
-
-                <div class="acciones wd100">
-                    <button type="submit" class="btn_new"><i class="fas fa-edit"></i> Guardar</button>
-                    <a href="#" class="btn_ok closeModal" onclick="closeModal2();"><i class="fas fa-ban"></i> Cerrar</a>
-                    <a href="#" onclick="prepararDatosParaPDF().then(() => window.open(' . $comillas . 'generarCierrePDF.php?preview=1' . $comillas . ', ' . $comillas . '_blank' . $comillas . '));" class="btn_ok" style="margin-top:10px;">
-                        <i class="fas fa-file-pdf"></i> Ver Cierre en PDF
-                    </a>
-                </div>
-
-                <input type="hidden" name="monto_efectivo_calc" value="' . $totalFinalEfectivoEntregar . '">
-                <input type="hidden" name="monto_tarjeta_calc" value="' . ($montoTarjeta != 0 ? number_format($montoTarjeta / 0.94, 2, '.', '') : '0.00') . '">
-                <input type="hidden" name="monto_transferencia_calc" value="' . $totalFinalTransferenciaEntregar . '">
-                <input type="hidden" name="monto_deuna_calc" value="' . $montoDeUna . '">
-                <input type="hidden" name="redirigir_pdf" value="1">
-            </form>';
+                        
+                </form>';
         }
     }
-
 
     if ($_POST['action'] == 'actualizarPreviewPDF') {
         $campos = [
@@ -3094,395 +2882,219 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     if ($_POST['action'] == 'cerrarCaja') {
 
-        // ---------- utilidades ----------
-        function money_str($v)
-        {
-            $v = preg_replace('/[^\d.,-]/', '', (string)$v);
-            if (strpos($v, ',') !== false && strpos($v, '.') !== false) {
-                $v = str_replace(',', '', $v);
-            } else {
-                if (strpos($v, ',') !== false) {
-                    $v = str_replace(',', '.', $v);
-                }
-            }
-            return number_format((float)$v, 2, '.', '');
-        }
-        function logErr($msg)
-        {
-            error_log('[CIERRE_CAJA] '.$msg);
-        }
 
-        mysqli_query($conection, "SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
+        //print_r($_POST);
+        //exit;
+        // Inicio de la transacción
         mysqli_begin_transaction($conection, MYSQLI_TRANS_START_READ_WRITE);
 
         try {
-            // Validaciones mínimas (se mantiene tu requisito de empleado_1 no vacío)
-            if (empty($_POST['co']) || $_POST['monto_final'] === '' || $_POST['empleado_1'] === '') {
+            if (empty($_POST['co']) || empty($_POST['monto_final']) || empty($_POST['empleado_1'])) {
                 echo 1;
                 exit;
             }
 
-            $id   = (int)$_POST['co'];
-            $user = (int)$_SESSION['idUser'];
+            $id = $_POST['co'];
+            $user = $_SESSION['idUser'];
 
-            // Tiempo consistente desde MySQL
-            $rf = mysqli_query($conection, "SELECT NOW() AS ahora, CURDATE() AS hoy");
-            $ts = mysqli_fetch_assoc($rf);
-            $fecha_fin_mysql = $ts['ahora'];  // 'YYYY-mm-dd HH:ii:ss'
-            $fechaHoy        = $ts['hoy'];    // 'YYYY-mm-dd'
-
-            // Arqueo abierto (bloquea fila)
-            $q = mysqli_query($conection, "
-            SELECT id, id_caja, fecha_inicio, monto_inicial
-            FROM arqueo_caja
-            WHERE id = $id AND estatus = 1
-            FOR UPDATE
-        ");
-            if (mysqli_num_rows($q) != 1) {
+            // Consultar datos del arqueo de caja
+            $query = mysqli_query($conection, "SELECT id, id_caja, fecha_inicio, monto_inicial FROM arqueo_caja WHERE id = $id AND estatus = 1");
+            if (mysqli_num_rows($query) != 1) {
                 echo 4;
                 mysqli_rollback($conection);
                 exit;
             }
-            $data_caja    = mysqli_fetch_assoc($q);
-            $id_cierre    = (int)$data_caja['id'];
-            $id_caja      = (int)$data_caja['id_caja'];
+
+            $data_caja = mysqli_fetch_assoc($query);
+            $id_cierre = $data_caja['id'];
+            $id_caja = $data_caja['id_caja'];
             $fecha_inicio = $data_caja['fecha_inicio'];
-            $fecha_fin    = $fecha_fin_mysql;
+            $fecha_fin = date('Y-m-d G:i:s');
 
-            // --------- Datos del formulario (nombres según formCerrarCaja) ---------
-            $monto_final   = money_str($_POST['monto_final'] ?? 0);
-            $total_ventas  = money_str($_POST['total_ventas'] ?? 0);
-            $total_cash    = money_str($_POST['total_cash'] ?? 0);
-            // OJO: en el form el campo se llama total_movimientos (antes leías total_salidas)
-            $total_salidas = money_str($_POST['total_movimientos'] ?? 0);
+            // Recopilar datos del formulario
+            $monto_final = isset($_POST['monto_final']) && $_POST['monto_final'] !== '' ? $_POST['monto_final'] : 0;
+            $total_ventas = isset($_POST['total_ventas']) && $_POST['total_ventas'] !== '' ? $_POST['total_ventas'] : 0;
+            $total_cash = isset($_POST['total_cash']) && $_POST['total_cash'] !== '' ? $_POST['total_cash'] : 0;
+            $total_salidas = isset($_POST['total_salidas']) && $_POST['total_salidas'] !== '' ? $_POST['total_salidas'] : 0;
+            $efectivo = isset($_POST['monto_efectivo']) && $_POST['monto_efectivo'] !== '' ? $_POST['monto_efectivo'] : 0;
+            $transferencia = isset($_POST['monto_transferencia']) && $_POST['monto_transferencia'] !== '' ? $_POST['monto_transferencia'] : 0;
+            $totalFinalEfectivoEntregar = isset($_POST['monto_efectivo_calc']) ? floatval($_POST['monto_efectivo_calc']) : 0;
+            $totalFinalTransferenciaEntregar = isset($_POST['monto_transferencia_calc']) ? floatval($_POST['monto_transferencia_calc']) : 0;
+            $totalTarjetaCalculado = isset($_POST['monto_tarjeta_calc']) ? floatval($_POST['monto_tarjeta_calc']) : 0;
+            $totalDeUnaCalculado = isset($_POST['monto_deuna_calc']) ? floatval($_POST['monto_deuna_calc']) : 0;
 
-            $efectivo      = money_str($_POST['monto_efectivo'] ?? 0);
-            $transferencia = money_str($_POST['monto_transferencia'] ?? 0);
-            $deuna         = money_str($_POST['monto_deuna'] ?? 0);
-            $tarjeta       = money_str($_POST['monto_tarjeta'] ?? 0);
+            $deuna = isset($_POST['monto_deuna']) && $_POST['monto_deuna'] !== '' ? $_POST['monto_deuna'] : 0;
+            $tarjeta = isset($_POST['monto_tarjeta']) && $_POST['monto_tarjeta'] !== '' ? $_POST['monto_tarjeta'] : 0;
 
-            // Calculados (hidden del form)
-            $totalFinalEfectivoEntregar      = (float)($_POST['monto_efectivo_calc'] ?? 0);
-            $totalFinalTransferenciaEntregar = (float)($_POST['monto_transferencia_calc'] ?? 0);
-            $totalTarjetaCalculado           = (float)($_POST['monto_tarjeta_calc'] ?? 0);
-            $totalDeUnaCalculado             = (float)($_POST['monto_deuna_calc'] ?? 0);
 
-            $observaciones = mysqli_real_escape_string($conection, $_POST['observaciones'] ?? '');
 
-            // =================== COMPRAS (checkboxes + "otros") ===================
-            // 1) recoge los checks
-            $compras_items = [];
-            if (!empty($_POST['compras_items']) && is_array($_POST['compras_items'])) {
-                foreach ($_POST['compras_items'] as $it) {
-                    $it = trim((string)$it);
-                    if ($it !== '') {
-                        $compras_items[] = $it;
-                    }
+            // Obtener los valores de los empleados y sumar
+            $salarios = 0;
+            $salarios += isset($_POST['empleado_1']) && $_POST['empleado_1'] !== '' ? (float) $_POST['empleado_1'] : 0;
+            $salarios += isset($_POST['empleado_2']) && $_POST['empleado_2'] !== '' ? (float) $_POST['empleado_2'] : 0;
+            $salarios += isset($_POST['empleado_3']) && $_POST['empleado_3'] !== '' ? (float) $_POST['empleado_3'] : 0;
+
+            // Actualizar el arqueo de caja
+            $query_update_2 = mysqli_query($conection, "UPDATE arqueo_caja SET fecha_fin = '$fecha_fin', monto_final = '$monto_final', total_ventas = '$total_ventas', total_cash = '$total_cash', efectivo = '$efectivo', transferencia = '$transferencia', deuna = '$deuna', tarjeta = '$tarjeta', salida = '$total_salidas', salarios = '$salarios', estatus = 2 WHERE id = $id");
+
+            if ($query_update_2) {
+                // Actualizar el estado de la caja
+                $query_update_3 = mysqli_query($conection, "UPDATE cajas SET estatus = 2 WHERE id = $id_caja");
+                if (!$query_update_3) {
+                    echo 3;
+                    mysqli_rollback($conection);
+                    exit;
                 }
-                // elimina duplicados y reindexa
-                $compras_items = array_values(array_unique($compras_items));
-            }
 
-            // 2) otros
-            $compras_otro = trim((string)($_POST['compras_otro'] ?? ''));
-
-            // 3) construye texto final
-            $compras_text_parts = [];
-            if (!empty($compras_items)) {
-                $compras_text_parts[] = implode(', ', $compras_items);
-            }
-            if ($compras_otro !== '') {
-                $compras_text_parts[] = 'Otros: '.$compras_otro;
-            }
-            $compras_text = implode(' | ', $compras_text_parts);
-
-            // 4) compatibilidad: si no llegó nada por los nuevos campos, usa el viejo textarea "compras"
-            if ($compras_text === '' && isset($_POST['compras'])) {
-                $compras_text = (string)$_POST['compras'];
-            }
-
-            // 5) limpieza, límite y escape
-            $compras_text = preg_replace('/\s+/', ' ', $compras_text); // espacios bonitos
-            if (strlen($compras_text) > 1000) { // límite razonable
-                $compras_text = substr($compras_text, 0, 1000);
-            }
-            $compras = mysqli_real_escape_string($conection, $compras_text);
-            // ================= FIN COMPRAS ===========================
-
-            // ============== LÓGICA DE EMPLEADOS (coherente con formCerrarCaja) ==============
-            // mensual_asistio: checkbox -> hidden "1"/"0"
-            $mensualAsistio = isset($_POST['mensual_asistio']) ? ($_POST['mensual_asistio'] === '1') : true;
-
-            // 1) Empleada mensual: registrar 1 vez por día (tipo 'por_dia'), reatribuir al último cierre del día
-            $stmtMensual = $conection->prepare("
-            SELECT id, nombre, salario_mensual, COALESCE(dias_semana,5) AS dias_semana
-            FROM empleados
-            WHERE modalidad = 'mensual_por_dia' AND activo = 1
-            LIMIT 1
-        ");
-            $stmtMensual->execute();
-            $resMensual = $stmtMensual->get_result();
-            if ($resMensual && $resMensual->num_rows === 1 && $mensualAsistio) {
-                $rowM = $resMensual->fetch_assoc();
-                $empMensualId   = (int)$rowM['id'];
-                $empMensualNom  = $rowM['nombre'];
-                $salarioMensual = (float)$rowM['salario_mensual'];
-                $diasSemana     = (int)$rowM['dias_semana'];
-
-                $diasMesLaboral = ($diasSemana * 52.0) / 12.0; // ≈21.6667 si 5 días/semana
-                $montoDia       = $diasMesLaboral > 0 ? round($salarioMensual / $diasMesLaboral, 2) : 0.00;
-
-                if ($montoDia > 0) {
-                    $stmtPD = $conection->prepare("
-                    INSERT INTO pagos_personal (arqueo_id, fecha, empleado_id, empleado, tipo, monto)
-                    VALUES (?, ?, ?, ?, 'por_dia', ?)
-                    ON DUPLICATE KEY UPDATE arqueo_id = VALUES(arqueo_id)
-                ");
-                    $stmtPD->bind_param('isssd', $id_cierre, $fechaHoy, $empMensualId, $empMensualNom, $montoDia);
-                    $stmtPD->execute();
-                    $stmtPD->close();
+                // Actualizar facturas relacionadas
+                $query_update_4 = mysqli_query($conection, "UPDATE factura SET id_cierre = $id_cierre, estatus = 4 WHERE caja = $id_caja AND estatus = 1 AND fecha BETWEEN '$fecha_inicio' AND '$fecha_fin'");
+                if (!$query_update_4) {
+                    echo 3;
+                    mysqli_rollback($conection);
+                    exit;
                 }
-            }
-            $stmtMensual->close();
 
-            // 2) Dos empleados diario_variable: montos del form (empleado_2, empleado_3) por cierre
-            $dv = [];
-            $stmtDV = $conection->prepare("
-            SELECT id, nombre
-            FROM empleados
-            WHERE modalidad = 'diario_variable' AND activo = 1
-            ORDER BY id ASC
-            LIMIT 2
-        ");
-            $stmtDV->execute();
-            $resDV = $stmtDV->get_result();
-            while ($row = $resDV->fetch_assoc()) {
-                $dv[] = ['id' => (int)$row['id'],'nombre' => $row['nombre']];
-            }
-            $stmtDV->close();
+                // Confirmar la transacción
+                mysqli_commit($conection);
 
-            $monto_dv_1 = (float)($_POST['empleado_2'] ?? 0);
-            $monto_dv_2 = (float)($_POST['empleado_3'] ?? 0);
-
-            $stmtPC = $conection->prepare("
-            INSERT INTO pagos_personal (arqueo_id, fecha, empleado_id, empleado, tipo, monto)
-            VALUES (?, ?, ?, ?, 'por_cierre', ?)
-            ON DUPLICATE KEY UPDATE monto = VALUES(monto)
-        ");
-            if (isset($dv[0]) && $monto_dv_1 > 0) {
-                $stmtPC->bind_param('isisd', $id_cierre, $fechaHoy, $dv[0]['id'], $dv[0]['nombre'], $monto_dv_1);
-                $stmtPC->execute();
-            }
-            if (isset($dv[1]) && $monto_dv_2 > 0) {
-                $stmtPC->bind_param('isisd', $id_cierre, $fechaHoy, $dv[1]['id'], $dv[1]['nombre'], $monto_dv_2);
-                $stmtPC->execute();
-            }
-            $stmtPC->close();
-
-            // 3) Sumar salarios del CIERRE desde pagos_personal
-            $salariosCierre = 0.00;
-            $rsSal = mysqli_query($conection, "
-            SELECT IFNULL(SUM(monto),0) AS salarios
-            FROM pagos_personal
-            WHERE arqueo_id = {$id_cierre}
-        ");
-            if ($rsSal && mysqli_num_rows($rsSal) === 1) {
-                $salariosCierre = (float) mysqli_fetch_assoc($rsSal)['salarios'];
-            }
-            // =================== FIN LÓGICA EMPLEADOS ===================
-
-            // ---------- UPDATE arqueo (con guard estatus=1) ----------
-            $stmtUpdArq = $conection->prepare("
-            UPDATE arqueo_caja SET
-                fecha_fin = ?,
-                monto_final = ?,
-                total_ventas = ?,
-                total_cash = ?,
-                efectivo = ?,
-                transferencia = ?,
-                deuna = ?,
-                tarjeta = ?,
-                salida = ?,
-                salarios = ?,
-                estatus = 2
-            WHERE id = ? AND estatus = 1
-        ");
-            $stmtUpdArq->bind_param(
-                'sdddddddddi',
-                $fecha_fin,
-                (float)$monto_final,
-                (float)$total_ventas,
-                (float)$total_cash,
-                (float)$efectivo,
-                (float)$transferencia,
-                (float)$deuna,
-                (float)$tarjeta,
-                (float)$total_salidas,
-                (float)$salariosCierre,
-                $id
-            );
-            $stmtUpdArq->execute();
-            if ($stmtUpdArq->affected_rows !== 1) {
-                $stmtUpdArq->close();
-                echo 2;
-                mysqli_rollback($conection);
-                exit;
-            }
-            $stmtUpdArq->close();
-
-            // ---------- UPDATE estado de la caja ----------
-            $stmtUpdCaja = $conection->prepare("UPDATE cajas SET estatus = 2 WHERE id = ?");
-            $stmtUpdCaja->bind_param('i', $id_caja);
-            if (!$stmtUpdCaja->execute() || $stmtUpdCaja->affected_rows !== 1) {
-                $stmtUpdCaja->close();
-                echo 3;
-                mysqli_rollback($conection);
-                exit;
-            }
-            $stmtUpdCaja->close();
-
-            // ---------- UPDATE facturas del rango ----------
-            $stmtUpdFac = $conection->prepare("
-            UPDATE factura
-               SET id_cierre = ?, estatus = 4
-             WHERE caja = ? AND estatus = 1
-               AND fecha BETWEEN ? AND ?
-        ");
-            $stmtUpdFac->bind_param('iiss', $id_cierre, $id_caja, $fecha_inicio, $fecha_fin);
-            if (!$stmtUpdFac->execute()) {
-                $stmtUpdFac->close();
-                echo 3;
-                mysqli_rollback($conection);
-                exit;
-            }
-            $stmtUpdFac->close();
-
-            // ---------- Commit principal ----------
-            mysqli_commit($conection);
-
-            // ---------- Post-commit: consultas para impresión ----------
-
-            // Kardex (rango de fechas)
-            $salidas = [];
-            $query_kardex = mysqli_query($conection, "
-            SELECT k.id AS id_salida, k.valor, k.tipo_moneda, k.id_usuario,
-                   p.nombres AS nombre_usuario, k.motivo, k.tipo_transaccion
+                // Consultar detalles del kardex (todas las salidas) con nombre de usuario
+                $salidas = [];
+                $query_kardex = mysqli_query($conection, "
+            SELECT k.id AS id_salida, k.valor, k.tipo_moneda, k.id_usuario, p.nombres AS nombre_usuario, k.motivo, k.tipo_transaccion
             FROM kardex k
             JOIN personas p ON k.id_usuario = p.id
             WHERE k.fecha BETWEEN '$fecha_inicio' AND '$fecha_fin'
         ");
-            if (mysqli_num_rows($query_kardex) > 0) {
-                while ($row = mysqli_fetch_assoc($query_kardex)) {
-                    $salidas[] = $row;
-                }
-            }
-
-            // Preparar data para imprimir
-            $data = [
-                'fecha_inicio' => $fecha_inicio,
-                'fecha_fin' => $fecha_fin,
-                'idArqueo' => $id_cierre,
-                'idUser' => $user,
-                'monto_inicial' => $data_caja['monto_inicial'],
-                'nombre' => $_SESSION['nombre'],
-                'apellido' => $_SESSION['apellido'],
-                'monto_final' => $monto_final,
-                'total_ventas' => $total_ventas,
-                'total_cash' => $total_cash,
-                'efectivo' => $efectivo,
-                'transferencia' => $transferencia,
-                'tarjeta' => $tarjeta,
-                'deuna' => $deuna,
-                'total_movimientos' => $total_salidas, // coincide con el form
-                'salidas' => $salidas,
-                'total_efectivo' => $totalFinalEfectivoEntregar,
-                'total_tarjeta' => $totalTarjetaCalculado,
-                'total_transferencia' => $totalFinalTransferenciaEntregar,
-                'total_deuna' => $totalDeUnaCalculado,
-                'observaciones' => $observaciones,
-                'compras' => $compras,
-                'salarios' => $salariosCierre
-            ];
-
-            // Auditoría: entregado vs calculado
-            $calculado = [
-                'efectivo' => $totalFinalEfectivoEntregar,
-                'tarjeta' => $totalTarjetaCalculado,
-                'transferencia' => $totalFinalTransferenciaEntregar,
-                'deuna' => $totalDeUnaCalculado
-            ];
-            $entregado = [
-                'efectivo' => (float)$efectivo,
-                'tarjeta' => (float)$tarjeta,
-                'transferencia' => (float)$transferencia,
-                'deuna' => (float)$deuna
-            ];
-            $diferencias = compararMontosEntregadosVsCalculados($calculado, $entregado);
-
-            $stmtAud = $conection->prepare("
-            INSERT INTO auditoria_cierre_caja (id_cierre, tipo_pago, estado, diferencia)
-            VALUES (?, ?, ?, ?)
-        ");
-            foreach ($diferencias as $tipo => $info) {
-                if ($tipo === 'TOTAL') {
-                    continue;
-                }
-                $tipo_pago = ucfirst($tipo);
-                $estado = $info['estado'];
-                $diferencia = (float)$info['diferencia'];
-                $stmtAud->bind_param('issi', $id_cierre, $tipo_pago, $estado, $diferencia);
-                $stmtAud->execute();
-            }
-            $stmtAud->close();
-
-            // Códigos de pago agrupados por tipo de pago
-            $tipos_codigos_pago = [];
-            $query_codigos = mysqli_query($conection, "
-            SELECT tipopago, codigopago, COUNT(*) AS cantidad, SUM(totalfactura) AS total
-            FROM factura
-            WHERE id_cierre = $id_cierre
-              AND estatus = 4
-              AND tipopago != 1
-            GROUP BY tipopago, codigopago
-            ORDER BY tipopago, codigopago
-        ");
-            if (mysqli_num_rows($query_codigos) > 0) {
-                while ($row = mysqli_fetch_assoc($query_codigos)) {
-                    $tipoPago = tipoPagoNombre($row['tipopago']);
-                    $codigo   = $row['codigopago'];
-                    $cantidad = (int)$row['cantidad'];
-                    $total    = (float)$row['total'];
-                    if ((int)$row['tipopago'] == 2) { // tu factor tarjeta
-                        $total = $total / 0.94;
+                if (mysqli_num_rows($query_kardex) > 0) {
+                    while ($row = mysqli_fetch_assoc($query_kardex)) {
+                        $salidas[] = $row;
                     }
-                    $total = number_format($total, 2);
-
-                    if (!isset($tipos_codigos_pago[$tipoPago])) {
-                        $tipos_codigos_pago[$tipoPago] = [];
-                    }
-                    $tipos_codigos_pago[$tipoPago][] = [
-                        'codigo' => $codigo,
-                        'cantidad' => $cantidad,
-                        'total' => $total
-                    ];
                 }
+
+                // Preparar datos para imprimir el cierre de caja
+                $data = [
+                    'fecha_inicio' => $fecha_inicio,
+                    'fecha_fin' => $fecha_fin,
+                    'idArqueo' => $id_cierre,
+                    'idUser' => $user,
+                    'monto_inicial' => $data_caja['monto_inicial'],
+                    'nombre' => $_SESSION['nombre'],
+                    'apellido' => $_SESSION['apellido'],
+                    'monto_final' => $monto_final,
+                    'total_ventas' => $total_ventas,
+                    'total_cash' => $total_cash,
+                    'efectivo' => $efectivo,
+                    'transferencia' => $transferencia,
+                    'tarjeta' => $tarjeta,
+                    'deuna' => $deuna,
+                    'total_movimientos' => $total_salidas,
+                    'salidas' => $salidas, // Añadir todas las salidas para la impresión
+                    'total_efectivo' => $totalFinalEfectivoEntregar,
+                    'total_tarjeta' => $totalTarjetaCalculado,
+                    'total_transferencia' => $totalFinalTransferenciaEntregar,
+                    'total_deuna' => $totalDeUnaCalculado,
+                    'observaciones' => $_POST['observaciones'],
+                    'compras' => $_POST['compras'],
+                    'salarios' => $salarios
+
+                ];
+
+                // === AUDITORÍA DE MONTO ENTREGADO VS CALCULADO ===
+
+                $calculado = [
+                    'efectivo' => $totalFinalEfectivoEntregar,
+                    'tarjeta' => $totalTarjetaCalculado,
+                    'transferencia' => $totalFinalTransferenciaEntregar,
+                    'deuna' => $totalDeUnaCalculado
+                ];
+
+
+                $entregado = [
+                    'efectivo' => floatval($efectivo),
+                    'tarjeta' => floatval($tarjeta),
+                    'transferencia' => floatval($transferencia),
+                    'deuna' => floatval($deuna)
+                ];
+
+                $diferencias = compararMontosEntregadosVsCalculados($calculado, $entregado);
+
+                // Registrar en tabla de auditoría
+                foreach ($diferencias as $tipo => $info) {
+                    if ($tipo === 'TOTAL') {
+                        continue;
+                    }
+
+                    $tipo_pago = ucfirst($tipo); // capitalizar
+                    $estado = $info['estado'];
+                    $diferencia = $info['diferencia'];
+
+                    mysqli_query($conection, "
+                INSERT INTO auditoria_cierre_caja (id_cierre, tipo_pago, estado, diferencia) 
+                VALUES ($id_cierre, '$tipo_pago', '$estado', $diferencia)
+            ");
+                }
+
+                // Traer códigos de pago agrupados por tipo de pago para este cierre
+                $tipos_codigos_pago = [];
+
+                $query_codigos = mysqli_query($conection, "
+                SELECT 
+                    tipopago, 
+                    codigopago, 
+                    COUNT(*) AS cantidad, 
+                    SUM(totalfactura) AS total
+                FROM factura
+                WHERE id_cierre = $id_cierre
+                AND estatus = 4
+                AND tipopago != 1
+                GROUP BY tipopago, codigopago
+                ORDER BY tipopago, codigopago
+            ");
+
+                if (mysqli_num_rows($query_codigos) > 0) {
+                    while ($row = mysqli_fetch_assoc($query_codigos)) {
+                        $tipoPago = tipoPagoNombre($row['tipopago']);
+                        $codigo = $row['codigopago'];
+                        $cantidad = $row['cantidad'];
+                        $total = $row['total'];
+
+                        if ($row['tipopago'] == 2) {
+                            $total = $total / 0.94;
+                        }
+
+                        $total = number_format($total, 2);
+
+                        if (!isset($tipos_codigos_pago[$tipoPago])) {
+                            $tipos_codigos_pago[$tipoPago] = [];
+                        }
+
+                        $tipos_codigos_pago[$tipoPago][] = [
+                            'codigo' => $codigo,
+                            'cantidad' => $cantidad,
+                            'total' => $total
+                        ];
+                    }
+                }
+
+                // Guardar en data
+                $data['pagos_codigos'] = $tipos_codigos_pago;
+
+
+                imprimirCierreCaja($data);
+
+                echo 10;
+
+            } else {
+                echo 2;
+                mysqli_rollback($conection);
+                exit;
             }
-            $data['pagos_codigos'] = $tipos_codigos_pago;
-
-            // Imprimir cierre
-            imprimirCierreCaja($data);
-
-            echo 10;
-
         } catch (Exception $e) {
-            logErr('Excepción: '.$e->getMessage());
             mysqli_rollback($conection);
             echo 2;
             exit;
         }
     }
-
-
 
 
     if ($_POST['action'] == 'verCierreCaja') {
@@ -3906,7 +3518,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 		<button type="submit" class="boton"><i class="fas fa-print"></i> Imprimir</button>
 		<a href="#" class="boton rojo closeModal" onclick="closeModal2();"><i class="fas fa-ban"></i> Cerrar</a>
 		</div>
-	    </form>
+	</form>
 					
 					</div>
 					 ';
@@ -3930,7 +3542,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 		<button type="submit" class="boton"><i class="fas fa-print"></i> Guardar</button>
 		<a href="#" class="boton rojo closeModal" onclick="closeModal2();"><i class="fas fa-ban"></i> Cerrar</a>
 		</div>
-	    </form>
+	</form>
 					
 					</div>
 					 ';
@@ -3992,7 +3604,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 		<input type="hidden" name="action" value="salidaDinero">
 		<button type="submit" class="btn_new"><i class="fas fa-edit"></i> Guardar</button>
 		<a href="#" class="btn_ok closeModal" onclick="closeModal2();"><i class="fas fa-ban"></i> Cerrar</a>
-	    </form>
+	</form>
 					
 					</div>
 					 ';
@@ -4058,6 +3670,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
     }
+
+
+
+
 
     if ($_POST['action'] == 'formReserva') {
         //include '../conexion.php';
@@ -4152,7 +3768,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 <?php for ($i = 1; $i <= 6; $i++) {
                     $inputId = "adulto_0_$i";
                     echo "<input type='radio' name='adultos[0]' id='$inputId' value='$i' ".($i == 1 ? "checked" : "")." onchange='recalcularTotalReserva();'>
-                    <label for='$inputId'>$i</label>";
+          <label for='$inputId'>$i</label>";
                 } ?>
 
             </div>
@@ -4163,7 +3779,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 <?php for ($i = 0; $i <= 6; $i++) {
                     $inputId = "nino_0_$i";
                     echo "<input type='radio' name='ninos[0]' id='$inputId' value='$i' ".($i == 0 ? "checked" : "")." onchange='recalcularTotalReserva();'>
-                    <label for='$inputId'>$i</label>";
+          <label for='$inputId'>$i</label>";
                 } ?>
             </div>
             <input type="hidden" name="tarifa_nino_aplicada[]" class="tarifa_nino_aplicada" value="0.00">
@@ -4258,7 +3874,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     actualizarHabitacionesDisponibles();
 </script>
 <?php
-                        echo ob_get_clean();
+                echo ob_get_clean();
     }
 
     if ($_POST['action'] == 'habitacionesDisponibles') {
@@ -4323,271 +3939,147 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
-    if (($_POST['action'] ?? '') == 'guardarReserva') {
+    if ($_POST['action'] == 'guardarReserva') {
 
+        //print_r($_POST);
+        //exit;
         mysqli_begin_transaction($conection);
         try {
-            // === 1) ENTRADA Y VALIDACIONES ===
-            $id_cliente      = intval($_POST['id_cliente'] ?? 0);
-            $fecha_entrada   = $_POST['fecha_entrada'] ?? '';
-            $fecha_salida    = $_POST['fecha_salida'] ?? '';
+            // === 1. VARIABLES PRINCIPALES ===
+            $id_cliente      = intval($_POST['id_cliente']);
+            $fecha_entrada   = $_POST['fecha_entrada'];
+            $fecha_salida    = $_POST['fecha_salida'];
             $observaciones   = mysqli_real_escape_string($conection, $_POST['observaciones'] ?? '');
-            $abono           = floatval($_POST['abono'] ?? 0);
-            $usuario_id      = intval($_SESSION['idUser'] ?? 1);
+            $total           = floatval($_POST['total']);
+            $abono           = floatval($_POST['abono']);
+            $usuario_id      = $_SESSION['idUser'] ?? 1;
             $canal_reserva   = 'recepción';
             $metodo_pago     = mysqli_real_escape_string($conection, $_POST['metodo_pago'] ?? 'efectivo');
             $referencia_pago = mysqli_real_escape_string($conection, $_POST['referencia_pago'] ?? '');
 
-            if ($id_cliente <= 0 || !$fecha_entrada || !$fecha_salida) {
+            if ($id_cliente <= 0 || empty($fecha_entrada) || empty($fecha_salida)) {
                 throw new Exception('Faltan datos obligatorios');
             }
 
-            $tsE = strtotime($fecha_entrada);
-            $tsS = strtotime($fecha_salida);
-            if ($tsE === false || $tsS === false || $tsS <= $tsE) {
-                throw new Exception('Rango de fechas inválido');
+            // === 2. ESTADO DE LA RESERVA ===
+            if ($abono >= $total) {
+                $estado_pago = 'pagado';
+                $estado_reserva = 'confirmada';
+            } elseif ($abono > 0) {
+                $estado_pago = 'parcial';
+                $estado_reserva = 'confirmada';
+            } else {
+                $estado_pago = 'pendiente';
+                $estado_reserva = 'pendiente';
             }
-            $dias = (int)ceil(($tsS - $tsE) / 86400); // >= 1
 
-            // === 2) ESTADOS PROVISIONALES (se recalculan luego con el total real) ===
-            $estado_pago    = ($abono > 0) ? 'parcial' : 'pendiente';
-            $estado_reserva = ($abono > 0) ? 'confirmada' : 'pendiente';
-
-            // === 3) INSERT CABECERA CON TOTAL 0.00 (se actualiza después) ===
-            $sqlReserva = "INSERT INTO reservas (
+            // === 3. GUARDAR CABECERA ===
+            $sql = "INSERT INTO reservas (
             id_cliente, fecha_entrada, fecha_salida, total,
             estado_pago, estado, observaciones, canal_reserva, usuario_id
         ) VALUES (
-            $id_cliente, '$fecha_entrada', '$fecha_salida', 0.00,
+            $id_cliente, '$fecha_entrada', '$fecha_salida', $total,
             '$estado_pago', '$estado_reserva', '$observaciones', '$canal_reserva', $usuario_id
         )";
-            if (!mysqli_query($conection, $sqlReserva)) {
+
+            if (!mysqli_query($conection, $sql)) {
                 throw new Exception('Error al registrar la reserva');
             }
+
             $idreserva = mysqli_insert_id($conection);
 
-            // === 4) ARRAYS DETALLE ===
-            $ids_hab                = $_POST['id_habitacion'] ?? [];
-            $tarifas_adulto         = $_POST['tarifa'] ?? [];
-            $adultos                = $_POST['adultos'] ?? [];
-            $ninos                  = $_POST['ninos'] ?? [];
+            // === 4. ARRAYS DE DETALLE ===
+            $ids_hab              = $_POST['id_habitacion'] ?? [];
+            $tarifas_adulto       = $_POST['tarifa'] ?? [];
+            $adultos              = $_POST['adultos'] ?? [];
+            $ninos                = $_POST['ninos'] ?? [];
             $tarifas_nino_aplicadas = $_POST['tarifa_nino_aplicada'] ?? [];
-            $precio_desayuno        = $_POST['precio_desayuno'] ?? [];
-            $precio_tour            = $_POST['precio_tour'] ?? [];
-            $lugares_tour           = $_POST['lugar_tour'] ?? [];
-            $garajes                = $_POST['garaje'] ?? [];
+            $precio_desayuno      = $_POST['precio_desayuno'] ?? [];
+            $precio_tour          = $_POST['precio_tour'] ?? [];
+            $lugares_tour         = $_POST['lugar_tour'] ?? [];
+            $garajes              = $_POST['garaje'] ?? [];
 
             $n = count($ids_hab);
-            if ($n !== count($tarifas_adulto) || $n !== count($adultos) || $n !== count($ninos)) {
-                throw new Exception('Inconsistencia en los arrays de detalle');
-            }
+            $dias = max(1, ceil((strtotime($fecha_salida) - strtotime($fecha_entrada)) / 86400));
+            $acumulado_total = 0;
 
-            $acumulado_total = 0.0;
-            $detallesPago = []; // para prorratear el abono
-
-            // === 5) INSERT DETALLE POR HABITACIÓN + SUBTOTALES ===
+            // === 5. DETALLE POR HABITACIÓN ===
             for ($i = 0; $i < $n; $i++) {
-                $idh       = (int)$ids_hab[$i];
-                $id_tarifa = (int)$tarifas_adulto[$i];
-                $adt       = (int)($adultos[$i] ?? 0);
-                $nin       = (int)($ninos[$i] ?? 0);
+                $idh       = intval($ids_hab[$i]);
+                $id_tarifa = intval($tarifas_adulto[$i]);
+                $adt       = intval($adultos[$i] ?? 0);
+                $nin       = intval($ninos[$i] ?? 0);
 
-                if ($idh <= 0) {
-                    throw new Exception("Habitación #".($i + 1)." inválida");
-                }
-                if ($id_tarifa <= 0) {
-                    throw new Exception("Tarifa inválida en habitación #".($i + 1));
-                }
                 if ($adt <= 0) {
-                    throw new Exception("La habitación #".($i + 1)." no tiene adultos");
+                    throw new Exception("La habitación #".($i + 1)." no tiene adultos asignados");
                 }
 
-                // Tarifa adulto
-                $precio_adulto = 0.0;
-                $resTar = mysqli_query($conection, "SELECT precio_por_persona FROM tarifas_habitaciones WHERE id = $id_tarifa LIMIT 1");
-                if ($resTar && mysqli_num_rows($resTar)) {
-                    $precio_adulto = (float)mysqli_fetch_assoc($resTar)['precio_por_persona'];
+                // Precio tarifa adulto
+                $precio_adulto = 0;
+                $resA = mysqli_query($conection, "SELECT precio_por_persona FROM tarifas_habitaciones WHERE id = $id_tarifa LIMIT 1");
+                if ($resA && mysqli_num_rows($resA)) {
+                    $precio_adulto = floatval(mysqli_fetch_assoc($resA)['precio_por_persona']);
                 } else {
                     throw new Exception("No se pudo obtener la tarifa de la habitación #".($i + 1));
                 }
 
-                $precio_nino = (float)($tarifas_nino_aplicadas[$i] ?? 0);
-                $precioD     = (float)($precio_desayuno[$i] ?? 0);
-                $precioT     = (float)($precio_tour[$i] ?? 0);
-                if ($precio_adulto < 0 || $precio_nino < 0 || $precioD < 0 || $precioT < 0) {
-                    throw new Exception("Precio negativo en habitación #".($i + 1));
-                }
+                $precio_nino        = floatval($tarifas_nino_aplicadas[$i] ?? 0);
+                $precioD            = floatval($precio_desayuno[$i] ?? 0);
+                $precioT            = floatval($precio_tour[$i] ?? 0);
+                $incluye_desayuno   = $precioD > 0 ? 1 : 0;
+                $incluye_tour       = $precioT > 0 ? 1 : 0;
+                $precioGaraje       = floatval($garajes[$i] ?? 0) * $dias;
+                $precioGaraje2       = floatval($garajes[$i] ?? 0);
+                $lugares_por_noche = $lugares_tour[$i] ?? [];
+                $lugar_tour = is_array($lugares_por_noche) ? implode(',', $lugares_por_noche) : mysqli_real_escape_string($conection, $lugares_por_noche);
 
-                $incluye_desayuno = $precioD > 0 ? 1 : 0;
-                $incluye_tour     = $precioT > 0 ? 1 : 0;
 
-                // Garaje (precio unitario por noche)
-                $garaje_unit = (float)($garajes[$i] ?? 0);
-                if ($garaje_unit < 0) {
-                    throw new Exception("Garaje negativo en habitación #".($i + 1));
-                }
-                $garaje_total = $garaje_unit * $dias;
-
-                // lugar_tour (array o string) + escape
-                $lug = $lugares_tour[$i] ?? [];
-                if (is_array($lug)) {
-                    $san = array_map(fn ($v) => mysqli_real_escape_string($conection, (string)$v), $lug);
-                    $lugar_tour = implode(',', $san);
-                } else {
-                    $lugar_tour = mysqli_real_escape_string($conection, (string)$lug);
-                }
-
-                // Subtotal habitación
+                // Subtotal completo (una sola fila por habitación)
                 $subtotal = ($adt * ($precio_adulto + $precioD + $precioT) * $dias)
-                          + ($nin * ($precio_nino  + $precioD + $precioT) * $dias)
-                          + $garaje_total;
-                $subtotal = round($subtotal, 2);
+                          + ($nin * ($precio_nino + $precioD + $precioT) * $dias)
+                          + $precioGaraje;
 
-                // INSERT detalle (idcliente es VARCHAR)
-                $sqlDet = "INSERT INTO reservas_detalle (
-                idreserva, idcliente, id_habitacion, fecha_entrada, fecha_salida, adultos, ninos,
+                $sqlDetalle = "INSERT INTO reservas_detalle (
+                idreserva, id_habitacion, adultos, ninos,
                 incluye_desayuno, incluye_tour, lugar_tour,
-                precio_unitario, precio_nino, precio_desayuno, precio_tour,
-                subtotal, garaje, estado_detalle, usuario_id, fecha_creacion
+                precio_unitario, precio_nino, precio_desayuno, precio_tour, garaje, subtotal
             ) VALUES (
-                $idreserva, '$id_cliente', $idh, '$fecha_entrada', '$fecha_salida', $adt, $nin,
+                $idreserva, $idh, $adt, $nin,
                 $incluye_desayuno, $incluye_tour, '$lugar_tour',
-                $precio_adulto, $precio_nino, $precioD, $precioT,
-                $subtotal, $garaje_unit, '$estado_reserva', $usuario_id, NOW()
+                $precio_adulto, $precio_nino, $precioD, $precioT, $precioGaraje2, $subtotal
             )";
-                if (!mysqli_query($conection, $sqlDet)) {
+
+                if (!mysqli_query($conection, $sqlDetalle)) {
                     throw new Exception("Error al insertar el detalle de la habitación #".($i + 1));
                 }
-
-                $iddetalle = mysqli_insert_id($conection);
-                $detallesPago[] = ['id_detalle' => $iddetalle, 'subtotal' => $subtotal];
 
                 $acumulado_total += $subtotal;
             }
 
-            // === 6) TOTAL RESERVA = SUMA DE SUBTOTALES ===
-            $acumulado_total = round($acumulado_total, 2);
-
-            // Estados definitivos según abono vs total real
-            if ($abono >= $acumulado_total && $acumulado_total > 0) {
-                $estado_pago    = 'pagado';
-                $estado_reserva = 'confirmada';
-            } elseif ($abono > 0) {
-                $estado_pago    = 'parcial';
-                $estado_reserva = 'confirmada';
-            } else {
-                $estado_pago    = 'pendiente';
-                // estado_reserva queda como estaba
+            // === 6. VERIFICAR TOTAL ===
+            if (round($acumulado_total, 2) !== round($total, 2)) {
+                throw new Exception("El total no coincide con el cálculo interno: $acumulado_total ≠ $total");
             }
 
-            // Actualiza cabecera con total real y estados recalculados
-            $sqlUpdTot = "UPDATE reservas
-                      SET total = $acumulado_total, estado_pago = '$estado_pago', estado = '$estado_reserva'
-                      WHERE idreserva = $idreserva";
-            if (!mysqli_query($conection, $sqlUpdTot)) {
-                throw new Exception('Error al actualizar el total de la reserva');
-            }
-
-            // === 7) REGISTRAR ABONO (prorrateado por habitación; remanente global si excede) ===
+            // === 7. REGISTRAR ABONO
             if ($abono > 0) {
-                $monto_abono = round($abono, 2);
-                $sumSub = 0.0;
-                foreach ($detallesPago as $d) {
-                    $sumSub += (float)$d['subtotal'];
-                }
-                $sumSub = round($sumSub, 2);
+                $sqlPago = "INSERT INTO reservas_pagos (
+                idreserva, monto, metodo_pago, referencia_pago, usuario_id
+            ) VALUES (
+                $idreserva, $abono, '$metodo_pago', '$referencia_pago', $usuario_id
+            )";
 
-                $remanente = $monto_abono;
-                $insertado = 0.0;
-
-                if ($sumSub > 0) {
-                    $excede = ($monto_abono > $sumSub + 0.00001);
-
-                    // cuotas proporcionales (ajuste centavos en la última)
-                    $cuotas = [];
-                    $acumCuotas = 0.0;
-                    $count = count($detallesPago);
-
-                    foreach ($detallesPago as $idx => $d) {
-                        $isLast = ($idx === $count - 1);
-                        if ($excede) {
-                            $cuota = (float)$d['subtotal']; // no exceder subtotal
-                        } else {
-                            $prop  = (float)$d['subtotal'] / $sumSub;
-                            $cuota = round($monto_abono * $prop, 2);
-                            if ($isLast) { // ajustar centavos
-                                $cuota = round($monto_abono - $acumCuotas, 2);
-                            }
-                        }
-                        if ($cuota < 0) {
-                            $cuota = 0.0;
-                        }
-                        if ($excede && $cuota > (float)$d['subtotal']) {
-                            $cuota = (float)$d['subtotal'];
-                        }
-                        $cuotas[] = $cuota;
-                        $acumCuotas += $cuota;
-                    }
-
-                    // Insert pagos por detalle
-                    foreach ($detallesPago as $i => $d) {
-                        $cuota = round($cuotas[$i], 2);
-                        if ($cuota <= 0) {
-                            continue;
-                        }
-
-                        $id_detalle = (int)$d['id_detalle'];
-                        $sqlPagoDet = "INSERT INTO reservas_pagos (
-                        idreserva, id_detalle, monto, metodo_pago, referencia_pago, usuario_id, origen_pago, observacion, fecha_pago
-                    ) VALUES (
-                        $idreserva, $id_detalle, $cuota, '$metodo_pago', '$referencia_pago', $usuario_id, 'recepción',
-                        'Abono prorrateado por subtotal', NOW()
-                    )";
-                        if (!mysqli_query($conection, $sqlPagoDet)) {
-                            throw new Exception('Error al registrar el abono por detalle');
-                        }
-
-                        $insertado += $cuota;
-                        $remanente  = round($monto_abono - $insertado, 2);
-                    }
-                }
-
-                // Si sobró remanente (abono > total), lo guardamos como pago global
-                if ($remanente > 0) {
-                    $sqlPagoGlobal = "INSERT INTO reservas_pagos (
-                    idreserva, id_detalle, monto, metodo_pago, referencia_pago, usuario_id, origen_pago, observacion, fecha_pago
-                ) VALUES (
-                    $idreserva, NULL, $remanente, '$metodo_pago', '$referencia_pago', $usuario_id, 'recepción',
-                    'Abono global (remanente)', NOW()
-                )";
-                    if (!mysqli_query($conection, $sqlPagoGlobal)) {
-                        throw new Exception('Error al registrar el abono global restante');
-                    }
-                    $insertado = round($insertado + $remanente, 2);
-                    $remanente = 0.0;
-                }
-
-                // Actualiza abono acumulado y estado_pago final en cabecera
-                $sqlUpdAb = "UPDATE reservas
-                         SET abono = abono + $insertado, estado_pago = '$estado_pago'
-                         WHERE idreserva = $idreserva";
-                if (!mysqli_query($conection, $sqlUpdAb)) {
-                    throw new Exception('Error al actualizar abono de la reserva');
+                if (!mysqli_query($conection, $sqlPago)) {
+                    throw new Exception('Error al registrar el abono');
                 }
             }
 
-            // === 8) COMMIT + ACCIÓN SECUNDARIA ===
+            // === 8. CONFIRMAR
             mysqli_commit($conection);
 
-            if ($estado_reserva === 'confirmada' && function_exists('enviarComprobante')) {
-<<<<<<< Updated upstream
-                
-                enviarComprobante($idreserva, null);
-            } 
-=======
-                //enviarComprobante($idreserva, null);
+            if ($estado_reserva === 'confirmada') {
+                enviarComprobante($idreserva);
             }
->>>>>>> Stashed changes
 
             echo 'ok';
 
@@ -4599,606 +4091,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
-
-
-    if (($_POST['action'] ?? '') === 'agregarAbono') {
+    if ($_POST['action'] == 'agregarAbono') {
         mysqli_begin_transaction($conection);
+
         try {
-            // ---------- ENTRADAS ----------
-            $idreserva   = isset($_POST['idreserva']) ? (int)$_POST['idreserva'] : 0; // requerido
-            $monto       = round((float)($_POST['monto'] ?? 0), 2);
-            $usuario_id  = (int)($_SESSION['idUser'] ?? 0);
-            $fecha       = date('Y-m-d H:i:s');
+            $id = intval($_POST['idreserva']);
+            $monto = floatval($_POST['monto']);
+            $usuario_id = $_SESSION['idUser'] ?? 0;
+            $fecha = date('Y-m-d H:i:s');
+            $metodo_pago = intval($_POST['metodo_pago'] ?? 0);
+            $referencia = trim($_POST['referencia'] ?? '');
 
-            // método de pago -> normalizamos a string
-            $metodo_raw  = trim((string)($_POST['metodo_pago'] ?? ''));
-            $metodo_pago = is_numeric($metodo_raw) ? (string)((int)$metodo_raw) : $metodo_raw;
-            $metodo_lc   = mb_strtolower($metodo_pago, 'UTF-8');
-
-            $referencia  = mysqli_real_escape_string($conection, trim((string)($_POST['referencia'] ?? '')));
-
-            // ---------- VALIDACIONES ----------
-            if ($idreserva <= 0) {
-                throw new Exception('idreserva inválido.');
-            }
-            if ($monto <= 0) {
-                throw new Exception('Monto inválido.');
-            }
-            if ($metodo_pago === '') {
-                throw new Exception('Método de pago inválido.');
-            }
-            $req_ref = ['2','3','transferencia','tarjeta','pos','deposito','depósito'];
-            $req_ref_lc = array_map(fn ($x) => mb_strtolower($x, 'UTF-8'), $req_ref);
-            if (in_array($metodo_lc, $req_ref_lc, true) && $referencia === '') {
-                throw new Exception('Debe ingresar una referencia para este método de pago.');
+            // Validaciones básicas
+            if ($id <= 0 || $monto <= 0 || $metodo_pago <= 0) {
+                throw new Exception('Datos inválidos');
             }
 
-            // ---------- LOCK RESERVA ----------
-            $qr = mysqli_query($conection, "SELECT total, estado FROM reservas WHERE idreserva = $idreserva FOR UPDATE");
-            if (!$qr || mysqli_num_rows($qr) === 0) {
-                throw new Exception('Reserva no encontrada.');
+            // Validar referencia si aplica
+            if (in_array($metodo_pago, [2, 3]) && $referencia == '') {
+                throw new Exception('Debe ingresar una referencia para pagos con tarjeta o transferencia.');
             }
-            $r = mysqli_fetch_assoc($qr);
-            $total_reserva = (float)$r['total'];
-            $estado_actual = $r['estado'];
 
-            // misma referencia permitida solo dentro de la MISMA reserva
-            if ($referencia !== '') {
-                $chk = mysqli_query($conection, "SELECT idpago FROM reservas_pagos WHERE referencia_pago = '$referencia' AND idreserva <> $idreserva LIMIT 1");
-                if ($chk && mysqli_num_rows($chk) > 0) {
-                    throw new Exception('La referencia ya está asociada a otra reserva.');
+            // Verificar que la reserva exista y obtener total
+            $res = mysqli_query($conection, "SELECT total FROM reservas WHERE idreserva = $id FOR UPDATE");
+            if (!$res || mysqli_num_rows($res) == 0) {
+                throw new Exception('Reserva no encontrada');
+            }
+
+            $row = mysqli_fetch_assoc($res);
+            $total = floatval($row['total']);
+
+            // Calcular abonos previos
+            $pagos = mysqli_query($conection, "SELECT SUM(monto) AS abonos FROM reservas_pagos WHERE idreserva = $id");
+            $data_pagos = mysqli_fetch_assoc($pagos);
+            $abonos_actuales = floatval($data_pagos['abonos']);
+
+            $nuevo_total_abonado = $abonos_actuales + $monto;
+
+            if ($nuevo_total_abonado > $total) {
+                $saldo_disponible = $total - $abonos_actuales;
+                throw new Exception("El abono excede el total de la reserva. Saldo disponible: $" . number_format($saldo_disponible, 2));
+            }
+
+            if (in_array($metodo_pago, [2, 3])) {
+                $checkRef = mysqli_query($conection, "SELECT idpago FROM reservas_pagos WHERE referencia_pago = '$referencia'");
+                if (mysqli_num_rows($checkRef) > 0) {
+                    throw new Exception('La referencia ya fue registrada anteriormente.');
                 }
             }
 
-            // Abonos previos (totales)
-            $qp = mysqli_query($conection, "SELECT COALESCE(SUM(monto),0) AS abonos FROM reservas_pagos WHERE idreserva = $idreserva");
-            $abonos_previos = (float)mysqli_fetch_assoc($qp)['abonos'];
-
-            // ---------- SALDOS POR DETALLE (LOCK) ----------
-            $sqlDet = "
-            SELECT d.id AS id_detalle,
-                   d.subtotal,
-                   (d.subtotal - COALESCE(p.pagado_det,0)) AS saldo_det
-            FROM reservas_detalle d
-            LEFT JOIN (
-                SELECT id_detalle, SUM(monto) AS pagado_det
-                FROM reservas_pagos
-                WHERE idreserva = $idreserva AND id_detalle IS NOT NULL
-                GROUP BY id_detalle
-            ) p ON p.id_detalle = d.id
-            WHERE d.idreserva = $idreserva
-            ORDER BY d.id ASC
-            FOR UPDATE";
-            $resDet = mysqli_query($conection, $sqlDet);
-            if (!$resDet) {
-                throw new Exception('No se pudieron obtener los detalles de la reserva.');
+            // Insertar abono
+            $stmt = mysqli_prepare($conection, "INSERT INTO reservas_pagos (idreserva, monto, metodo_pago, referencia_pago, fecha_pago, usuario_id) VALUES (?, ?, ?, ?, ?, ?)");
+            mysqli_stmt_bind_param($stmt, "idisss", $id, $monto, $metodo_pago, $referencia, $fecha, $usuario_id);
+            if (!mysqli_stmt_execute($stmt)) {
+                throw new Exception('No se pudo registrar el abono');
             }
 
-            $detalles = [];
-            $total_saldos = 0.0;
-            while ($row = mysqli_fetch_assoc($resDet)) {
-                $saldo_det = round((float)$row['saldo_det'], 2);
-                if ($saldo_det > 0) {
-                    $detalles[] = [
-                        'id_detalle' => (int)$row['id_detalle'],
-                        'saldo'      => $saldo_det
-                    ];
-                    $total_saldos += $saldo_det;
+
+            // Si antes no había abonos y ahora hay, actualizar estado de la reserva a confirmada
+            if ($nuevo_total_abonado > 0) {
+                $estado_pago = ($nuevo_total_abonado >= $total) ? 'pagado' : 'parcial';
+
+                $upd = mysqli_query($conection, "UPDATE reservas SET estado = 'confirmada', estado_pago = '$estado_pago' WHERE idreserva = $id");
+                if (!$upd) {
+                    throw new Exception('Error al actualizar el estado de la reserva');
                 }
             }
 
-            if (empty($detalles)) {
-                throw new Exception('No hay saldos pendientes por habitación.');
-            }
-
-            $total_saldos = round($total_saldos, 2);
-            if ($monto > $total_saldos + 0.00001) {
-                throw new Exception('El abono excede el saldo total de la reserva.');
-            }
-
-            // ---------- DISTRIBUCIÓN PROPORCIONAL POR SALDO ----------
-            // Si hay una sola habitación, todo va a ese detalle (hasta su saldo).
-            // Si hay varias: cuota_i = round(monto * saldo_i / total_saldos, 2), ajustando centavos al final.
-            $cuotas = [];
-            if (count($detalles) === 1) {
-                $only = $detalles[0];
-                $cuotas[] = [
-                    'id_detalle' => $only['id_detalle'],
-                    'monto'      => min($monto, $only['saldo'])
-                ];
-            } else {
-                // Cuotas iniciales redondeadas
-                $suma_inicial = 0.0;
-                foreach ($detalles as $d) {
-                    $base = $monto * ($d['saldo'] / $total_saldos);
-                    $cuota = round($base, 2);
-                    // No exceder el saldo del detalle
-                    if ($cuota > $d['saldo']) {
-                        $cuota = $d['saldo'];
-                    }
-                    $cuotas[] = [
-                        'id_detalle' => $d['id_detalle'],
-                        'monto'      => $cuota
-                    ];
-                    $suma_inicial = round($suma_inicial + $cuota, 2);
-                }
-
-                // Ajuste de centavos para cuadrar exactamente el monto
-                $diff = round($monto - $suma_inicial, 2);
-                if ($diff !== 0.0) {
-                    // capacidad disponible por detalle
-                    // cap_i = saldo_i - cuota_i
-                    $cap = [];
-                    foreach ($detalles as $idx => $d) {
-                        $cap[$idx] = round($d['saldo'] - $cuotas[$idx]['monto'], 2);
-                    }
-
-                    // Si faltan centavos (+diff), vamos sumando de a 0.01 donde haya capacidad
-                    // Si sobran centavos (-diff), vamos restando de a 0.01 donde haya monto > 0
-                    while (abs($diff) >= 0.01) {
-                        $moved = false;
-                        if ($diff > 0) {
-                            // Agregar 0.01 donde exista capacidad
-                            foreach ($cuotas as $i => &$q) {
-                                if ($cap[$i] >= 0.01) {
-                                    $q['monto'] = round($q['monto'] + 0.01, 2);
-                                    $cap[$i] = round($cap[$i] - 0.01, 2);
-                                    $diff = round($diff - 0.01, 2);
-                                    $moved = true;
-                                    if ($diff < 0.01) {
-                                        break;
-                                    }
-                                }
-                            }
-                            unset($q);
-                        } else {
-                            // Quitar 0.01 donde haya al menos 0.01 asignado
-                            foreach ($cuotas as $i => &$q) {
-                                if ($q['monto'] >= 0.01) {
-                                    $q['monto'] = round($q['monto'] - 0.01, 2);
-                                    $diff = round($diff + 0.01, 2);
-                                    $moved = true;
-                                    if ($diff > -0.01) {
-                                        break;
-                                    }
-                                }
-                            }
-                            unset($q);
-                        }
-                        if (!$moved) {
-                            break;
-                        } // seguridad; no debería ocurrir si validamos saldo antes
-                    }
-                }
-            }
-
-            // Seguridad: suma de cuotas = monto (o muy cercano por redondeo); revalida
-            $suma_final = 0.0;
-            foreach ($cuotas as $q) {
-                $suma_final = round($suma_final + $q['monto'], 2);
-            }
-            if (abs($suma_final - $monto) >= 0.01) {
-                throw new Exception('No fue posible distribuir el monto exactamente entre las habitaciones.');
-            }
-
-            // ---------- INSERT PAGOS (uno por detalle) ----------
-            $stmt = mysqli_prepare($conection, "INSERT INTO reservas_pagos
-            (idreserva, id_detalle, monto, metodo_pago, referencia_pago, fecha_pago, usuario_id, origen_pago, observacion)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'recepción', 'Abono distribuido proporcional')");
-            if (!$stmt) {
-                throw new Exception('Prepare insert pagos: ' . mysqli_error($conection));
-            }
-
-            foreach ($cuotas as $q) {
-                $detId   = (int)$q['id_detalle'];
-                $cuota   = (float)$q['monto'];
-                if ($cuota <= 0) {
-                    continue;
-                }
-
-                mysqli_stmt_bind_param(
-                    $stmt,
-                    "iidsssi",
-                    $idreserva,
-                    $detId,
-                    $cuota,
-                    $metodo_pago,
-                    $referencia,
-                    $fecha,
-                    $usuario_id
-                );
-                if (!mysqli_stmt_execute($stmt)) {
-                    throw new Exception('No se pudo registrar el abono: ' . mysqli_stmt_error($stmt));
-                }
-            }
-            mysqli_stmt_close($stmt);
-
-            // ---------- ACTUALIZAR RESERVA ----------
-            $total_abonado = round($abonos_previos + $monto, 2);
-            $estado_pago   = ($total_abonado >= $total_reserva && $total_reserva > 0) ? 'pagado'
-                           : (($total_abonado > 0) ? 'parcial' : 'pendiente');
-            $set_estado    = ($estado_actual === 'pendiente' && $total_abonado > 0) ? "estado = 'confirmada'," : '';
-
-            $upd = mysqli_query($conection, "UPDATE reservas
-                                         SET $set_estado estado_pago = '$estado_pago', abono = $total_abonado
-                                         WHERE idreserva = $idreserva");
-            if (!$upd) {
-                throw new Exception('Error al actualizar la reserva.');
-            }
 
             mysqli_commit($conection);
             echo json_encode(['ok' => true]);
-
         } catch (Exception $e) {
             mysqli_rollback($conection);
             echo json_encode(['ok' => false, 'msg' => $e->getMessage()]);
         }
         exit;
     }
-
-    // ===================== infoSaldoDetalle =====================
-    if (($_POST['action'] ?? '') === 'infoSaldoDetalle') {
-        header('Content-Type: application/json; charset=utf-8');
-
-        try {
-            $id_detalle = isset($_POST['id_detalle']) ? (int)$_POST['id_detalle'] : 0;
-            if ($id_detalle <= 0) {
-                echo json_encode(['ok' => false, 'msg' => 'id_detalle inválido']);
-                exit;
-            }
-
-            // Traer el detalle + posible reserva + cliente (si hay)
-            $sql = "
-                SELECT 
-                    d.id                AS id_detalle,
-                    d.idreserva         AS idreserva,
-                    d.subtotal          AS subtotal,
-                    d.estado_detalle    AS estado_detalle,
-                    d.fecha_entrada,
-                    d.fecha_salida,
-                    COALESCE(r.id_cliente, d.idcliente) AS id_cliente,
-                    CONCAT(COALESCE(c.nombre,''),' ',COALESCE(c.p_apellido,'')) AS cliente
-                FROM reservas_detalle d
-                LEFT JOIN reservas  r ON r.idreserva = d.idreserva
-                LEFT JOIN clientes  c ON c.usuario  = COALESCE(r.id_cliente, d.idcliente)
-                WHERE d.id = {$id_detalle}
-                LIMIT 1
-            ";
-            $qd = mysqli_query($conection, $sql);
-            if (!$qd || mysqli_num_rows($qd) === 0) {
-                echo json_encode(['ok' => false, 'msg' => 'Detalle no encontrado']);
-                exit;
-            }
-            $d = mysqli_fetch_assoc($qd);
-
-            $subtotal = (float)$d['subtotal'];
-            $idreserva = (int)($d['idreserva'] ?? 0);
-
-            // Abonos aplicados a ESTE detalle
-            $qa = mysqli_query($conection, "SELECT COALESCE(SUM(monto),0) AS abonado FROM reservas_pagos WHERE id_detalle = {$id_detalle}");
-            $abonado = 0.0;
-            if ($qa && mysqli_num_rows($qa)) {
-                $abonado = (float)mysqli_fetch_assoc($qa)['abonado'];
-            }
-            $saldo = round(max(0, $subtotal - $abonado), 2);
-
-            echo json_encode([
-                'ok'             => true,
-                'id_detalle'     => (int)$d['id_detalle'],
-                'idreserva'      => $idreserva,
-                'cliente'        => trim($d['cliente'] ?? ''),
-                'subtotal'       => round($subtotal, 2),
-                'abonado'        => round($abonado, 2),
-                'saldo'          => $saldo,
-                'estado_detalle' => $d['estado_detalle'],
-                'fecha_entrada'  => $d['fecha_entrada'],
-                'fecha_salida'   => $d['fecha_salida']
-            ]);
-        } catch (Throwable $e) {
-            echo json_encode(['ok' => false, 'msg' => 'Error al consultar el detalle']);
-        }
-        exit;
-    }
-
-    if (($_POST['action'] ?? '') === 'checkinPorDetalle') {
-        mysqli_begin_transaction($conection);
-        try {
-            $id_detalle  = isset($_POST['id_detalle']) ? (int)$_POST['id_detalle'] : 0;
-            $usuario_id  = (int)($_SESSION['idUser'] ?? 0);
-
-            if ($id_detalle <= 0) {
-                throw new Exception('ID de detalle inválido.');
-            }
-
-            // Lock del detalle
-            $qd = mysqli_query($conection, "
-            SELECT id, idreserva, estado_detalle, subtotal, fecha_entrada, fecha_salida
-            FROM reservas_detalle
-            WHERE id = $id_detalle
-            FOR UPDATE
-        ");
-            if (!$qd || mysqli_num_rows($qd) === 0) {
-                throw new Exception('Detalle no encontrado.');
-            }
-            $d = mysqli_fetch_assoc($qd);
-
-            $idreserva      = (int)$d['idreserva'];
-            $estado_detalle = $d['estado_detalle'];
-            $subtotal       = (float)$d['subtotal'];
-
-            if ($idreserva <= 0) {
-                throw new Exception('Este detalle es de check-in directo. Use el formulario de ingreso directo.');
-            }
-
-            // Si ya está en checkin, no repetimos trabajo
-            if (mb_strtolower($estado_detalle) === 'checkin') {
-                mysqli_commit($conection);
-                echo 'ok';
-                exit;
-            }
-
-            // Saldo del detalle (no permitir check-in con deuda)
-            $qPag = mysqli_query($conection, "
-            SELECT COALESCE(SUM(monto),0) AS pagado
-            FROM reservas_pagos
-            WHERE id_detalle = $id_detalle
-        ");
-            $pagado_det = (float)mysqli_fetch_assoc($qPag)['pagado'];
-            $saldo_det  = round($subtotal - $pagado_det, 2);
-
-            if ($saldo_det > 0.00001) {
-                mysqli_rollback($conection);
-                echo json_encode([
-                    'ok'   => false,
-                    'code' => 'saldo_pendiente',
-                    'msg'  => 'La habitación tiene saldo pendiente.',
-                    'saldo' => $saldo_det
-                ]);
-                exit;
-            }
-
-            // Marcar el detalle en checkin
-            $updDet = mysqli_query($conection, "
-            UPDATE reservas_detalle
-            SET estado_detalle = 'checkin'
-            WHERE id = $id_detalle
-        ");
-            if (!$updDet) {
-                throw new Exception('No se pudo actualizar el estado del detalle.');
-            }
-
-            // ¿Todas las habitaciones de la reserva ya están en checkin?
-            $qPend = mysqli_query($conection, "
-            SELECT COUNT(*) AS pendientes
-            FROM reservas_detalle
-            WHERE idreserva = $idreserva
-              AND estado_detalle <> 'checkin'
-        ");
-            $pendientes = (int)mysqli_fetch_assoc($qPend)['pendientes'];
-
-            if ($pendientes === 0) {
-                // Recién aquí finalizamos la reserva
-                $updRes = mysqli_query($conection, "
-                UPDATE reservas
-                SET estado = 'finalizada'
-                WHERE idreserva = $idreserva
-            ");
-                if (!$updRes) {
-                    throw new Exception('No se pudo actualizar el estado de la reserva.');
-                }
-            }
-            // Si aún faltan habitaciones por check-in, no tocamos reservas.estado
-
-            mysqli_commit($conection);
-            echo 'ok';
-        } catch (Exception $e) {
-            mysqli_rollback($conection);
-            echo $e->getMessage();
-        }
-        exit;
-    }
-
-
-    // ===================== cobrarYCheckinDetalle =====================
-    if (($_POST['action'] ?? '') === 'cobrarYCheckinDetalle') {
-        mysqli_begin_transaction($conection);
-        try {
-            $id_detalle  = isset($_POST['id_detalle']) ? (int)$_POST['id_detalle'] : 0;
-            $monto       = round((float)($_POST['monto'] ?? 0), 2);
-            $usuario_id  = (int)($_SESSION['idUser'] ?? 0);
-            $fecha_now   = date('Y-m-d H:i:s');
-
-            $metodo_raw  = trim((string)($_POST['metodo_pago'] ?? ''));
-            $metodo_pago = is_numeric($metodo_raw) ? (string)((int)$metodo_raw) : $metodo_raw;
-            $metodo_lc   = mb_strtolower($metodo_pago, 'UTF-8');
-            $referencia  = mysqli_real_escape_string($conection, trim((string)($_POST['referencia'] ?? '')));
-
-            if ($id_detalle <= 0) {
-                throw new Exception('id_detalle inválido.');
-            }
-
-            // 1) Lock del DETALLE
-            $qd = mysqli_query($conection, "
-            SELECT id, idreserva, subtotal, estado_detalle
-            FROM reservas_detalle
-            WHERE id = {$id_detalle}
-            FOR UPDATE
-        ");
-            if (!$qd || mysqli_num_rows($qd) === 0) {
-                throw new Exception('Detalle no encontrado.');
-            }
-            $d = mysqli_fetch_assoc($qd);
-            $idreserva = (int)$d['idreserva'];
-            $subtotal  = (float)$d['subtotal'];
-            $est_det  = (string)$d['estado_detalle'];
-            if ($idreserva <= 0) {
-                throw new Exception('Este check-in aplica solo para reservas.');
-            }
-
-            // 2) Lock de la RESERVA
-            $qr = mysqli_query($conection, "
-            SELECT total, estado
-            FROM reservas
-            WHERE idreserva = {$idreserva}
-            FOR UPDATE
-        ");
-            if (!$qr || mysqli_num_rows($qr) === 0) {
-                throw new Exception('Reserva no encontrada.');
-            }
-            $r = mysqli_fetch_assoc($qr);
-            $total_reserva = (float)$r['total'];
-            $estado_actual = (string)$r['estado'];
-
-            // 3) Calcular saldo del DETALLE (antes de validar cobro)
-            $qa = mysqli_query($conection, "
-            SELECT COALESCE(SUM(monto),0) AS abonado
-            FROM reservas_pagos
-            WHERE id_detalle = {$id_detalle}
-        ");
-            $abonado_det = ($qa && mysqli_num_rows($qa)) ? (float)mysqli_fetch_assoc($qa)['abonado'] : 0.0;
-            $saldo_det   = round($subtotal - $abonado_det, 2);
-
-            // 4) Si HAY saldo y VIENE monto > 0 -> cobrar; si NO hay saldo -> saltar cobro
-            if ($saldo_det > 0 && $monto > 0) {
-                // Validar referencia SOLO si vamos a cobrar
-                $req_ref = ['2','3','transferencia','tarjeta','pos','deposito','depósito'];
-                $req_ref_lc = array_map(fn ($x) => mb_strtolower($x, 'UTF-8'), $req_ref);
-                if ($metodo_pago === '') {
-                    throw new Exception('Debe seleccionar un método de pago.');
-                }
-                if (in_array($metodo_lc, $req_ref_lc, true) && $referencia === '') {
-                    throw new Exception('Debe ingresar una referencia para este método de pago.');
-                }
-                // Referencia no puede existir en otra reserva
-                if ($referencia !== '') {
-                    $chk = mysqli_query($conection, "
-                    SELECT idpago
-                    FROM reservas_pagos
-                    WHERE referencia_pago = '{$referencia}'
-                      AND idreserva <> {$idreserva}
-                    LIMIT 1
-                ");
-                    if ($chk && mysqli_num_rows($chk) > 0) {
-                        throw new Exception('La referencia ya está asociada a otra reserva.');
-                    }
-                }
-
-                if ($monto > $saldo_det + 0.00001) {
-                    throw new Exception('El abono excede el saldo de la habitación.');
-                }
-
-                // Insert pago por DETALLE
-                $stmt = mysqli_prepare($conection, "INSERT INTO reservas_pagos
-                (idreserva, id_detalle, monto, metodo_pago, referencia_pago, fecha_pago, usuario_id, origen_pago, observacion)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'recepción', 'Abono en check-in')");
-                if (!$stmt) {
-                    throw new Exception('No se pudo preparar el registro de pago.');
-                }
-                mysqli_stmt_bind_param(
-                    $stmt,
-                    "iidsssi",
-                    $idreserva,
-                    $id_detalle,
-                    $monto,
-                    $metodo_pago,
-                    $referencia,
-                    $fecha_now,
-                    $usuario_id
-                );
-                if (!mysqli_stmt_execute($stmt)) {
-                    $err = mysqli_stmt_error($stmt);
-                    mysqli_stmt_close($stmt);
-                    throw new Exception('Error al registrar el pago: ' . $err);
-                }
-                mysqli_stmt_close($stmt);
-            }
-            // Si $saldo_det <= 0 => ya está totalmente pagado; no cobramos nada y seguimos con el check-in.
-
-            // 5) Marcar SOLO este detalle en check-in (si aún no lo está)
-            if ($est_det !== 'checkin') {
-                $updDet = mysqli_query($conection, "
-                UPDATE reservas_detalle
-                SET estado_detalle = 'checkin'
-                WHERE id = {$id_detalle}
-            ");
-                if (!$updDet) {
-                    throw new Exception('No se pudo actualizar el estado de la habitación.');
-                }
-            }
-
-            // 6) Recalcular abono total de la RESERVA y estado_pago
-            $qp_tot = mysqli_query($conection, "
-            SELECT COALESCE(SUM(monto),0) AS abonos
-            FROM reservas_pagos
-            WHERE idreserva = {$idreserva}
-        ");
-            $total_abonado = ($qp_tot && mysqli_num_rows($qp_tot)) ? (float)mysqli_fetch_assoc($qp_tot)['abonos'] : 0.0;
-
-            $estado_pago = ($total_reserva > 0 && $total_abonado >= $total_reserva) ? 'pagado'
-                          : (($total_abonado > 0) ? 'parcial' : 'pendiente');
-
-            // 7) ¿Todas las habitaciones de la reserva ya están en checkin?
-            $qcont = mysqli_query($conection, "
-            SELECT
-              COUNT(*) AS total,
-              SUM(CASE WHEN estado_detalle='checkin' THEN 1 ELSE 0 END) AS en_checkin
-            FROM reservas_detalle
-            WHERE idreserva = {$idreserva}
-        ");
-            $rowc = mysqli_fetch_assoc($qcont);
-            $total_det   = (int)($rowc['total'] ?? 0);
-            $det_en_ckin = (int)($rowc['en_checkin'] ?? 0);
-            $todas_ckin  = ($total_det > 0 && $det_en_ckin === $total_det);
-
-            // 8) Actualizar RESERVA
-            if ($todas_ckin) {
-                // Todas en check-in -> finalizada
-                $updRes = mysqli_query($conection, "
-                UPDATE reservas
-                SET estado_pago     = '{$estado_pago}',
-                    abono           = {$total_abonado},
-                    estado          = 'finalizada',
-                    hora_checkin    = IFNULL(hora_checkin, '{$fecha_now}'),
-                    usuario_checkin = {$usuario_id}
-                WHERE idreserva = {$idreserva}
-            ");
-            } else {
-                // Mantener estado (p.ej. confirmada); solo actualizar pago/abono
-                $updRes = mysqli_query($conection, "
-                UPDATE reservas
-                SET estado_pago = '{$estado_pago}',
-                    abono       = {$total_abonado}
-                WHERE idreserva = {$idreserva}
-            ");
-            }
-            if (!$updRes) {
-                throw new Exception('No se pudo actualizar la reserva.');
-            }
-
-            mysqli_commit($conection);
-
-            // Impresiones opcionales
-            if (function_exists('imprimirComprobanteEstadia')) {
-                @imprimirComprobanteEstadia($idreserva);
-            }
-            if (function_exists('imprimirTicketsTourYGaraje')) {
-                @imprimirTicketsTourYGaraje($idreserva);
-            }
-
-            echo 'ok';
-        } catch (Throwable $e) {
-            mysqli_rollback($conection);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['ok' => false, 'msg' => $e->getMessage()]);
-        }
-        exit;
-    }
-
-
-
-
-
-
 
     if ($_POST['action'] == 'formCancelarReserva') {
 
@@ -5516,7 +4484,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 </script>
 
 <?php
-                                echo ob_get_clean();
+                    echo ob_get_clean();
         exit;
     }
 
@@ -5980,79 +4948,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             didOpen: () => Swal.showLoading()
         });
 
-        // Asegúrate de que 'data' (FormData) incluya action=guardarCheckinDirecto
-        // data.append('action', 'guardarCheckinDirecto');
-
         fetch('ajax.php', {
                 method: 'POST',
                 body: data
             })
-            .then(async (res) => {
-                // Leemos siempre como texto y luego intentamos parsear JSON
-                const raw = await res.text();
-                let json;
-                try {
-                    json = JSON.parse(raw);
-                } catch (e) {
-                    // Si no es JSON, lanzamos error con el texto crudo
-                    throw new Error(raw || `Respuesta inválida del servidor (HTTP ${res.status})`);
-                }
-
-                // Si HTTP no es OK, disparamos error usando lo que venga del backend
-                if (!res.ok) {
-                    const msg = json.msg || json.error || `HTTP ${res.status} ${res.statusText}`;
-                    throw new Error(msg);
-                }
-
-                return json;
-            })
-            .then((data) => {
+            .then(res => res.text())
+            .then(resp => resp.json())
+            .then(data => {
                 Swal.close();
 
                 if (data.status === 'ok') {
-<<<<<<< Updated upstream
-
-                    console.log(data);
-                    // Armamos detalles de impresión/envío
-                    const det = (etiqueta, valor, okText) => {
-                        if (valor === true) return `${okText}<br>`;
-                        if (valor === null || typeof valor === 'undefined')
-                            return `❌ ${etiqueta}: sin respuesta<br>`;
-                        return `❌ ${etiqueta}: ${String(valor)}<br>`;
-                    };
-
-=======
-                    // Armamos detalles de impresión/envío
-                    const det = (etiqueta, valor, okText) => {
-                        if (valor === true) return `${okText}<br>`;
-                        if (valor === null || typeof valor === 'undefined')
-                            return `❌ ${etiqueta}: sin respuesta<br>`;
-                        return `❌ ${etiqueta}: ${String(valor)}<br>`;
-                    };
-
->>>>>>> Stashed changes
                     let detalles = '';
-                    detalles += det('Impresión', data.imprimirEstadia, '🖨️ Comprobante impreso');
-                    detalles += det('Copia cliente', data.imprimirCliente, '👥 Copia cliente impresa');
-                    detalles += det('Tickets', data.imprimirTickets, '🎟️ Tickets impresos');
-                    detalles += det('Correo', data.enviarCorreo, '📧 Correo enviado');
+                    detalles += data.imprimirEstadia === true ? '🖨️ Comprobante impreso<br>' :
+                        `❌ Falló impresión: ${data.imprimirEstadia}<br>`;
+                    detalles += data.imprimirCliente === true ? '👥 Copia cliente impresa<br>' :
+                        `❌ Cliente: ${data.imprimirCliente}<br>`;
+                    detalles += data.imprimirTickets === true ? '🎟️ Tickets impresos<br>' :
+                        `❌ Tickets: ${data.imprimirTickets}<br>`;
+                    detalles += data.enviarCorreo === true ? '📧 Correo enviado<br>' :
+                        `❌ Correo: ${data.enviarCorreo}<br>`;
 
-                    Swal.fire('✅ Check-in exitoso', detalles, 'success');
+                    Swal.fire('✅ Check-In exitoso', detalles, 'success');
                     closeModal('modalReserva');
-                    //location.reload();
+                    location.reload();
                 } else {
-                    // Muestra el mensaje real que vino del backend
-                    const msg = data.msg || 'Algo salió mal en el proceso de check-in';
-                    Swal.fire('Error', msg, 'error');
+                    Swal.fire('Error', 'Algo salió mal en el proceso de check-in', 'error');
                 }
-            })
-            .catch((error) => {
+            }).catch(() => {
                 Swal.close();
-                // Muestra el error real
-                Swal.fire('Error', error.message || String(error), 'error');
+                Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
             });
-
-
     }
 
     function toggleTourLugar() {
@@ -6125,27 +5050,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 </script>
 
 
-<?php
-                                        echo ob_get_clean();
+    <?php
+                            echo ob_get_clean();
         exit;
     }
 
 
-    if (($_POST['action'] ?? '') == 'guardarCheckinDirecto') {
+    if ($_POST['action'] == 'guardarCheckinDirecto') {
 
+
+        //print_r($_POST);
+        //exit;
         mysqli_begin_transaction($conection);
 
-        try {
-            // === 1) ENTRADA (mínimos obligatorios) ===
-            $cliente          = $_POST['id_cliente'];        // ¡Ojo! En tu schema reservas_detalle.idcliente es VARCHAR(20)
-            $habitacion       = intval($_POST['id_habitacion'] ?? 0);
-            $adultos          = intval($_POST['adultos'] ?? 0);
-            $ninos            = intval($_POST['ninos'] ?? 0);
-            $tarifa_adulto_id = intval($_POST['tarifa'] ?? 0);
-            $noches           = intval($_POST['noches'] ?? 0);
 
-            $incluye_tour     = (isset($_POST['precio_tour']) && $_POST['precio_tour'] !== '') ? 1 : 0;
-            $incluye_desayuno = (isset($_POST['precio_desayuno']) && $_POST['precio_desayuno'] !== '') ? 1 : 0;
+
+
+        try {
+
+
+
+            $cliente         = intval($_POST['id_cliente']);
+            $habitacion      = intval($_POST['id_habitacion']);
+            $adultos         = intval($_POST['adultos']);
+            $ninos           = intval($_POST['ninos']);
+            $tarifa_adulto_id = intval($_POST['tarifa']);
+            $noches          = intval($_POST['noches']);
+
+            $incluye_tour     = isset($_POST['precio_tour']) && $_POST['precio_tour'] !== '' ? 1 : 0;
+            $incluye_desayuno = isset($_POST['precio_desayuno']) && $_POST['precio_desayuno'] !== '' ? 1 : 0;
             $valor_tour       = floatval($_POST['precio_tour'] ?? 0);
             $valor_desayuno   = floatval($_POST['precio_desayuno'] ?? 0);
 
@@ -6153,15 +5086,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $valor_garaje     = floatval($_POST['garaje_valor'] ?? 0);
 
             $tour_destino = '';
-            if (!empty($_POST['lugar_tour']) && is_array($_POST['lugar_tour'])) {
+            if (isset($_POST['lugar_tour']) && is_array($_POST['lugar_tour'])) {
                 $ids_lugares = array_map('intval', $_POST['lugar_tour']);
                 $tour_destino = mysqli_real_escape_string($conection, implode(',', $ids_lugares));
             }
 
-            $total_enviado = floatval($_POST['total'] ?? 0);
-            $metodo_pago   = mysqli_real_escape_string($conection, $_POST['metodo_pago'] ?? 'efectivo'); // texto ok
-            $referencia    = mysqli_real_escape_string($conection, $_POST['referencia_pago'] ?? '');
-            $usuario_id    = intval($_SESSION['idUser'] ?? 0);
+
+            $total_enviado    = floatval($_POST['total']);
+            $metodo_pago      = mysqli_real_escape_string($conection, $_POST['metodo_pago']);
+            $referencia       = mysqli_real_escape_string($conection, $_POST['referencia_pago']);
+            $usuario_id       = $_SESSION['idUser'] ?? 0;
 
             if ($cliente <= 0 || $habitacion <= 0 || $adultos <= 0 || $noches <= 0 || $total_enviado <= 0) {
                 throw new Exception('Datos inválidos o incompletos');
@@ -6171,352 +5105,355 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $fecha_salida  = date('Y-m-d', strtotime("+$noches days"));
             $hora_checkin  = date('Y-m-d H:i:s');
 
-            // === 2) TARIFA ADULTO ===
-            $qTarifa = mysqli_query($conection, "SELECT precio_por_persona FROM tarifas_habitaciones WHERE id = $tarifa_adulto_id LIMIT 1");
-            $rowTarifa = $qTarifa ? mysqli_fetch_assoc($qTarifa) : null;
+            // Obtener tarifa de adulto
+            $rowTarifa = mysqli_fetch_assoc(mysqli_query($conection, "SELECT precio_por_persona FROM tarifas_habitaciones WHERE id = $tarifa_adulto_id LIMIT 1"));
             if (!$rowTarifa) {
                 throw new Exception('Tarifa de habitación inválida');
             }
-            $precio_adulto = (float)$rowTarifa['precio_por_persona'];
-            $precio_nino   = round($precio_adulto * 0.75, 2); // regla actual
 
-            // === 3) CÁLCULO TOTAL HABITACIÓN ===
+            $precio_adulto = floatval($rowTarifa['precio_por_persona']);
+            $precio_nino = round($precio_adulto * 0.75, 2);
+
+            // Calcular subtotales
             $subtotal_adultos = $adultos * ($precio_adulto + $valor_desayuno + $valor_tour) * $noches;
-            $subtotal_ninos   = $ninos   * ($precio_nino   + $valor_desayuno + $valor_tour) * $noches;
-            $subtotal_garaje  = $chk_garaje ? ($valor_garaje * $noches) : 0;
+            $subtotal_ninos   = $ninos * ($precio_nino + $valor_desayuno + $valor_tour) * $noches;
+            $subtotal_garaje  = $chk_garaje ? $valor_garaje * $noches : 0;
             $total_calculado  = round($subtotal_adultos + $subtotal_ninos + $subtotal_garaje, 2);
 
             if (abs($total_calculado - $total_enviado) > 0.01) {
                 throw new Exception("El total no coincide con el cálculo del sistema");
             }
 
-            // === 4) DISPONIBILIDAD (contra reservas_detalle) ===
-            // Bloquea si hay solapamiento con estados activos: pendiente, confirmada, checkin
-            $conf = mysqli_query($conection, "
-            SELECT id
-            FROM reservas_detalle
-            WHERE id_habitacion = $habitacion
-              AND estado_detalle IN ('confirmada','checkin')
-              AND ('$fecha_entrada' < fecha_salida AND '$fecha_salida' > fecha_entrada)
-            LIMIT 1
-        ");
-            if ($conf && mysqli_num_rows($conf) > 0) {
-                throw new Exception('La habitación seleccionada ya está ocupada/reservada en ese rango de fechas');
+            // Verificar disponibilidad de la habitación
+            $reservaConflicto = mysqli_query($conection, "
+                SELECT r.idreserva 
+                FROM reservas_detalle d
+                INNER JOIN reservas r ON r.idreserva = d.idreserva
+                WHERE d.id_habitacion = $habitacion
+                AND r.estado NOT IN ('cancelada', 'checkout')
+                AND ('$fecha_entrada' < r.fecha_salida AND '$fecha_salida' > r.fecha_entrada)
+                LIMIT 1
+            ");
+
+            if ($reservaConflicto && mysqli_num_rows($reservaConflicto) > 0) {
+                $row = mysqli_fetch_assoc($reservaConflicto);
+                $id_reserva_conflicto = intval($row['idreserva']);
+
+                // Consultamos si es una reserva pendiente
+                $estado = mysqli_fetch_assoc(mysqli_query($conection, "SELECT estado FROM reservas WHERE idreserva = $id_reserva_conflicto LIMIT 1"))['estado'];
+
+                if ($estado == 'pendiente') {
+                    // Cancelar automáticamente la reserva pendiente
+                    mysqli_query($conection, "
+                    UPDATE reservas 
+                    SET estado = 'cancelada', observaciones = CONCAT(observaciones, ' | Cancelada automáticamente por check-in directo el " . date('Y-m-d H:i') . "') 
+                    WHERE idreserva = $id_reserva_conflicto
+                        ");
+                } else {
+                    throw new Exception('La habitación seleccionada ya está reservada en ese rango de fechas');
+                }
             }
 
-            // === 5) INSERT DETALLE (check-in directo, sin cabecera reservas) ===
-            // Nota: idcliente en tabla es VARCHAR(20). Si en tu sistema el "usuario" del cliente es distinto al ID numérico, reemplaza '$cliente' por ese usuario.
-            $sqlDetalle = "INSERT INTO reservas_detalle (
-            idcliente, id_habitacion, fecha_entrada, fecha_salida, adultos, ninos,
-            incluye_desayuno, incluye_tour, lugar_tour,
-            precio_unitario, precio_nino, precio_desayuno, precio_tour,
-            subtotal, garaje, estado_detalle, usuario_id, fecha_creacion, hora_checkin, usuario_checkin
-        ) VALUES (
-            '$cliente', $habitacion, '$fecha_entrada', '$fecha_salida', $adultos, $ninos,
-            $incluye_desayuno, $incluye_tour, '$tour_destino',
-            $precio_adulto, $precio_nino, $valor_desayuno, $valor_tour,
-            $total_calculado, $valor_garaje, 'checkin', $usuario_id, NOW(), TIME(NOW()), '$usuario_id'
-        )";
-            if (!mysqli_query($conection, $sqlDetalle)) {
-                throw new Exception('Error al guardar el check-in (detalle)');
-            }
-            $id_detalle = mysqli_insert_id($conection);
 
-            // === 6) PAGO (global, ligado al detalle) ===
-            $sqlPago = "INSERT INTO reservas_pagos (
-            idreserva, id_detalle, monto, metodo_pago, referencia_pago, fecha_pago, usuario_id, origen_pago, observacion
+            // Insertar reserva
+            $sql = "INSERT INTO reservas (
+            id_cliente, fecha_entrada, fecha_salida, total, estado_pago, estado, facturada, 
+            fecha_factura, observaciones, canal_reserva, usuario_id,
+            hora_checkin, usuario_checkin
         ) VALUES (
-            NULL, $id_detalle, $total_calculado, '$metodo_pago', '$referencia', NOW(), $usuario_id, 'recepción', 'Check-in directo'
+            $cliente, '$fecha_entrada', '$fecha_salida', $total_calculado, 'pagado', 'checkin', 1,
+            NOW(), 'Check-in directo facturado', 'recepción', $usuario_id,
+            '$hora_checkin', $usuario_id
         )";
-            if (!mysqli_query($conection, $sqlPago)) {
+            if (!mysqli_query($conection, $sql)) {
+                throw new Exception('Error al guardar reserva');
+            }
+
+            $idreserva = mysqli_insert_id($conection);
+
+            // Detalle de la habitación
+            $sql_det = "INSERT INTO reservas_detalle (
+                idreserva, id_habitacion, adultos, ninos, incluye_desayuno, incluye_tour, 
+                lugar_tour, precio_unitario, precio_nino, precio_desayuno, precio_tour, subtotal, garaje
+            ) VALUES (
+                $idreserva, $habitacion, $adultos, $ninos, $incluye_desayuno, $incluye_tour,
+                '$tour_destino', $precio_adulto, $precio_nino, $valor_desayuno, $valor_tour, $total_calculado, $valor_garaje
+            )";
+
+            if (!mysqli_query($conection, $sql_det)) {
+                throw new Exception('Error al guardar detalle de habitación');
+            }
+
+            // Pago
+            $sql_pago = "INSERT INTO reservas_pagos (
+            idreserva, monto, metodo_pago, referencia_pago, fecha_pago, usuario_id
+        ) VALUES (
+            $idreserva, $total_calculado, '$metodo_pago', '$referencia', NOW(), $usuario_id
+        )";
+            if (!mysqli_query($conection, $sql_pago)) {
                 throw new Exception('Error al registrar el pago');
             }
 
-            // === 7) FACTURA + DETALLE FACTURA ===
-            $fecha_now = date('Y-m-d H:i:s');
-            $sqlFactura = "INSERT INTO factura (fecha, usuario, codcliente, totalfactura, tipopago, codigopago)
-                       VALUES ('$fecha_now', $usuario_id, $cliente, $total_calculado, '$metodo_pago', '$referencia')";
-            if (!mysqli_query($conection, $sqlFactura)) {
+            // === Factura ===
+            $fecha = date('Y-m-d H:i:s');
+            $sql_factura = "INSERT INTO factura (fecha, usuario, codcliente, totalfactura, tipopago, codigopago)
+                VALUES ('$fecha', $usuario_id, $cliente, $total_calculado, '$metodo_pago', '$referencia')";
+            if (!mysqli_query($conection, $sql_factura)) {
                 throw new Exception('Error al registrar la factura');
             }
+
             $idfactura = mysqli_insert_id($conection);
 
-            // Nombre habitación
-            $habitacion_nombre = '';
-            $qHab = mysqli_query($conection, "SELECT numero FROM habitaciones WHERE idhabitacion = $habitacion LIMIT 1");
-            if ($qHab && mysqli_num_rows($qHab)) {
-                $habitacion_nombre = mysqli_fetch_assoc($qHab)['numero'];
-            }
+            // Detalle factura
+            $personas = $adultos + $ninos;
+            $habitacion_nombre = mysqli_fetch_assoc(mysqli_query($conection, "SELECT numero FROM habitaciones WHERE idhabitacion = $habitacion LIMIT 1"))['numero'];
 
-            // Nombres lugares tour
+            // 🔽 Obtener nombres de lugares de tour si aplica
             $nombres_lugares_str = '';
             if ($incluye_tour && $tour_destino != '') {
                 $nombres_lugares = [];
-                foreach (explode(',', $tour_destino) as $idL) {
-                    $idL = intval(trim($idL));
-                    if ($idL > 0) {
-                        $rL = mysqli_query($conection, "SELECT nombre FROM lugares_tour WHERE id = $idL LIMIT 1");
-                        if ($rL && mysqli_num_rows($rL)) {
-                            $nombres_lugares[] = mysqli_fetch_assoc($rL)['nombre'];
+                $ids_lugares = explode(',', $tour_destino);
+                foreach ($ids_lugares as $id) {
+                    $id = intval(trim($id));
+                    if ($id > 0) {
+                        $res = mysqli_query($conection, "SELECT nombre FROM lugares_tour WHERE id = $id LIMIT 1");
+                        if ($res && mysqli_num_rows($res)) {
+                            $nombres_lugares[] = mysqli_fetch_assoc($res)['nombre'];
                         }
                     }
                 }
-                $nombres_lugares_str = implode(', ', $nombres_lugares);
+                $nombres_lugares_str = implode(', ', $nombres_lugares); // Ej: "Casa del Árbol, Manos de Dios"
             }
 
-            $personas = $adultos + $ninos;
-
-            // Detalle factura
             if ($adultos > 0) {
                 mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
-            VALUES ($idfactura, 0, 'Hospedaje Adultos - Hab. $habitacion_nombre', $adultos, " . ($precio_adulto * $noches) . ", 'hospedaje')");
+        VALUES ($idfactura, 0, 'Hospedaje Adultos - Hab. $habitacion_nombre', $adultos, " . ($precio_adulto * $noches) . ", 'hospedaje')");
             }
+
             if ($ninos > 0) {
                 mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
-            VALUES ($idfactura, 0, 'Hospedaje Niños - Hab. $habitacion_nombre', $ninos, " . ($precio_nino * $noches) . ", 'hospedaje')");
+        VALUES ($idfactura, 0, 'Hospedaje Niños - Hab. $habitacion_nombre', $ninos, " . ($precio_nino * $noches) . ", 'hospedaje')");
             }
+
             if ($incluye_desayuno) {
                 mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
-            VALUES ($idfactura, 0, 'Desayuno - Hab. $habitacion_nombre', $personas, " . ($valor_desayuno * $noches) . ", 'desayuno')");
+        VALUES ($idfactura, 0, 'Desayuno - Hab. $habitacion_nombre', $personas, " . ($valor_desayuno * $noches) . ", 'desayuno')");
             }
+
             if ($incluye_tour) {
                 mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
-            VALUES ($idfactura, 0, 'Tour: $nombres_lugares_str - Hab. $habitacion_nombre', $personas, " . ($valor_tour * $noches) . ", 'tour')");
+        VALUES ($idfactura, 0, 'Tour: $nombres_lugares_str - Hab. $habitacion_nombre', $personas, " . ($valor_tour * $noches) . ", 'tour')");
             }
+
             if ($chk_garaje && $valor_garaje > 0) {
                 mysqli_query($conection, "INSERT INTO detalle_factura (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
-            VALUES ($idfactura, 0, 'Garaje - Hab. $habitacion_nombre', 1, " . ($valor_garaje * $noches) . ", 'garaje')");
+        VALUES ($idfactura, 0, 'Garaje - Hab. $habitacion_nombre', 1, " . ($valor_garaje * $noches) . ", 'garaje')");
             }
 
-            // === 8) COMMIT ===
+
             mysqli_commit($conection);
 
-            // === 9) IMPRESIONES + CORREO (por id_detalle) ===
-            $impresionAdmin   = function_exists('imprimirComprobanteEstadia') ? imprimirComprobanteEstadia(null, $id_detalle) : null;
-            $impresionCliente = function_exists('imprimirComprobanteEstadiaCliente') ? imprimirComprobanteEstadiaCliente(null, $id_detalle) : null;
-            $tickets          = function_exists('imprimirTicketsTourYGaraje') ? imprimirTicketsTourYGaraje(null, $id_detalle) : null;
-            $correo           = function_exists('enviarComprobante') ? enviarComprobante(null, $id_detalle) : null;
+            $resultado = [
+                'status' => 'ok',
+                'imprimirEstadia' => imprimirComprobanteEstadia($idreserva),
+                'imprimirCliente' => imprimirComprobanteEstadiaCliente($idreserva),
+                'imprimirTickets' => imprimirTicketsTourYGaraje($idreserva),
+                'enviarCorreo' => enviarComprobante(null,$idreserva)
+            ];
 
-            echo json_encode([
-                'status'           => 'ok',
-                'id_detalle'       => $id_detalle,
-                'imprimirEstadia'  => $impresionAdmin,
-                'imprimirCliente'  => $impresionCliente,
-                'imprimirTickets'  => $tickets,
-                'enviarCorreo'     => $correo,
-            ]);
+            echo json_encode($resultado);
             exit;
 
+
         } catch (Exception $e) {
             mysqli_rollback($conection);
-            echo json_encode(['status' => 'error','msg' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+            echo 'Error: ' . $e->getMessage();
         }
         exit;
     }
 
+    if ($_POST['action'] == 'realizarCheckout') {
+        $idreserva    = intval($_POST['idreserva']);
+        $faltante     = floatval($_POST['faltante']);
+        $metodo_pago  = intval($_POST['metodo_pago']);
+        $referencia   = mysqli_real_escape_string($conection, $_POST['referencia']);
+        $usuario_id   = $_SESSION['idUser'] ?? 0;
+        $fecha        = date('Y-m-d H:i:s');
+        $hora         = date('Y-m-d H:i:s');
 
-    if (($_POST['action'] ?? '') === 'checkoutDetalle') {
         mysqli_begin_transaction($conection);
+
         try {
-            $id_detalle   = isset($_POST['id_detalle']) ? (int)$_POST['id_detalle'] : 0;
-            $monto        = isset($_POST['monto']) ? round((float)$_POST['monto'], 2) : 0.0; // opcional
-            $metodo_raw   = trim((string)($_POST['metodo_pago'] ?? ''));                     // opcional
-            $metodo_pago  = is_numeric($metodo_raw) ? (string)((int)$metodo_raw) : $metodo_raw;
-            $referencia   = mysqli_real_escape_string($conection, trim((string)($_POST['referencia'] ?? '')));
-            $usuario_id   = (int)($_SESSION['idUser'] ?? 0);
-            $fecha        = date('Y-m-d H:i:s');
-
-            if ($id_detalle <= 0) {
-                throw new Exception('id_detalle inválido.');
+            // Validar reserva activa
+            $res = mysqli_query($conection, "SELECT * FROM reservas WHERE idreserva = $idreserva AND estado = 'checkin'");
+            if (mysqli_num_rows($res) == 0) {
+                throw new Exception('Reserva no válida o ya procesada');
             }
 
-            // 1) Traer detalle con lock
-            $qd = mysqli_query($conection, "
-            SELECT d.id, d.idreserva, d.id_habitacion, d.subtotal, d.estado_detalle
-            FROM reservas_detalle d
-            WHERE d.id = $id_detalle
-            FOR UPDATE");
-            if (!$qd || mysqli_num_rows($qd) === 0) {
-                throw new Exception('Detalle no encontrado.');
+            $reserva = mysqli_fetch_assoc($res);
+            $cliente_id = intval($reserva['id_cliente']);
+            $facturada = intval($reserva['facturada']);
+
+            // Obtener abonos reales
+            $res_abonos = mysqli_query($conection, "SELECT SUM(monto) AS total_abonos FROM reservas_pagos WHERE idreserva = $idreserva");
+            $data_abonos = mysqli_fetch_assoc($res_abonos);
+            $abono = floatval($data_abonos['total_abonos']);
+            $total = $abono + $faltante;
+
+            // Insertar abono final si hay faltante
+            if ($faltante > 0) {
+                $sql_pago = "INSERT INTO reservas_pagos (idreserva, monto, metodo_pago, referencia_pago, fecha_pago, usuario_id)
+                         VALUES ($idreserva, $faltante, $metodo_pago, '$referencia', NOW(), $usuario_id)";
+                if (!mysqli_query($conection, $sql_pago)) {
+                    throw new Exception('No se pudo registrar el abono final');
+                }
             }
-            $d = mysqli_fetch_assoc($qd);
-            $idreserva     = (int)$d['idreserva']; // puede ser 0/NULL para check-in directo
-            $id_habitacion = (int)$d['id_habitacion'];
-            $subtotal      = (float)$d['subtotal'];
-            $estado_det    = $d['estado_detalle'];
 
-            if ($estado_det !== 'checkin') {
-                throw new Exception('La habitación no está en estado de check-in.');
-            }
+            // Solo generar factura si aún no está facturada
+            if ($facturada === 0) {
+                $sql_factura = "INSERT INTO factura (fecha, usuario, codcliente, totalfactura, tipopago, codigopago)
+                            VALUES ('$fecha', $usuario_id, $cliente_id, $total, '$metodo_pago', '$referencia')";
+                if (!mysqli_query($conection, $sql_factura)) {
+                    throw new Exception('Error al registrar la factura');
+                }
+                $idfactura = mysqli_insert_id($conection);
 
-            // 2) Calcular abonado del DETALLE y saldo
-            $qpd = mysqli_query($conection, "SELECT COALESCE(SUM(monto),0) AS pagado FROM reservas_pagos WHERE id_detalle = $id_detalle");
-            $abonado_det = (float)mysqli_fetch_assoc($qpd)['pagado'];
-            $saldo_det   = round($subtotal - $abonado_det, 2);
+                // Detalles
+                $detalles = mysqli_query($conection, "
+                SELECT d.*, h.numero AS habitacion_numero 
+                FROM reservas_detalle d
+                INNER JOIN habitaciones h ON d.id_habitacion = h.idhabitacion
+                WHERE d.idreserva = $idreserva");
 
-            // 3) Si viene un cobro, validarlo e insertarlo
-            if ($monto > 0) {
-                if ($monto - $saldo_det > 0.00001) {
-                    throw new Exception('El monto cobrado excede el saldo del detalle.');
-                }
-                if ($metodo_pago === '') {
-                    throw new Exception('Debe indicar un método de pago.');
-                }
-                // Referencia obligatoria para ciertos métodos
-                $req_ref = ['2','3','transferencia','tarjeta','pos','deposito','depósito'];
-                $req_ref_lc = array_map(fn ($x) => mb_strtolower($x, 'UTF-8'), $req_ref);
-                if (in_array(mb_strtolower($metodo_pago, 'UTF-8'), $req_ref_lc, true) && $referencia === '') {
-                    throw new Exception('Debe ingresar una referencia para este método de pago.');
-                }
-                // Regla de referencias:
-                //  - Pago POR DETALLE: no permitir la misma referencia repetida en el MISMO detalle.
-                if ($referencia !== '') {
-                    $chk = mysqli_query($conection, "
-                    SELECT idpago FROM reservas_pagos
-                    WHERE referencia_pago = '$referencia' AND id_detalle = $id_detalle
-                    LIMIT 1");
-                    if ($chk && mysqli_num_rows($chk) > 0) {
-                        throw new Exception('La referencia ya fue usada en esta habitación.');
+                $dias = (strtotime($reserva['fecha_salida']) - strtotime($reserva['fecha_entrada'])) / (60 * 60 * 24);
+
+                while ($row = mysqli_fetch_assoc($detalles)) {
+                    $habitacion = $row['habitacion_numero'];
+                    $adultos = intval($row['adultos']);
+                    $ninos = intval($row['ninos']);
+                    $desayuno = intval($row['incluye_desayuno']);
+                    $tour = intval($row['incluye_tour']);
+                    $lugar_tour = $row['lugar_tour'];
+
+                    $p_adulto = floatval($row['precio_unitario']);
+                    $p_nino   = floatval($row['precio_nino']);
+
+                    // Adultos
+                    if ($adultos > 0) {
+                        mysqli_query($conection, "INSERT INTO detalle_factura 
+                        (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
+                        VALUES ($idfactura, 0, 'Hospedaje Adultos - Hab. $habitacion', $adultos, $p_adulto * $dias, 'hospedaje')");
+                    }
+
+                    // Niños
+                    if ($ninos > 0) {
+                        mysqli_query($conection, "INSERT INTO detalle_factura 
+                        (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
+                        VALUES ($idfactura, 0, 'Hospedaje Niños - Hab. $habitacion', $ninos, $p_nino * $dias, 'hospedaje')");
+                    }
+
+                    // Desayuno
+                    if ($desayuno) {
+                        $val = mysqli_fetch_assoc(mysqli_query($conection, "SELECT valor FROM tarifa_extras WHERE tipo_extra = 'desayuno' AND habilitado = 1 LIMIT 1"));
+                        $precio = floatval($val['valor']);
+                        $personas = $adultos + $ninos;
+                        mysqli_query($conection, "INSERT INTO detalle_factura 
+                        (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
+                        VALUES ($idfactura, 0, 'Desayuno - Hab. $habitacion', $personas, $precio * $dias, 'desayuno')");
+                    }
+
+                    // Tour
+                    if ($tour) {
+                        $val = mysqli_fetch_assoc(mysqli_query($conection, "SELECT valor FROM tarifa_extras WHERE tipo_extra = 'tour' AND habilitado = 1 LIMIT 1"));
+                        $precio = floatval($val['valor']);
+                        $personas = $adultos + $ninos;
+                        mysqli_query($conection, "INSERT INTO detalle_factura 
+                        (nofactura, codproducto, descripcion_servicio, cantidad, precio_venta, tipo_servicio)
+                        VALUES ($idfactura, 0, 'Tour: $lugar_tour - Hab. $habitacion', $personas, $precio, 'tour')");
                     }
                 }
 
-                // Insertar el pago (referenciando SIEMPRE el id_detalle, y el idreserva si existe)
-                $stmt = mysqli_prepare($conection, "INSERT INTO reservas_pagos
-                (idreserva, id_detalle, monto, metodo_pago, referencia_pago, fecha_pago, usuario_id, origen_pago, observacion)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'recepción', 'Pago checkout')");
-                if (!$stmt) {
-                    throw new Exception('Prepare pago: ' . mysqli_error($conection));
-                }
-                $idreserva_or_null = $idreserva > 0 ? $idreserva : null; // permite NULL si es checkin directo
-                mysqli_stmt_bind_param(
-                    $stmt,
-                    "iidsssi",
-                    $idreserva_or_null,
-                    $id_detalle,
-                    $monto,
-                    $metodo_pago,
-                    $referencia,
-                    $fecha,
-                    $usuario_id
-                );
-                if (!mysqli_stmt_execute($stmt)) {
-                    throw new Exception('No se pudo registrar el pago: ' . mysqli_stmt_error($stmt));
-                }
-                mysqli_stmt_close($stmt);
+                // Marcar reserva como facturada
+                mysqli_query($conection, "UPDATE reservas SET facturada = 1 WHERE idreserva = $idreserva");
 
-                // Ajustar saldo local
-                $saldo_det = round($saldo_det - $monto, 2);
+                //enviarComprobante($idreserva);
+
+
             }
 
-            // 4) Para finalizar el checkout, el saldo debe ser 0
-            if ($saldo_det > 0.00001) {
-                throw new Exception('Aún existe saldo pendiente en esta habitación.');
-            }
+            // Actualizar estado y hora de checkout
+            mysqli_query($conection, "UPDATE reservas 
+            SET estado = 'checkout', hora_checkout = '$hora', usuario_checkout = $usuario_id 
+            WHERE idreserva = $idreserva");
 
-            // 5) Actualizar abonos/estado de la RESERVA (si aplica)
-            if ($idreserva > 0) {
-                // Recalcular abonos totales de la reserva
-                $qa = mysqli_query($conection, "SELECT COALESCE(SUM(monto),0) AS abonos FROM reservas_pagos WHERE idreserva = $idreserva");
-                $total_abonado = (float)mysqli_fetch_assoc($qa)['abonos'];
-
-                $qr = mysqli_query($conection, "SELECT total, estado, estado_pago FROM reservas WHERE idreserva = $idreserva FOR UPDATE");
-                if ($qr && mysqli_num_rows($qr) > 0) {
-                    $r = mysqli_fetch_assoc($qr);
-                    $total_reserva = (float)$r['total'];
-                    $estado_pago   = ($total_abonado >= $total_reserva && $total_reserva > 0) ? 'pagado'
-                                   : (($total_abonado > 0) ? 'parcial' : 'pendiente');
-
-                    mysqli_query($conection, "UPDATE reservas SET abono = $total_abonado, estado_pago = '$estado_pago' WHERE idreserva = $idreserva");
-
-                    // Si TODAS las habitaciones del documento YA están en checkout, puedes (opcional) marcar la reserva como 'checkout'
-                    // (Descomenta si lo deseas)
-                    /*
-                    $qc = mysqli_query($conection, "SELECT COUNT(*) AS faltan FROM reservas_detalle WHERE idreserva = $idreserva AND estado_detalle <> 'checkout'");
-                    $faltan = (int)mysqli_fetch_assoc($qc)['faltan'];
-                    if ($faltan === 0) {
-                        mysqli_query($conection, "UPDATE reservas SET estado = 'checkout', hora_checkout = '$fecha', usuario_checkout = $usuario_id WHERE idreserva = $idreserva");
-                    }
-                    */
-                }
-            }
-
-            // 6) Cerrar el DETALLE y liberar SOLO su habitación
-            if (!mysqli_query($conection, "UPDATE reservas_detalle SET estado_detalle = 'checkout' WHERE id = $id_detalle")) {
-                throw new Exception('No se pudo cerrar el detalle.');
-            }
-            if ($id_habitacion > 0) {
-                mysqli_query($conection, "UPDATE habitaciones SET estado = 'disponible' WHERE idhabitacion = $id_habitacion");
-            }
+            // Liberar habitación
+            mysqli_query($conection, "
+            UPDATE habitaciones h
+            INNER JOIN reservas_detalle d ON d.id_habitacion = h.idhabitacion
+            SET h.estado = 'disponible'
+            WHERE d.idreserva = $idreserva");
 
             mysqli_commit($conection);
+
             echo 'ok';
+
         } catch (Exception $e) {
             mysqli_rollback($conection);
-            echo json_encode(['ok' => false, 'msg' => $e->getMessage()]);
+            echo 'Error: ' . $e->getMessage();
         }
+
         exit;
     }
+
 
     if ($_POST['action'] == 'cambiarEstadoReserva') {
-        // ESTE ACTION ES SOLO PARA CHECK-IN DE RESERVAS
-        $idreserva = isset($_POST['idreserva']) ? (int)$_POST['idreserva'] : 0;
-        $estado    = mysqli_real_escape_string($conection, $_POST['estado'] ?? '');
-        $usuario   = (int)($_SESSION['idUser'] ?? 0);
+        $idreserva = intval($_POST['idreserva']);
+        $estado = mysqli_real_escape_string($conection, $_POST['estado']);
+        $usuario = $_SESSION['idUser'] ?? 0;
 
-        // Solo aceptamos checkin aquí
-        if ($estado !== 'checkin') {
-            echo 'Solo check-in';
+        if ($idreserva <= 0 || !in_array($estado, ['pendiente', 'confirmada', 'checkin', 'checkout', 'cancelada'])) {
+            echo 'Datos inválidos';
             exit;
         }
 
-        // Si NO viene idreserva, asumimos que es check-in directo (no hacemos nada aquí)
-        if ($idreserva <= 0) {
-            echo 'ok'; // no-op para check-in directo
-            exit;
+        if ($estado === 'checkin') {
+            $hora = date('Y-m-d H:i:s');
+            $sql = "UPDATE reservas 
+                SET estado = 'checkin', 
+                    hora_checkin = '$hora', 
+                    usuario_checkin = $usuario 
+                WHERE idreserva = $idreserva";
+        } else {
+            $sql = "UPDATE reservas 
+                SET estado = '$estado' 
+                WHERE idreserva = $idreserva";
         }
 
-        mysqli_begin_transaction($conection);
-        $ok = true;
+        $query = mysqli_query($conection, $sql);
 
-        // 1) Reserva -> FINALIZADA (guardamos hora/usuario del check-in)
-        $hora = date('Y-m-d H:i:s');
-        $sqlReserva = "
-        UPDATE reservas
-           SET estado = 'finalizada',
-               hora_checkin = '{$hora}',
-               usuario_checkin = {$usuario}
-         WHERE idreserva = {$idreserva}
-         LIMIT 1
-        ";
-        $ok = $ok && mysqli_query($conection, $sqlReserva);
+        if ($query) {
 
-        // 2) Todos los detalles de esa reserva -> CHECKIN (guardamos hora/usuario)
-        $sqlDetalles = "
-        UPDATE reservas_detalle
-           SET estado_detalle  = 'checkin',
-               hora_checkin    = CURTIME(),
-               usuario_checkin = '{$usuario}'
-         WHERE idreserva = {$idreserva}
-        ";
-        $ok = $ok && mysqli_query($conection, $sqlDetalles);
+            // Enviar comprobante de RESERVA solo si pasa a CONFIRMADA
+            if ($estado === 'confirmada') {
 
-        if ($ok) {
-            mysqli_commit($conection);
+                enviarComprobante($idreserva);
+            }
 
-            // Disparadores de impresión/comprobantes para el momento del check-in
-<<<<<<< Updated upstream
-            enviarComprobante($idreserva,null);
-=======
-            enviarComprobante($idreserva);
->>>>>>> Stashed changes
-            imprimirComprobanteEstadia($idreserva);
-            imprimirTicketsTourYGaraje($idreserva);
+            // Enviar comprobante de ESTADÍA si es CHECK-IN o CHECKOUT
+            if (in_array($estado, ['checkin'])) {
+
+                enviarComprobante($idreserva);
+                imprimirComprobanteEstadia($idreserva);
+                imprimirTicketsTourYGaraje($idreserva);
+            }
 
             echo 'ok';
         } else {
-            mysqli_rollback($conection);
             echo 'Error al actualizar';
         }
+
+
+
         exit;
     }
 
@@ -7366,7 +6303,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 
 
+    if ($_POST['action'] == 'verDesayunosPorFecha') {
 
+        $fecha = $_POST['fecha'];
+
+        $query = mysqli_query($conection, "
+        SELECT h.numero AS habitacion, (rd.adultos + rd.ninos) AS total_desayunos
+        FROM reservas_detalle rd
+        INNER JOIN reservas r ON rd.idreserva = r.idreserva
+        INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+        WHERE 
+            rd.incluye_desayuno = 1
+            AND r.estado IN ('confirmada', 'checkin')
+            AND DATE('$fecha') > CURDATE()
+            AND DATE('$fecha') BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
+        ORDER BY h.numero
+    ");
+
+        if (!$query || mysqli_num_rows($query) == 0) {
+            echo "<p style='color:#666;'>No hay desayunos programados para el $fecha.</p>";
+            exit;
+        }
+
+        echo "<ul style='margin-left:20px;'>";
+        while ($row = mysqli_fetch_assoc($query)) {
+            echo "<li><strong>Hab. {$row['habitacion']}:</strong> {$row['total_desayunos']} desayuno(s)</li>";
+        }
+        echo "</ul>";
+        exit;
+    }
 
     if ($_POST['action'] == 'reimprimirTicketReserva') {
 
@@ -7378,137 +6343,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
-    if ($_POST['action'] == 'verDesayunosPorFecha') {
-        // conexión
-        if (!isset($conection)) {
-            include '../conexion.php';
-        }
-        mysqli_set_charset($conection, 'utf8mb4');
-
-        $fecha = $_POST['fecha'] ?? '';
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
-            echo "<p style='color:#666;'>Fecha inválida.</p>";
-            exit;
-        }
-
-        // Desayuno: desde el día siguiente del check-in hasta la salida (solo detalles en checkin)
-        $sql = "
-        SELECT 
-            h.numero AS habitacion, 
-            (d.adultos + d.ninos) AS total_desayunos
-        FROM reservas_detalle d
-        JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
-        WHERE 
-            d.incluye_desayuno = 1
-            AND d.estado_detalle = 'checkin'
-            AND ? BETWEEN DATE_ADD(d.fecha_entrada, INTERVAL 1 DAY) AND d.fecha_salida
-        ORDER BY CAST(h.numero AS UNSIGNED)
-        ";
-        $stmt = mysqli_prepare($conection, $sql);
-        mysqli_stmt_bind_param($stmt, 's', $fecha);
-        mysqli_stmt_execute($stmt);
-        $query = mysqli_stmt_get_result($stmt);
-
-        if (!$query || mysqli_num_rows($query) === 0) {
-            echo "<p style='color:#666;'>No hay desayunos programados para el $fecha.</p>";
-            exit;
-        }
-
-        echo "<ul style='margin-left:20px;'>";
-        while ($row = mysqli_fetch_assoc($query)) {
-            $hab = htmlspecialchars($row['habitacion']);
-            $cant = (int)$row['total_desayunos'];
-            echo "<li><strong>Hab. {$hab}:</strong> {$cant} desayuno(s)</li>";
-        }
-        echo "</ul>";
-        exit;
-    }
-
     if ($_POST['action'] == 'verGarajePorFecha') {
-        if (!isset($conection)) {
-            include '../conexion.php';
-        }
-        mysqli_set_charset($conection, 'utf8mb4');
-
+        include '../conexion.php';
         $fecha = $_POST['fecha'] ?? '';
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
-            echo "<p style='color:#666;'>Fecha inválida.</p>";
+        if (!$fecha) {
+            echo "Fecha inválida.";
             exit;
         }
 
-        // Garaje por noche: noche de entrada inclusive hasta antes del día de salida (solo detalles en checkin)
-        $sql = "
-        SELECT h.numero AS habitacion
-        FROM reservas_detalle d
-        JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
-        WHERE 
-            d.estado_detalle = 'checkin'
-            AND d.garaje > 0
-            AND ? >= DATE(d.fecha_entrada)
-            AND ? <  DATE(d.fecha_salida)
-        GROUP BY h.numero
-        ORDER BY CAST(h.numero AS UNSIGNED)
-        ";
-        $stmt = mysqli_prepare($conection, $sql);
-        mysqli_stmt_bind_param($stmt, 'ss', $fecha, $fecha);
-        mysqli_stmt_execute($stmt);
-        $query = mysqli_stmt_get_result($stmt);
+        $query = mysqli_query($conection, "
+        SELECT 
+            h.numero AS habitacion,
+            rd.garaje
+        FROM reservas_detalle rd
+        INNER JOIN reservas r ON r.idreserva = rd.idreserva
+        INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+        WHERE rd.garaje > 0
+          AND r.estado = 'checkin'
+          AND '$fecha' BETWEEN r.fecha_entrada AND r.fecha_salida
+    ");
 
         if ($query && mysqli_num_rows($query) > 0) {
             echo "<ul style='margin-left:20px;'>";
             while ($row = mysqli_fetch_assoc($query)) {
-                $hab = htmlspecialchars($row['habitacion']);
-                echo "<li><strong>Hab. {$hab}</strong></li>";
-                // Si quieres mostrar "1 ticket": echo "<li><strong>Hab. {$hab}:</strong> 1 ticket</li>";
+                echo "<li><strong>Hab. {$row['habitacion']}:</strong> {$row['garaje']} ticket(s)</li>";
             }
             echo "</ul>";
         } else {
-            echo "<p style='color:#666;'>No hay garajes registrados para esa fecha.</p>";
+            echo "<p>No hay garajes registrados para esa fecha.</p>";
         }
         exit;
     }
 
     if ($_POST['action'] == 'verToursPorFecha') {
-        if (!isset($conection)) {
-            include '../conexion.php';
-        }
-        mysqli_set_charset($conection, 'utf8mb4');
-
+        include '../conexion.php';
         $fecha = $_POST['fecha'] ?? '';
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
-            echo "<p style='color:#666;'>Fecha inválida.</p>";
+        if (!$fecha) {
+            echo "Fecha inválida.";
             exit;
         }
 
-        // Tours: desde el día siguiente del check-in hasta la salida (solo detalles en checkin)
-        $sql = "
+        $query = mysqli_query($conection, "
         SELECT 
             h.numero AS habitacion,
-            SUM(d.adultos + d.ninos) AS total_personas
-        FROM reservas_detalle d
-        JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
-        WHERE 
-            d.incluye_tour = 1
-            AND d.estado_detalle = 'checkin'
-            AND ? BETWEEN DATE_ADD(d.fecha_entrada, INTERVAL 1 DAY) AND d.fecha_salida
+            SUM(rd.adultos + rd.ninos) AS total_personas
+        FROM reservas_detalle rd
+        INNER JOIN reservas r ON r.idreserva = rd.idreserva
+        INNER JOIN habitaciones h ON rd.id_habitacion = h.idhabitacion
+        WHERE rd.incluye_tour = 1
+          AND r.estado = 'checkin'
+          AND '$fecha' BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
         GROUP BY h.numero
-        ORDER BY CAST(h.numero AS UNSIGNED)
-        ";
-        $stmt = mysqli_prepare($conection, $sql);
-        mysqli_stmt_bind_param($stmt, 's', $fecha);
-        mysqli_stmt_execute($stmt);
-        $query = mysqli_stmt_get_result($stmt);
+    ");
 
         if ($query && mysqli_num_rows($query) > 0) {
             echo "<ul style='margin-left:20px;'>";
             while ($row = mysqli_fetch_assoc($query)) {
-                $hab = htmlspecialchars($row['habitacion']);
-                $pers = (int)$row['total_personas'];
-                echo "<li><strong>Hab. {$hab}:</strong> {$pers} persona(s)</li>";
+                echo "<li><strong>Hab. {$row['habitacion']}:</strong> {$row['total_personas']} persona(s)</li>";
             }
             echo "</ul>";
         } else {
-            echo "<p style='color:#666;'>No hay tours registrados para esa fecha.</p>";
+            echo "<p>No hay tours registrados para esa fecha.</p>";
         }
         exit;
     }

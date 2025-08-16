@@ -308,21 +308,13 @@ if (isset($desayunosQuery) && $desayunosQuery && mysqli_num_rows($desayunosQuery
 }
 
 // BLOQUE FINAL (no agregues nada más después)
-<<<<<<< Updated upstream
 $desayunos = '
-=======
-$desayunos = <<<HTML
->>>>>>> Stashed changes
 <div id="bloqueDesayunos">
   <div class="desayuno-header">
     <strong>🍽️ Desayunos hoy:</strong>
     <div class="desayuno-controles">
       <button class="btn-imprimir-hoy" onclick="imprimirDesayunos()">🖨️ Hoy</button>
-<<<<<<< Updated upstream
       <input type="date" id="fecha_desayuno" min="' . $minDateDes . '">
-=======
-      <input type="date" id="fecha_desayuno" min="{$minDateDes}">
->>>>>>> Stashed changes
       <button class="btn-ver-fecha" onclick="verDesayunosPorFecha()">📅 Ver</button>
     </div>
   </div>
@@ -330,26 +322,16 @@ $desayunos = <<<HTML
 
   <!-- Contenedor de HOY: se vacía desde verDesayunosPorFecha() -->
   <div id="desayunos_hoy_lista">
-<<<<<<< Updated upstream
     ' . $listaHoyDes . '
-=======
-    {$listaHoyDes}
->>>>>>> Stashed changes
   </div>
 
   <!-- Resultado por FECHA (reemplaza al de HOY) -->
   <div id="resultado_desayunos_fecha" style="margin-top:10px;"></div>
 </div>
-<<<<<<< Updated upstream
 ';
 
 
 
-=======
-HTML;
-
-
->>>>>>> Stashed changes
 $reservas_array = [];
 while ($r = mysqli_fetch_assoc($reservasProximas)) {
     $reservas_array[] = $r;
@@ -1091,11 +1073,7 @@ verificarSesionPOS();
       const modalAbierto = document.querySelector('.modal')?.style.display === 'block';
       const swalVisible = !!document.querySelector('.swal2-container');
       if (!modalAbierto && !swalVisible) location.reload();
-<<<<<<< Updated upstream
     }, 600000);
-=======
-    }, 60000);
->>>>>>> Stashed changes
 
     // DataTable
     $(document).ready(function() {
@@ -1298,11 +1276,7 @@ verificarSesionPOS();
                 console.log('[cobrarYCheckinDetalle] respuesta cruda:', r3);
               } catch (_) {}
 
-<<<<<<< Updated upstream
               const txt = (typeof r3 === 'string' ? r3 : String(r3 || '')).trim().toLowerCase();
-=======
-              const txt = (r3 || '').trim().toLowerCase();
->>>>>>> Stashed changes
               if (txt === 'ok' || txt === '{"ok":true}' || txt === 'true') {
                 Swal.fire({
                   icon: 'success',
@@ -1371,13 +1345,8 @@ verificarSesionPOS();
               console.log('[checkoutDetalle] respuesta:', r3);
             } catch (_) {}
 
-<<<<<<< Updated upstream
             const txt = (typeof r3 === 'string' ? r3 : String(r3 || '')).trim().toLowerCase();
-              if (txt === 'ok' || txt === '{"ok":true}' || txt === 'true') {
-=======
-            const txt = (r3 || '').trim().toLowerCase();
             if (txt === 'ok' || txt === '{"ok":true}' || txt === 'true') {
->>>>>>> Stashed changes
               Swal.fire({
                 icon: 'success',
                 title: 'Check-Out realizado correctamente',
