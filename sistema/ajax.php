@@ -4580,9 +4580,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             mysqli_commit($conection);
 
             if ($estado_reserva === 'confirmada' && function_exists('enviarComprobante')) {
+<<<<<<< Updated upstream
                 
                 enviarComprobante($idreserva, null);
             } 
+=======
+                //enviarComprobante($idreserva, null);
+            }
+>>>>>>> Stashed changes
 
             echo 'ok';
 
@@ -6005,6 +6010,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 Swal.close();
 
                 if (data.status === 'ok') {
+<<<<<<< Updated upstream
 
                     console.log(data);
                     // Armamos detalles de impresión/envío
@@ -6015,6 +6021,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         return `❌ ${etiqueta}: ${String(valor)}<br>`;
                     };
 
+=======
+                    // Armamos detalles de impresión/envío
+                    const det = (etiqueta, valor, okText) => {
+                        if (valor === true) return `${okText}<br>`;
+                        if (valor === null || typeof valor === 'undefined')
+                            return `❌ ${etiqueta}: sin respuesta<br>`;
+                        return `❌ ${etiqueta}: ${String(valor)}<br>`;
+                    };
+
+>>>>>>> Stashed changes
                     let detalles = '';
                     detalles += det('Impresión', data.imprimirEstadia, '🖨️ Comprobante impreso');
                     detalles += det('Copia cliente', data.imprimirCliente, '👥 Copia cliente impresa');
@@ -6488,7 +6504,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             mysqli_commit($conection);
 
             // Disparadores de impresión/comprobantes para el momento del check-in
+<<<<<<< Updated upstream
             enviarComprobante($idreserva,null);
+=======
+            enviarComprobante($idreserva);
+>>>>>>> Stashed changes
             imprimirComprobanteEstadia($idreserva);
             imprimirTicketsTourYGaraje($idreserva);
 

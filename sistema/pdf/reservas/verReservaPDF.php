@@ -4,6 +4,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Dompdf\Dompdf;
 
 require_once __DIR__ . '/../../../conexion.php';
+<<<<<<< Updated upstream
 require_once __DIR__ . '/../../includes/functions.php';
 date_default_timezone_set('America/Guayaquil');
 
@@ -26,6 +27,35 @@ if ($idreserva <= 0 && $id_detalle <= 0) {
 */
 $modo = $id_detalle > 0 ? 'detalle' : 'reserva';
 
+=======
+date_default_timezone_set('America/Guayaquil');
+
+/* =================== Helpers =================== */
+function formatearFechaEspanol($fechaStr)
+{
+    $dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+    $meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    $ts = strtotime($fechaStr);
+    return ucfirst($dias[(int)date('w', $ts)]) . " " . date('d', $ts) . " de " . $meses[(int)date('n', $ts) - 1] . " de " . date('Y', $ts);
+}
+
+/* =================== Entrada =================== */
+$idreserva = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$id_detalle = isset($_GET['detalle']) ? (int)$_GET['detalle'] : 0;
+
+if ($idreserva <= 0 && $id_detalle <= 0) {
+    die("Parámetros inválidos");
+}
+
+/* =================== Carga de contexto =================== */
+/*
+   Modos:
+   - MODO RESERVA:   ?id=123  -> documento global de la reserva
+   - MODO DETALLE:   ?detalle=456 -> documento por habitación (usa datos de la reserva si existe)
+*/
+$modo = $id_detalle > 0 ? 'detalle' : 'reserva';
+
+>>>>>>> Stashed changes
 $cliente_nombre = '';
 $cliente_usuario = '';
 $cliente_telefono = '';

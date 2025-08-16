@@ -321,6 +321,10 @@ function imprimirCierreCaja($data)
 
     $nombreImpresora = PRN_COMANDAS;
 
+<<<<<<< Updated upstream
+=======
+    // Extraer datos del arreglo
+>>>>>>> Stashed changes
     $fecha_inicio       = $data['fecha_inicio'];
     $fecha_fin          = $data['fecha_fin'];
     $id_cierre          = (int)$data['idArqueo'];
@@ -337,13 +341,21 @@ function imprimirCierreCaja($data)
     $deuna              = (float)$data['deuna'];
     $total_salidas      = (float)$data['total_movimientos'];
     $salidas            = is_array($data['salidas']) ? $data['salidas'] : [];
+<<<<<<< Updated upstream
     $salarios_total     = isset($data['salarios']) ? (float)$data['salarios'] : 0.0;
 
+=======
+    // El backend ya trae este total desde pagos_personal (salariosCierre)
+    $salarios_total     = isset($data['salarios']) ? (float)$data['salarios'] : 0.0;
+
+    // Valores calculados del sistema (montos por entregar)
+>>>>>>> Stashed changes
     $totalEfectivo      = (float)$data['total_efectivo'];
     $totalTarjeta       = (float)$data['total_tarjeta'];
     $totalTransferencia = (float)$data['total_transferencia'];
     $totalDeUna         = (float)$data['total_deuna'];
 
+<<<<<<< Updated upstream
     $observaciones      = $data['observaciones'] ?? '';
     $compras            = $data['compras'] ?? '';
 
@@ -357,14 +369,51 @@ function imprimirCierreCaja($data)
             $detalle_salarios[] = ['tipo' => $tipo, 'empleado' => $row['empleado'], 'monto' => (float)$row['monto']];
             if (isset($total_por_tipo[$tipo])) {
                 $total_por_tipo[$tipo] += (float)$row['monto'];
+=======
+    $total_venta = $monto_inicial + $total_cash;
+    $observaciones = $data['observaciones'] ?? '';
+    $compras       = $data['compras'] ?? '';
+
+    // --- Traer detalle de salarios (pagos_personal) para imprimir desglose ---
+    $detalle_salarios = [];
+    $total_por_tipo = ['por_dia' => 0.0, 'por_cierre' => 0.0];
+    $sql_det = "
+        SELECT empleado, tipo, monto
+        FROM pagos_personal
+        WHERE arqueo_id = {$id_cierre}
+        ORDER BY tipo, empleado
+    ";
+    if ($rs = mysqli_query($conection, $sql_det)) {
+        while ($row = mysqli_fetch_assoc($rs)) {
+            $tipo = $row['tipo']; // 'por_dia' o 'por_cierre'
+            $empleado = $row['empleado'];
+            $monto = (float)$row['monto'];
+            $detalle_salarios[] = [
+                'tipo' => $tipo,
+                'empleado' => $empleado,
+                'monto' => $monto
+            ];
+            if (isset($total_por_tipo[$tipo])) {
+                $total_por_tipo[$tipo] += $monto;
+>>>>>>> Stashed changes
             }
         }
         mysqli_free_result($rs);
     }
+<<<<<<< Updated upstream
     if ($salarios_total <= 0 && !empty($detalle_salarios)) {
         $salarios_total = array_reduce($detalle_salarios, fn ($a, $b) => $a + (float)$b['monto'], 0.0);
     }
     // efectivo final (neto - salarios)
+=======
+
+    // Si no vino del backend, suma por seguridad
+    if ($salarios_total <= 0 && !empty($detalle_salarios)) {
+        $salarios_total = array_reduce($detalle_salarios, function ($acc, $it) { return $acc + (float)$it['monto']; }, 0.0);
+    }
+
+    // Cierre final en efectivo (tu lógica actual): efectivo neto – salarios
+>>>>>>> Stashed changes
     $monto_final_final = $totalEfectivo - $salarios_total;
 
     try {
@@ -377,6 +426,7 @@ function imprimirCierreCaja($data)
     try {
         $printer->setTextSize(1, 1);
 
+        // Encabezado
         $printer->setEmphasis(true);
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->text("CIERRE DE CAJA # {$id_cierre}\n");
@@ -385,32 +435,66 @@ function imprimirCierreCaja($data)
         $printer->text("Fecha Inicio: {$fecha_inicio}\n");
         $printer->text("Fecha Final:  {$fecha_fin}\n");
         $printer->text("Cajero:       {$nombre} {$apellido}\n");
+<<<<<<< Updated upstream
         $printer->text(str_repeat("-", 48) . "\n");
         $printer->text("Monto Inicial:          $ " . number_format($monto_inicial, 2) . "\n");
         $printer->text(str_repeat("-", 48) . "\n");
 
+=======
+        $printer->text("------------------------------------------------\n");
+        $printer->text("Monto Inicial:          $ " . number_format($monto_inicial, 2) . "\n");
+        $printer->text("------------------------------------------------\n");
+
+        // Ventas del día
+>>>>>>> Stashed changes
         $printer->setEmphasis(true);
         $printer->text("VENTAS DEL DIA\n");
         $printer->setEmphasis(false);
         $printer->text("Cantidad de Ventas:     " . number_format($total_ventas, 0) . "\n");
         $printer->text("TOTAL EN VENTAS:        $ " . number_format($total_cash, 2) . "\n");
+<<<<<<< Updated upstream
         $printer->text(str_repeat("-", 48) . "\n");
+=======
+        $printer->text("------------------------------------------------\n");
+>>>>>>> Stashed changes
 
+        // Movimientos de caja
         $printer->setEmphasis(true);
         $printer->text("MOVIMIENTOS DE CAJA\n");
         $printer->setEmphasis(false);
+<<<<<<< Updated upstream
         foreach ($salidas as $salida) {
             $nombre_usuario = $salida['nombre_usuario'] ?? '';
             $motivo         = $salida['motivo'] ?? '';
             $valor          = (float)($salida['valor'] ?? 0);
             $tipo_moneda    = ((int)($salida['tipo_moneda'] ?? 1) === 1) ? 'EF' : 'TR';
             if ((int)($salida['tipo_transaccion'] ?? 1) === 1) {
+=======
+
+        // Nota: en tu sistema, tipo_transaccion: 1=Salida (resta), 2=Entrada (suma)
+        foreach ($salidas as $salida) {
+            $nombre_usuario = $salida['nombre_usuario'] ?? '';
+            $motivo = $salida['motivo'] ?? '';
+            $valor = (float)($salida['valor'] ?? 0);
+            $tipo_moneda = (isset($salida['tipo_moneda']) && (int)$salida['tipo_moneda'] === 1) ? 'EF' : 'TR';
+            if (isset($salida['tipo_transaccion']) && (int)$salida['tipo_transaccion'] === 1) {
+                // Salida: se muestra como negativo
+>>>>>>> Stashed changes
                 $valor = -abs($valor);
             }
             $printer->text("{$nombre_usuario} ({$tipo_moneda}): {$motivo} - $ " . number_format($valor, 2) . "\n");
         }
+<<<<<<< Updated upstream
         $printer->text(str_repeat("-", 48) . "\n");
+=======
+        // Si quieres mostrar total de movimientos, descomenta:
+        // $printer->setEmphasis(true);
+        // $printer->text("Total Movimientos:      $ " . number_format($total_salidas, 2) . "\n");
+        // $printer->setEmphasis(false);
+        $printer->text("------------------------------------------------\n");
+>>>>>>> Stashed changes
 
+        // Montos a entregar (cálculo del sistema)
         $printer->setEmphasis(true);
         $printer->text("MONTOS A ENTREGAR (Sistema)\n");
         $printer->setEmphasis(false);
@@ -418,8 +502,14 @@ function imprimirCierreCaja($data)
         $printer->text("Tarjeta:         $ " . number_format($totalTarjeta, 2) . "\n");
         $printer->text("Transferencia:   $ " . number_format($totalTransferencia, 2) . "\n");
         $printer->text("DeUna:           $ " . number_format($totalDeUna, 2) . "\n");
+<<<<<<< Updated upstream
         $printer->text(str_repeat("-", 48) . "\n");
 
+=======
+        $printer->text("------------------------------------------------\n");
+
+        // Montos entregados (lo que digitó el cajero)
+>>>>>>> Stashed changes
         $printer->setEmphasis(true);
         $printer->text("MONTOS ENTREGADOS (Cajero)\n");
         $printer->setEmphasis(false);
@@ -433,12 +523,27 @@ function imprimirCierreCaja($data)
         $printer->text(str_repeat("-", 48) . "\n");
 
         // Auditoría de diferencias
+<<<<<<< Updated upstream
         $q_aud = mysqli_query($conection, "SELECT tipo_pago, estado, diferencia FROM auditoria_cierre_caja WHERE id_cierre = {$id_cierre}");
         $novedad = false;
         $aud = [];
         if ($q_aud && mysqli_num_rows($q_aud) > 0) {
             while ($row = mysqli_fetch_assoc($q_aud)) {
                 $aud[] = $row;
+=======
+        $q_auditoria = mysqli_query(
+            $conection,
+            "SELECT tipo_pago, estado, diferencia 
+             FROM auditoria_cierre_caja 
+             WHERE id_cierre = {$id_cierre}"
+        );
+
+        $novedad_encontrada = false;
+        $auditoria_detalle = [];
+        if ($q_auditoria && mysqli_num_rows($q_auditoria) > 0) {
+            while ($row = mysqli_fetch_assoc($q_auditoria)) {
+                $auditoria_detalle[] = $row;
+>>>>>>> Stashed changes
                 if (strtoupper($row['estado']) !== 'OK') {
                     $novedad = true;
                 }
@@ -449,7 +554,11 @@ function imprimirCierreCaja($data)
             $printer->setEmphasis(true);
             $printer->text("RESULTADO DE AUDITORIA\n");
             $printer->setEmphasis(false);
+<<<<<<< Updated upstream
             foreach ($aud as $row) {
+=======
+            foreach ($auditoria_detalle as $row) {
+>>>>>>> Stashed changes
                 $printer->text("{$row['tipo_pago']}: {$row['estado']} - $ " . number_format((float)$row['diferencia'], 2) . "\n");
             }
             $printer->text(str_repeat("-", 48) . "\n");
@@ -469,12 +578,17 @@ function imprimirCierreCaja($data)
             $printer->text(str_repeat("-", 48) . "\n");
         }
 
+<<<<<<< Updated upstream
         // Salarios
+=======
+        // === Detalle de pagos al personal ===
+>>>>>>> Stashed changes
         $printer->setEmphasis(true);
         $printer->text("PAGOS AL PERSONAL\n");
         $printer->setEmphasis(false);
 
         if (!empty($detalle_salarios)) {
+<<<<<<< Updated upstream
             $t_por_dia    = $total_por_tipo['por_dia'];
             $t_por_cierre = $total_por_tipo['por_cierre'];
 
@@ -505,32 +619,89 @@ function imprimirCierreCaja($data)
         $printer->text(str_repeat("-", 48) . "\n");
 
         if ($observaciones !== '') {
+=======
+            // Primero por_dia (mensual)
+            $t_por_dia = $total_por_tipo['por_dia'];
+            if ($t_por_dia > 0) {
+                $printer->text("Mensual (por dia):\n");
+                foreach ($detalle_salarios as $d) {
+                    if ($d['tipo'] === 'por_dia') {
+                        $printer->text("  {$d['empleado']}: $ " . number_format($d['monto'], 2) . "\n");
+                    }
+                }
+                $printer->text("  Total por dia:   $ " . number_format($t_por_dia, 2) . "\n");
+            }
+            // Luego por_cierre (diarios variables)
+            $t_por_cierre = $total_por_tipo['por_cierre'];
+            if ($t_por_cierre > 0) {
+                $printer->text("Por cierre:\n");
+                foreach ($detalle_salarios as $d) {
+                    if ($d['tipo'] === 'por_cierre') {
+                        $printer->text("  {$d['empleado']}: $ " . number_format($d['monto'], 2) . "\n");
+                    }
+                }
+                $printer->text("  Total por cierre: $ " . number_format($t_por_cierre, 2) . "\n");
+            }
+        } else {
+            $printer->text("  (Sin registros)\n");
+        }
+        $printer->setEmphasis(true);
+        $printer->text("TOTAL SALARIOS:         $ " . number_format($salarios_total, 2) . "\n");
+        $printer->setEmphasis(false);
+        $printer->text("------------------------------------------------\n");
+
+        // Observaciones / Compras
+        if (!empty($observaciones)) {
+>>>>>>> Stashed changes
             $printer->setEmphasis(true);
             $printer->text("OBSERVACIONES\n");
             $printer->setEmphasis(false);
             $printer->text($observaciones . "\n");
+<<<<<<< Updated upstream
             $printer->text(str_repeat("-", 48) . "\n");
+=======
+            $printer->text("------------------------------------------------\n");
+>>>>>>> Stashed changes
         }
         if ($compras !== '') {
             $printer->setEmphasis(true);
             $printer->text("COMPRAS\n");
             $printer->setEmphasis(false);
             $printer->text($compras . "\n");
+<<<<<<< Updated upstream
             $printer->text(str_repeat("-", 48) . "\n");
+=======
+            $printer->text("------------------------------------------------\n");
+>>>>>>> Stashed changes
         }
 
+        // Cierre final en efectivo (efectivo neto – salarios)
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->text("CIERRE FINAL EN EFECTIVO  $ " . number_format($monto_final_final, 2) . "\n");
         $printer->setEmphasis(false);
+<<<<<<< Updated upstream
 
         $printer->cut();
         $printer->close();
+=======
+        $printer->cut();
+
+        try {
+            $printer->close();
+        } catch (Exception $e) { /* silencio */
+        }
+
+>>>>>>> Stashed changes
         return true;
     } catch (Exception $e) {
         try {
             $printer->close();
+<<<<<<< Updated upstream
         } catch (Exception $e2) {
+=======
+        } catch (Exception $e2) { /* silencio */
+>>>>>>> Stashed changes
         }
         return false;
     }
@@ -721,8 +892,11 @@ function sanearPost(array $post): array
     }
     return $limpio;
 }
+<<<<<<< Updated upstream
 
 /* ===================== IMPRESIONES (HOTEL) ===================== */
+=======
+>>>>>>> Stashed changes
 
 function imprimirDesayunosHoy()
 {
@@ -730,22 +904,36 @@ function imprimirDesayunosHoy()
         include "../conexion.php";
         mysqli_set_charset($conection, 'utf8mb4');
 
+<<<<<<< Updated upstream
         $hoy = date('Y-m-d');
 
         // Encabezado hotel
         $config = mysqli_fetch_assoc(mysqli_query($conection, "SELECT razon_social, nit, direccion, telefono FROM configuracion LIMIT 1")) ?: [];
+=======
+        $nombreImpresora = "comandas";
+        $hoy = date('Y-m-d');
+
+        // Encabezado hotel
+        $cfg = mysqli_query($conection, "SELECT razon_social, nit, direccion, telefono FROM configuracion LIMIT 1");
+        $config = $cfg ? mysqli_fetch_assoc($cfg) : [];
+>>>>>>> Stashed changes
         $razon_social = $config['razon_social'] ?? 'GRUPO CAÑALIMEÑA';
         $nit          = $config['nit'] ?? '';
         $direccion    = $config['direccion'] ?? '';
         $telefono     = $config['telefono'] ?? '';
 
+<<<<<<< Updated upstream
         // Desayunos (detalle en checkin; día siguiente a entrada hasta salida)
+=======
+        // Desayunos del día: después del check-in (entrada+1) y hasta salida
+>>>>>>> Stashed changes
         $sql = "
             SELECT 
                 h.numero AS habitacion, 
                 (d.adultos + d.ninos) AS total_desayunos,
                 CONCAT(c.nombre, ' ', c.p_apellido) AS cliente
             FROM reservas_detalle d
+<<<<<<< Updated upstream
             INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
             INNER JOIN clientes c     ON c.usuario = d.idcliente
             WHERE 
@@ -753,6 +941,16 @@ function imprimirDesayunosHoy()
                 AND d.estado_detalle = 'checkin'
                 AND ? BETWEEN DATE_ADD(d.fecha_entrada, INTERVAL 1 DAY) AND d.fecha_salida
             ORDER BY CAST(h.numero AS UNSIGNED)
+=======
+            INNER JOIN reservas r       ON d.idreserva = r.idreserva
+            INNER JOIN habitaciones h   ON d.id_habitacion = h.idhabitacion
+            INNER JOIN clientes c       ON c.usuario = r.id_cliente
+            WHERE 
+                d.incluye_desayuno = 1
+                AND r.estado = 'checkin'
+                AND DATE(?) BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
+            ORDER BY h.numero
+>>>>>>> Stashed changes
         ";
         $stmt = mysqli_prepare($conection, $sql);
         mysqli_stmt_bind_param($stmt, "s", $hoy);
@@ -763,7 +961,12 @@ function imprimirDesayunosHoy()
             throw new Exception("No hay desayunos programados hoy.");
         }
 
+<<<<<<< Updated upstream
         $printer = new Printer(new WindowsPrintConnector(PRN_HOTEL));
+=======
+        $printer = new Printer(new WindowsPrintConnector($nombreImpresora));
+
+>>>>>>> Stashed changes
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->text(mb_strtoupper($razon_social) . "\n");
@@ -778,9 +981,14 @@ function imprimirDesayunosHoy()
         $printer->text(str_repeat("-", 42) . "\n");
 
         while ($row = mysqli_fetch_assoc($query)) {
+<<<<<<< Updated upstream
             $printer->setJustification(Printer::JUSTIFY_LEFT);
             $hab  = str_pad("Hab. " . $row['habitacion'], 15);
             $cant = str_pad("🟢 " . (int)$row['total_desayunos'] . " desayuno(s)", 25);
+=======
+            $hab  = str_pad("Hab. " . $row['habitacion'], 15);
+            $cant = str_pad("🟢 {$row['total_desayunos']} desayuno(s)", 25);
+>>>>>>> Stashed changes
             $printer->text("$hab $cant\n");
             $printer->text("Cliente: " . mb_strtoupper($row['cliente']) . "\n\n");
         }
@@ -803,9 +1011,15 @@ function imprimirComprobanteEstadia($idreserva = null, $id_detalle = null)
     include "../conexion.php";
     mysqli_set_charset($conection, 'utf8mb4');
 
+<<<<<<< Updated upstream
     // ====== MODO DETALLE ======
     if (!is_null($id_detalle)) {
         $id = (int)$id_detalle;
+=======
+    // ====== DETALLE (check-in directo) ======
+    if (!is_null($id_detalle)) {
+        $id = intval($id_detalle);
+>>>>>>> Stashed changes
         if ($id <= 0) {
             return "❌ ID de detalle inválido.";
         }
@@ -818,7 +1032,11 @@ function imprimirComprobanteEstadia($idreserva = null, $id_detalle = null)
             FROM reservas_detalle d
             INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
             INNER JOIN clientes c     ON c.usuario = d.idcliente
+<<<<<<< Updated upstream
             WHERE d.id = {$id}
+=======
+            WHERE d.id = $id
+>>>>>>> Stashed changes
             LIMIT 1
         ");
         if (!$q || mysqli_num_rows($q) === 0) {
@@ -826,6 +1044,7 @@ function imprimirComprobanteEstadia($idreserva = null, $id_detalle = null)
         }
         $r = mysqli_fetch_assoc($q);
 
+<<<<<<< Updated upstream
         $lugares = '';
         if (!empty($r['lugar_tour'])) {
             $csv = mysqli_real_escape_string($conection, $r['lugar_tour']);
@@ -833,6 +1052,16 @@ function imprimirComprobanteEstadia($idreserva = null, $id_detalle = null)
               SELECT GROUP_CONCAT(nombre SEPARATOR ', ') AS lugares
               FROM lugares_tour
               WHERE FIND_IN_SET(id, '$csv')
+=======
+        // LUGARES
+        $lugares = '';
+        if (!empty($r['lugar_tour'])) {
+            $csv = mysqli_real_escape_string($conection, $r['lugar_tour']);
+            $qL = mysqli_query($conection, "
+                SELECT GROUP_CONCAT(nombre SEPARATOR ', ') AS lugares
+                FROM lugares_tour
+                WHERE FIND_IN_SET(id, '$csv')
+>>>>>>> Stashed changes
             ");
             if ($qL && mysqli_num_rows($qL)) {
                 $lugares = mysqli_fetch_assoc($qL)['lugares'] ?? '';
@@ -843,11 +1072,18 @@ function imprimirComprobanteEstadia($idreserva = null, $id_detalle = null)
         $hash           = strtoupper(substr(sha1("ESTADIADET{$id}".$r['fecha_entrada']), 0, 10));
         $cliente        = $r['cliente'];
         $usuario_cli    = $r['usuario_cliente'];
+<<<<<<< Updated upstream
         $entrada        = formatearFechaEspanol($r['fecha_entrada']);
         $salida         = formatearFechaEspanol($r['fecha_salida']);
         $total          = number_format((float)$r['subtotal'], 2);
 
         $servicios = [];
+=======
+        $entrada        = function_exists('formatearFechaEspanol') ? formatearFechaEspanol($r['fecha_entrada']) : $r['fecha_entrada'];
+        $salida         = function_exists('formatearFechaEspanol') ? formatearFechaEspanol($r['fecha_salida']) : $r['fecha_salida'];
+        $total          = number_format((float)$r['subtotal'], 2);
+        $servicios      = [];
+>>>>>>> Stashed changes
         if ((int)$r['incluye_desayuno']) {
             $servicios[] = "Desayuno";
         }
@@ -859,7 +1095,11 @@ function imprimirComprobanteEstadia($idreserva = null, $id_detalle = null)
         }
 
         try {
+<<<<<<< Updated upstream
             $printer = new Printer(new WindowsPrintConnector(PRN_HOTEL));
+=======
+            $printer = new Printer(new WindowsPrintConnector("comandas"));
+>>>>>>> Stashed changes
             $printer->setJustification(Printer::JUSTIFY_CENTER);
             $printer->setEmphasis(true);
             $printer->text("GRUPO CAÑALIMEÑA\n");
@@ -886,7 +1126,10 @@ function imprimirComprobanteEstadia($idreserva = null, $id_detalle = null)
             $printer->text("\n\n");
             $printer->text("________________________________________\n");
             $printer->text("$cliente ($usuario_cli)\n");
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
             $printer->text(str_repeat("-", 46)."\n");
             $printer->text("Al firmar, el cliente declara haber leído y\n");
             $printer->text("aceptado los términos enviados al correo.\n");
@@ -899,8 +1142,13 @@ function imprimirComprobanteEstadia($idreserva = null, $id_detalle = null)
         }
     }
 
+<<<<<<< Updated upstream
     // ====== MODO RESERVA ======
     $id = (int)$idreserva;
+=======
+    // ====== RESERVA (cabecera + múltiples) ======
+    $id = intval($idreserva);
+>>>>>>> Stashed changes
     if ($id <= 0) {
         return "❌ ID de reserva inválido.";
     }
@@ -909,7 +1157,11 @@ function imprimirComprobanteEstadia($idreserva = null, $id_detalle = null)
         SELECT r.*, CONCAT(c.nombre,' ',c.p_apellido) AS cliente, c.usuario AS usuario_cliente
         FROM reservas r
         INNER JOIN clientes c ON r.id_cliente = c.usuario
+<<<<<<< Updated upstream
         WHERE r.idreserva = {$id}
+=======
+        WHERE r.idreserva = $id
+>>>>>>> Stashed changes
         LIMIT 1
     ");
     if (!$query || mysqli_num_rows($query) == 0) {
@@ -918,23 +1170,42 @@ function imprimirComprobanteEstadia($idreserva = null, $id_detalle = null)
     $reserva = mysqli_fetch_assoc($query);
 
     $detalle = mysqli_query($conection, "
+<<<<<<< Updated upstream
         SELECT h.numero, d.adultos, d.ninos, d.incluye_desayuno, d.incluye_tour, d.lugar_tour, d.garaje
         FROM reservas_detalle d
         INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
         WHERE d.idreserva = {$id}
+=======
+        SELECT h.numero, d.adultos, d.ninos, d.incluye_desayuno, d.incluye_tour,
+               d.lugar_tour, d.garaje
+        FROM reservas_detalle d
+        INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
+        WHERE d.idreserva = $id
+>>>>>>> Stashed changes
     ");
-
     $habitaciones = [];
     $adultos = 0;
+<<<<<<< Updated upstream
     $ninos   = 0;
+=======
+    $ninos = 0;
+>>>>>>> Stashed changes
     $servicios = [];
-
     if ($detalle) {
         while ($row = mysqli_fetch_assoc($detalle)) {
             $habitaciones[] = $row['numero'];
             $adultos += (int)$row['adultos'];
             $ninos   += (int)$row['ninos'];
 
+<<<<<<< Updated upstream
+    if ($detalle) {
+        while ($row = mysqli_fetch_assoc($detalle)) {
+            $habitaciones[] = $row['numero'];
+            $adultos += (int)$row['adultos'];
+            $ninos   += (int)$row['ninos'];
+
+=======
+>>>>>>> Stashed changes
             $lugares = '';
             if (!empty($row['lugar_tour'])) {
                 $csv = mysqli_real_escape_string($conection, $row['lugar_tour']);
@@ -961,14 +1232,23 @@ function imprimirComprobanteEstadia($idreserva = null, $id_detalle = null)
 
     $cliente     = $reserva['cliente'];
     $usuario_cli = $reserva['usuario_cliente'];
+<<<<<<< Updated upstream
     $entrada     = formatearFechaEspanol($reserva['fecha_entrada']);
     $salida      = formatearFechaEspanol($reserva['fecha_salida']);
+=======
+    $entrada     = function_exists('formatearFechaEspanol') ? formatearFechaEspanol($reserva['fecha_entrada']) : $reserva['fecha_entrada'];
+    $salida      = function_exists('formatearFechaEspanol') ? formatearFechaEspanol($reserva['fecha_salida']) : $reserva['fecha_salida'];
+>>>>>>> Stashed changes
     $total       = number_format((float)$reserva['total'], 2);
     $numeroC     = "01-".date('Y')."-".str_pad($id, 4, '0', STR_PAD_LEFT);
     $hash        = strtoupper(substr(sha1("ESTADIA{$id}".$reserva['fecha_entrada']), 0, 10));
 
     try {
+<<<<<<< Updated upstream
         $printer = new Printer(new WindowsPrintConnector(PRN_HOTEL));
+=======
+        $printer = new Printer(new WindowsPrintConnector("comandas"));
+>>>>>>> Stashed changes
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->text("GRUPO CAÑALIMEÑA\n");
@@ -1008,7 +1288,11 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
 
     // ====== DETALLE ======
     if (!is_null($id_detalle)) {
+<<<<<<< Updated upstream
         $id = (int)$id_detalle;
+=======
+        $id = intval($id_detalle);
+>>>>>>> Stashed changes
         if ($id <= 0) {
             return "❌ ID de detalle inválido.";
         }
@@ -1023,7 +1307,11 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
             FROM reservas_detalle d
             INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
             INNER JOIN clientes c     ON c.usuario = d.idcliente
+<<<<<<< Updated upstream
             WHERE d.id = {$id}
+=======
+            WHERE d.id = $id
+>>>>>>> Stashed changes
             LIMIT 1
         ");
         if (!$q || mysqli_num_rows($q) === 0) {
@@ -1044,6 +1332,7 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
             }
         }
 
+<<<<<<< Updated upstream
         $numeroC = "01-".date('Y')."-D".str_pad($id, 4, '0', STR_PAD_LEFT);
         $hash    = strtoupper(substr(sha1("ESTADIADET{$id}".$r['fecha_entrada']), 0, 10));
         $entrada = formatearFechaEspanol($r['fecha_entrada']);
@@ -1063,6 +1352,26 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
 
         try {
             $printer = new Printer(new WindowsPrintConnector(PRN_HOTEL));
+=======
+        $numeroC  = "01-".date('Y')."-D".str_pad($id, 4, '0', STR_PAD_LEFT);
+        $hash     = strtoupper(substr(sha1("ESTADIADET{$id}".$r['fecha_entrada']), 0, 10));
+        $entrada  = formatearFechaEspanol($r['fecha_entrada']);
+        $salida   = formatearFechaEspanol($r['fecha_salida']);
+        $total    = number_format((float)$r['subtotal'], 2);
+        $servs    = [];
+        if ((int)$r['incluye_desayuno']) {
+            $servs[] = "Desayuno";
+        }
+        if ((int)$r['incluye_tour']) {
+            $servs[] = "Tour".($lugares ? ": $lugares" : "");
+        }
+        if ((float)$r['garaje'] > 0) {
+            $servs[] = "Garaje";
+        }
+
+        try {
+            $printer = new Printer(new WindowsPrintConnector("comandas"));
+>>>>>>> Stashed changes
             $printer->setJustification(Printer::JUSTIFY_CENTER);
             $printer->setEmphasis(true);
             $printer->text("GRUPO CAÑALIMEÑA\n");
@@ -1088,11 +1397,15 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
 
             $printer->text(str_repeat("-", 48)."\n");
             $printer->setJustification(Printer::JUSTIFY_CENTER);
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
             $printer->setEmphasis(true);
             $printer->text("Total pagado: $ $total\n");
             $printer->setEmphasis(false);
             $printer->text(str_repeat("-", 48)."\n");
+<<<<<<< Updated upstream
 
             $personas = (int)$r['adultos'] + (int)$r['ninos'];
             $habitaciones = [$r['habitacion']];
@@ -1106,6 +1419,8 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
             $printer->text("------------------------------------------------\n");
             $printer->text("Fecha: " . date("d/m/Y") . "\n");
 
+=======
+>>>>>>> Stashed changes
             $printer->setEmphasis(true);
             $printer->text("¡Gracias por preferirnos!\n");
             $printer->setEmphasis(false);
@@ -1119,7 +1434,11 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
     }
 
     // ====== RESERVA ======
+<<<<<<< Updated upstream
     $id = (int)$idreserva;
+=======
+    $id = intval($idreserva);
+>>>>>>> Stashed changes
     if ($id <= 0) {
         return "❌ ID de reserva inválido.";
     }
@@ -1128,7 +1447,11 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
         SELECT r.*, CONCAT(c.nombre,' ',c.p_apellido) AS cliente, c.usuario AS usuario_cliente
         FROM reservas r
         INNER JOIN clientes c ON r.id_cliente = c.usuario
+<<<<<<< Updated upstream
         WHERE r.idreserva = {$id}
+=======
+        WHERE r.idreserva = $id
+>>>>>>> Stashed changes
         LIMIT 1
     ");
     if (!$qR || mysqli_num_rows($qR) === 0) {
@@ -1141,7 +1464,11 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
                d.garaje, d.precio_unitario
         FROM reservas_detalle d
         INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
+<<<<<<< Updated upstream
         WHERE d.idreserva = {$id}
+=======
+        WHERE d.idreserva = $id
+>>>>>>> Stashed changes
     ");
 
     $habitaciones = [];
@@ -1150,12 +1477,20 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
     $servicios = [];
     $aplicaPromo = false;
     $personas = 0;
+<<<<<<< Updated upstream
 
     while ($row = mysqli_fetch_assoc($detalle)) {
         $habitaciones[] = $row['numero'];
         $adultos   += (int)$row['adultos'];
         $ninos     += (int)$row['ninos'];
         $personas  += (int)$row['adultos'] + (int)$row['ninos'];
+=======
+    while ($row = mysqli_fetch_assoc($detalle)) {
+        $habitaciones[] = $row['numero'];
+        $adultos += (int)$row['adultos'];
+        $ninos   += (int)$row['ninos'];
+        $personas += (int)$row['adultos'] + (int)$row['ninos'];
+>>>>>>> Stashed changes
         if ((float)$row['precio_unitario'] >= 12) {
             $aplicaPromo = true;
         }
@@ -1190,7 +1525,11 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
     $hash    = strtoupper(substr(sha1("ESTADIA{$id}".$reserva['fecha_entrada']), 0, 10));
 
     try {
+<<<<<<< Updated upstream
         $printer = new Printer(new WindowsPrintConnector(PRN_HOTEL));
+=======
+        $printer = new Printer(new WindowsPrintConnector("comandas"));
+>>>>>>> Stashed changes
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setEmphasis(true);
         $printer->text("GRUPO CAÑALIMEÑA\n");
@@ -1232,7 +1571,10 @@ function imprimirComprobanteEstadiaCliente($idreserva = null, $id_detalle = null
         return "❌ Error de impresión cliente: ".$e->getMessage();
     }
 }
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
 {
     include "../conexion.php";
@@ -1240,7 +1582,11 @@ function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
 
     // ====== DETALLE ======
     if (!is_null($id_detalle)) {
+<<<<<<< Updated upstream
         $id = (int)$id_detalle;
+=======
+        $id = intval($id_detalle);
+>>>>>>> Stashed changes
         if ($id <= 0) {
             return "❌ ID de detalle inválido.";
         }
@@ -1249,7 +1595,11 @@ function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
             SELECT d.*, h.numero AS habitacion
             FROM reservas_detalle d
             INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
+<<<<<<< Updated upstream
             WHERE d.id = {$id}
+=======
+            WHERE d.id = $id
+>>>>>>> Stashed changes
             LIMIT 1
         ");
         if (!$q || mysqli_num_rows($q) === 0) {
@@ -1271,11 +1621,19 @@ function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
                     $lugares = mysqli_fetch_assoc($rs)['lugares'] ?? $lugares;
                 }
             }
+<<<<<<< Updated upstream
             $hash     = strtoupper(substr(sha1("TOUR".$d['habitacion'].$d['fecha_entrada'].$lugares), 0, 10));
             $personas = (int)$d['adultos'] + (int)$d['ninos'];
 
             try {
                 $p = new Printer(new WindowsPrintConnector(PRN_HOTEL));
+=======
+            $hash = strtoupper(substr(sha1("TOUR".$d['habitacion'].$d['fecha_entrada'].$lugares), 0, 10));
+            $personas = (int)$d['adultos'] + (int)$d['ninos'];
+
+            try {
+                $p = new Printer(new WindowsPrintConnector("comandas"));
+>>>>>>> Stashed changes
                 $p->setJustification(Printer::JUSTIFY_CENTER);
                 $p->setEmphasis(true);
                 $p->text("TICKET DE TOUR\n");
@@ -1298,9 +1656,15 @@ function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
             $dias = max(1, (strtotime($d['fecha_salida']) - strtotime($d['fecha_entrada'])) / 86400);
             for ($i = 0; $i < $dias; $i++) {
                 $fechaG = date('Y-m-d', strtotime("+$i days", strtotime($d['fecha_entrada'])));
+<<<<<<< Updated upstream
                 $hash   = strtoupper(substr(sha1("GARAJE".$d['habitacion'].$fechaG), 0, 10));
                 try {
                     $p = new Printer(new WindowsPrintConnector(PRN_HOTEL));
+=======
+                $hash = strtoupper(substr(sha1("GARAJE".$d['habitacion'].$fechaG), 0, 10));
+                try {
+                    $p = new Printer(new WindowsPrintConnector("comandas"));
+>>>>>>> Stashed changes
                     $p->setJustification(Printer::JUSTIFY_CENTER);
                     $p->setEmphasis(true);
                     $p->text("TICKET DE GARAJE\n");
@@ -1322,7 +1686,11 @@ function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
     }
 
     // ====== RESERVA ======
+<<<<<<< Updated upstream
     $id = (int)$idreserva;
+=======
+    $id = intval($idreserva);
+>>>>>>> Stashed changes
     if ($id <= 0) {
         return "❌ ID de reserva inválido.";
     }
@@ -1333,7 +1701,11 @@ function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
         FROM reservas_detalle d
         INNER JOIN habitaciones h ON h.idhabitacion = d.id_habitacion
         INNER JOIN reservas r     ON r.idreserva = d.idreserva
+<<<<<<< Updated upstream
         WHERE d.idreserva = {$id}
+=======
+        WHERE d.idreserva = $id
+>>>>>>> Stashed changes
         ORDER BY d.id_habitacion ASC
     ");
     if (!$detalle || mysqli_num_rows($detalle) === 0) {
@@ -1361,7 +1733,11 @@ function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
             }
             $hash = strtoupper(substr(sha1("TOUR$habitacion".$row['fecha_entrada'].$lugares), 0, 10));
             try {
+<<<<<<< Updated upstream
                 $p = new Printer(new WindowsPrintConnector(PRN_HOTEL));
+=======
+                $p = new Printer(new WindowsPrintConnector("comandas"));
+>>>>>>> Stashed changes
                 $p->setJustification(Printer::JUSTIFY_CENTER);
                 $p->setEmphasis(true);
                 $p->text("TICKET DE TOUR\n");
@@ -1379,15 +1755,25 @@ function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
             }
         }
 
+<<<<<<< Updated upstream
         // GARAJE (evitar duplicados por habitación)
+=======
+        // GARAJE (evitar duplicar por habitación)
+>>>>>>> Stashed changes
         if ((float)$row['garaje'] > 0 && !in_array($row['id_habitacion'], $impresosGaraje, true)) {
             $impresosGaraje[] = $row['id_habitacion'];
             $dias = max(1, (strtotime($row['fecha_salida']) - strtotime($row['fecha_entrada'])) / 86400);
             for ($d = 0; $d < $dias; $d++) {
                 $fechaG = date('Y-m-d', strtotime("+$d days", strtotime($row['fecha_entrada'])));
+<<<<<<< Updated upstream
                 $hash   = strtoupper(substr(sha1("GARAJE$habitacion$fechaG"), 0, 10));
                 try {
                     $p = new Printer(new WindowsPrintConnector(PRN_HOTEL));
+=======
+                $hash = strtoupper(substr(sha1("GARAJE$habitacion$fechaG"), 0, 10));
+                try {
+                    $p = new Printer(new WindowsPrintConnector("comandas"));
+>>>>>>> Stashed changes
                     $p->setJustification(Printer::JUSTIFY_CENTER);
                     $p->setEmphasis(true);
                     $p->text("TICKET DE GARAJE\n");
@@ -1408,13 +1794,16 @@ function imprimirTicketsTourYGaraje($idreserva = null, $id_detalle = null)
     }
     return true;
 }
-
 function imprimirTicketsTourHoy()
 {
     try {
         include "../conexion.php";
         mysqli_set_charset($conection, 'utf8mb4');
 
+<<<<<<< Updated upstream
+=======
+        $nombreImpresora = "comandas";
+>>>>>>> Stashed changes
         $hoy = date('Y-m-d');
         $cfg = mysqli_fetch_assoc(mysqli_query($conection, "SELECT razon_social, nit, direccion, telefono FROM configuracion LIMIT 1")) ?: [];
         $razon_social = $cfg['razon_social'] ?? '';
@@ -1422,12 +1811,22 @@ function imprimirTicketsTourHoy()
         $direccion    = $cfg['direccion'] ?? '';
         $telefono     = $cfg['telefono'] ?? '';
 
+<<<<<<< Updated upstream
         // Tours HOY: detalle en checkin, desde día siguiente a entrada
+=======
+        $config = mysqli_fetch_assoc(mysqli_query($conection, "SELECT razon_social, nit, direccion, telefono FROM configuracion LIMIT 1"));
+        $razon_social = $config['razon_social'] ?? '';
+        $nit = $config['nit'] ?? '';
+        $direccion = $config['direccion'] ?? '';
+        $telefono = $config['telefono'] ?? '';
+
+>>>>>>> Stashed changes
         $sql = "
             SELECT 
                 h.numero AS habitacion,
                 (d.adultos + d.ninos) AS total_personas,
                 CONCAT(c.nombre, ' ', c.p_apellido) AS cliente,
+<<<<<<< Updated upstream
                 d.id AS id_detalle
             FROM reservas_detalle d
             INNER JOIN habitaciones h ON d.id_habitacion = h.idhabitacion
@@ -1436,6 +1835,17 @@ function imprimirTicketsTourHoy()
               AND d.estado_detalle = 'checkin'
               AND ? BETWEEN DATE_ADD(d.fecha_entrada, INTERVAL 1 DAY) AND d.fecha_salida
             ORDER BY CAST(h.numero AS UNSIGNED)
+=======
+                r.idreserva
+            FROM reservas_detalle d
+            INNER JOIN reservas r     ON r.idreserva = d.idreserva
+            INNER JOIN habitaciones h ON d.id_habitacion = h.idhabitacion
+            INNER JOIN clientes c     ON c.usuario = r.id_cliente
+            WHERE d.incluye_tour = 1
+              AND r.estado = 'checkin'
+              AND ? BETWEEN DATE_ADD(r.fecha_entrada, INTERVAL 1 DAY) AND r.fecha_salida
+            ORDER BY h.numero
+>>>>>>> Stashed changes
         ";
         $stmt = mysqli_prepare($conection, $sql);
         mysqli_stmt_bind_param($stmt, "s", $hoy);
@@ -1493,12 +1903,22 @@ function imprimirTicketsGarajeHoy()
         $direccion    = $cfg['direccion'] ?? '';
         $telefono     = $cfg['telefono'] ?? '';
 
+<<<<<<< Updated upstream
         // Garaje HOY: por noche -> fecha_entrada ≤ HOY < fecha_salida
+=======
+        $config = mysqli_fetch_assoc(mysqli_query($conection, "SELECT razon_social, nit, direccion, telefono FROM configuracion LIMIT 1"));
+        $razon_social = $config['razon_social'] ?? '';
+        $nit = $config['nit'] ?? '';
+        $direccion = $config['direccion'] ?? '';
+        $telefono = $config['telefono'] ?? '';
+
+>>>>>>> Stashed changes
         $sql = "
             SELECT 
                 h.numero AS habitacion,
                 d.garaje,
                 CONCAT(c.nombre, ' ', c.p_apellido) AS cliente,
+<<<<<<< Updated upstream
                 d.id AS id_detalle
             FROM reservas_detalle d
             INNER JOIN habitaciones h ON d.id_habitacion = h.idhabitacion
@@ -1511,6 +1931,20 @@ function imprimirTicketsGarajeHoy()
         ";
         $stmt = mysqli_prepare($conection, $sql);
         mysqli_stmt_bind_param($stmt, "ss", $hoy, $hoy);
+=======
+                r.idreserva
+            FROM reservas_detalle d
+            INNER JOIN reservas r     ON r.idreserva = d.idreserva
+            INNER JOIN habitaciones h ON d.id_habitacion = h.idhabitacion
+            INNER JOIN clientes c     ON c.usuario = r.id_cliente
+            WHERE d.garaje > 0
+              AND r.estado = 'checkin'
+              AND ? BETWEEN r.fecha_entrada AND r.fecha_salida
+            ORDER BY h.numero
+        ";
+        $stmt = mysqli_prepare($conection, $sql);
+        mysqli_stmt_bind_param($stmt, "s", $hoy);
+>>>>>>> Stashed changes
         mysqli_stmt_execute($stmt);
         $query = mysqli_stmt_get_result($stmt);
 
